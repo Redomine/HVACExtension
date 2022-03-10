@@ -1,0 +1,9 @@
+title:
+  ru: Обновление имени системы
+  en_us: Update name of system
+
+tooltip:
+  ru: Копирует наименование системы в общий параметр
+  en_us: Copies name of system to shared parameter
+
+author: dosymep
