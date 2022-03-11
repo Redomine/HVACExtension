@@ -109,3 +109,5 @@ with revit.Transaction("Добавление формул"):
                 associate(param, ADSK_phase)
             if param.Definition.Name == 'Классификация нагрузок':
                 associate(param, ADSK_Class)
+
+#test
