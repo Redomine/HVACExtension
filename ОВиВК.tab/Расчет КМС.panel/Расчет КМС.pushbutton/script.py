@@ -132,8 +132,6 @@ def getDpTransition(element):
         elif F < 0.71: K = 0.15
         else: K = 0.1
 
-
-
     return K
 
 def getConCoords(connector):
@@ -247,7 +245,6 @@ def getTeeOrient(element):
     #Если угол расхождения между вектором входа воздуха и выхода больше 10 градусов(цифра с потолка) то считаем что идет буквой L
     #Если нет, то считаем что идет по прямой буквой I
 
-
     #тип 1
     #вытяжной воздуховод zп
     if math.acos(cosMain) < 0.10 and str(connectors[0].DuctSystemType) == "ExhaustAir":
@@ -293,37 +290,42 @@ def getDpTee(element):
         S3 = 3.14*0.3048*0.3048*conSet[2].Radius**2
 
     if type != 'Ошибка':
-        v1 = conSet[0].Flow*101.94/3600/S1
-        v2 = conSet[1].Flow*101.94/3600/S2
-        v3 = conSet[2].Flow*101.94/3600/S3
+        v1 = conSet[0].Flow*101.94
+        v2 = conSet[1].Flow*101.94
+        v3 = conSet[2].Flow*101.94
         Vset = [v1, v2, v3]
         Lc = max(Vset)
         Vset.remove(Lc)
         if Vset[0] > Vset[1]:
-            Lo = Vset[0]
-        else:
             Lo = Vset[1]
+        else:
+            Lo = Vset[0]
 
-        Fc = max [S1, S2, S3]
-        Fo = min [S1, S2, S3]
-        f0 = Fc/Fo
-        l0 = Lc/Lo
+        Fc = max([S1, S2, S3])
+        Fo = min([S1, S2, S3])
+
+        f0 = Fo/Fc
+        l0 = Lo/Lc
+        fp = 1
 
     if type == 1:
-        if f0 < 0.36: degree = 0.8 * l0
-        else:
-            if l0 < 0.61: degree = 0.5
-            else: 0.8 * l0
-        K = (1 - (1 - l0)**2 - (1.4 - l0)*(l0**2) - 2*degree * l0/f0)/(((1-l0)**2)/f0)
+
+
+
+        K = (1-(1-l0)**2-(1.4-l0)*l0**2)/((1-l0)**2/fp**2)
 
     if type == 2:
-        K = 1
+        K = (2.9 * (l0/f0)-2.1*(l0/f0)**2+(l0/f0)**3-1.5)*(f0/l0)**2
+
     if type == 3:
-        K = 1
+        K = ((0.19+0.43*fp)-(0.665-2.685*fp+3.45*fp**2)*(Lc-Lo)/(Lc*fp)+(2.66-9.76*fp+8.2*fp**2)*((Lc-Lo)/(Lc*fp))**2+(7.63*fp-5.43*fp**2-2.25*((Lc-Lo)/(Lc*fp))**3))*((Lc*fp)/(Lc-Lo))**2
+
     if type == 4:
-        K = 1
-    if type == 5:
-        K = 1
+        K = (1-0.58*l0/f0+0.54*(l0/f0)**2+0.025*(l0/f0)**3)*(f0/l0)**2
+
+    print element.Id
+    print K
+
     return K
 
 def getDpTapAdjustable(element):
