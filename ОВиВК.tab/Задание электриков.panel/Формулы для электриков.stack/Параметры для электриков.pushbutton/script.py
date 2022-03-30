@@ -64,7 +64,27 @@ spFileName = str(doc.Application.SharedParametersFilename)
 spFileName = spFileName.split('\\')
 spFileName = spFileName[-1]
 if "ФОП_ADSK.txt" != spFileName:
-    print 'Подгружен не тот файл общих параметров, переключитесь на ФОП_ADSK'
+    try:
+        doc.Application.SharedParametersFilename = "T:\\Проектный институт\\Отдел стандартизации BIM и RD\\BIM-Ресурсы\\2-Стандарты\\01 - ФОП\\ФОП_ADSK.txt"
+    except Exception:
+        print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_ADSK.txt'
+
+connectorNum = 0
+try:
+    for connector in connectorCol:
+        if str(connector.Domain) == "DomainElectrical":
+            connectorNum = connectorNum + 1
+except Exception:
+
+    print "Не найдено электрических коннекторов, должен быть один"
+    sys.exit()
+
+
+if connectorNum > 1:
+    print "Электрических коннекторов больше одного, удалите лишние"
+    sys.exit()
+if connectorNum == 0:
+    print "Не найдено электрических коннекторов, должен быть один"
     sys.exit()
 
 
@@ -96,7 +116,8 @@ with revit.Transaction("Добавление параметров"):
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф' or name == 'ADSK_Без частотного регулятора':
+                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф'\
+                            or name == 'ADSK_Без частотного регулятора' or name == 'ADSK_Классификация нагрузок':
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
                     else:
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)

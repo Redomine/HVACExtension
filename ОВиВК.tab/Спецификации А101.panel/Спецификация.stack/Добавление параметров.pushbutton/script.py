@@ -38,9 +38,12 @@ spFile = doc.Application.OpenSharedParameterFile()
 spFileName = str(doc.Application.SharedParametersFilename)
 spFileName = spFileName.split('\\')
 spFileName = spFileName[-1]
+
 if "ФОП_v1.txt" != spFileName:
-    print 'Подгружен не тот файл общих параметров, переключитесь на ФОП_v1'
-    sys.exit()
+    try:
+        doc.Application.SharedParametersFilename = "T:\\Проектный институт\\Отдел стандартизации BIM и RD\\BIM-Ресурсы\\2-Стандарты\\01 - ФОП\\ФОП_v1.txt"
+    except Exception:
+        print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt'
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число']
@@ -62,6 +65,7 @@ catPlumbingFixtures = doc.Settings.Categories.get_Item(BuiltInCategory.OST_Plumb
 cats = [catFittings, catPipeFittings, catPipeCurves, catCurves, catFlexCurves, catFlexPipeCurves, catTerminals, catAccessory,
         catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures]
 
+ductCats = [catCurves, catInsulations]
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
@@ -75,9 +79,13 @@ uiDoc = __revit__.ActiveUIDocument
 sel = uiDoc.Selection
 
 catSet = doc.Application.Create.NewCategorySet()
+catDuctSet = doc.Application.Create.NewCategorySet()
 
 for cat in cats:
     catSet.Insert(cat)
+
+for cat in ductCats:
+    catDuctSet.Insert(cat)
 
 with revit.Transaction("Добавление параметров"):
     if len(paraNames) > 0:
@@ -88,5 +96,8 @@ with revit.Transaction("Добавление параметров"):
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    newIB = doc.Application.Create.NewInstanceBinding(catSet)
+                    if name == "ФОП_ВИС_Минимальная толщина воздуховода":
+                        newIB = doc.Application.Create.NewTypeBinding(catDuctSet)
+                    else:
+                        newIB = doc.Application.Create.NewInstanceBinding(catSet)
                     doc.ParameterBindings.Insert(eDef, newIB)
