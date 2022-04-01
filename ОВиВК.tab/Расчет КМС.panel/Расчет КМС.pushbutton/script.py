@@ -270,6 +270,7 @@ def getTeeOrient(element):
 
 def getDpTee(element):
     conSet = getConnectors(element)
+
     try:
         type = getTeeOrient(element)
     except Exception:
@@ -303,28 +304,45 @@ def getDpTee(element):
 
         Fc = max([S1, S2, S3])
         Fo = min([S1, S2, S3])
+        Fp = Fo
 
         f0 = Fo/Fc
         l0 = Lo/Lc
-        fp = 1
+        fp = Fp/Fc
+
+        if f0 < 0.351:  koef_1 = 0.8 * l0
+        elif l0 < 0.61: koef_1 = 0.5
+        else: koef_1 = 0.8*l0
+
+        if f0 < 0.351:  koef_2 = 1
+        elif l0 < 0.41: koef_2 = 0.9*(1-l0)
+        else: koef_2 = 0.55
+
+        if f0 < 0.41:  koef_3 = 0.4
+        elif l0 < 0.51: koef_3 = 0.5
+        else: koef_3 = 2*l0-1
+
+        if f0 < 0.36:
+            if l0 < 0.41: koef_4 = 1.1-0.7*l0
+            else: koef_4 = 0.85
+        else:
+            if l0 < 0.61: koef_4 = 1 - 0.6*l0
+            else: koef_4 = 0.6
 
     if type == 1:
-
-
-
         K = (1-(1-l0)**2-(1.4-l0)*l0**2)/((1-l0)**2/fp**2)
 
     if type == 2:
-        K = (2.9 * (l0/f0)-2.1*(l0/f0)**2+(l0/f0)**3-1.5)*(f0/l0)**2
+        K = koef_2*(1+(l0/f0)**2-2*(1-l0)**2)/(l0/f0)**2
 
     if type == 3:
-        K = ((0.19+0.43*fp)-(0.665-2.685*fp+3.45*fp**2)*(Lc-Lo)/(Lc*fp)+(2.66-9.76*fp+8.2*fp**2)*((Lc-Lo)/(Lc*fp))**2+(7.63*fp-5.43*fp**2-2.25*((Lc-Lo)/(Lc*fp))**3))*((Lc*fp)/(Lc-Lo))**2
+        K = koef_3*l0**2/((1-l0)**2/Fp**2)
 
     if type == 4:
-        K = (1-0.58*l0/f0+0.54*(l0/f0)**2+0.025*(l0/f0)**3)*(f0/l0)**2
-
-    print element.Id
-    print K
+        K = (koef_4*(1+(l0/f0)**2))/(l0/f0)**2
+    
+    if type == 'Ошибка':
+        K = 0
 
     return K
 
