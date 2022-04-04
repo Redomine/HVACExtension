@@ -165,7 +165,7 @@ def getTeeOrient(element):
         if str(connectors[0].DuctSystemType) == "SupplyAir":
             if connector.Flow != max(connectors[0].Flow, connectors[1].Flow, connectors[2].Flow):
                 exitCons.append(connector)
-        if str(connectors[0].DuctSystemType) == "ExhaustAir":
+        if str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir":
             #а что делать если на на разветвлении расход одинаковы?
             if connector.Flow == max(connectors[0].Flow, connectors[1].Flow, connectors[2].Flow):
                 exitCons.append(connector)
@@ -194,16 +194,14 @@ def getTeeOrient(element):
             inDuctCon = getDuctCoords(inTeeCon, exhaustAirCons[0])
 
     # среди выходящих коннекторов ищем диктующий по большему расходу
-    try:
-        if exitCons[0].Flow > exitCons[1].Flow:
-            exitCon = exitCons[0]
-            secondaryCon = exitCons[1]
-        else:
-            exitCon = exitCons[1]
-            secondaryCon = exitCons[0]
-    except Exception:
-        print element.Id
-        print exitCons
+
+    if exitCons[0].Flow > exitCons[1].Flow:
+        exitCon = exitCons[0]
+        secondaryCon = exitCons[1]
+    else:
+        exitCon = exitCons[1]
+        secondaryCon = exitCons[0]
+
 
     #диктующий коннектор
     exitCon = getConCoords(exitCon)
@@ -378,7 +376,7 @@ def getDpTapAdjustable(element):
     l0 = Lo / Lc
     fp = Fp / Fc
 
-    if str(conSet[0].DuctSystemType) == "ExhaustAir":
+    if str(conSet[0].DuctSystemType) == "ExhaustAir" or str(conSet[0].DuctSystemType) == "ReturnAir":
         if form == "Круглый отвод":
             if Lc > Lo:
                 K = ((1-Fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((Fp+f0)*l0)**0.5)*(Fp/(1-l0))**2
@@ -428,24 +426,33 @@ def getServerById(serverGUID, serviceId):
     return None
 
 
-
-
 with revit.Transaction("Пересчет потерь напора"):
     for element in colFittings:
-        K = 0.5
-        if str(element.MEPModel.PartType) == 'Elbow':
-            K = getDpElbow(element)
+        K = 0
 
+        try:
+            if str(element.MEPModel.PartType) == 'Elbow':
+                K = getDpElbow(element)
+        except Exception:
+            pass
 
-        if str(element.MEPModel.PartType) == 'Transition':
-            K = getDpTransition(element)
+        try:
+            if str(element.MEPModel.PartType) == 'Transition':
+                K = getDpTransition(element)
+        except Exception:
+            pass
 
+        try:
+            if str(element.MEPModel.PartType) == 'Tee':
+                K = getDpTee(element)
+        except Exception:
+            pass
 
-        if str(element.MEPModel.PartType) == 'Tee':
-            K = getDpTee(element)
-
-        if str(element.MEPModel.PartType) == 'TapAdjustable':
-            K = getDpTapAdjustable(element)
+        try:
+            if str(element.MEPModel.PartType) == 'TapAdjustable':
+                K = getDpTapAdjustable(element)
+        except Exception:
+            pass
 
 
         #выбираем метод потерь по гуиду, "определенный коэффициент"
