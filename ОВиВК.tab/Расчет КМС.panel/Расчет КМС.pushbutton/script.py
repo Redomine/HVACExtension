@@ -267,7 +267,6 @@ def getTeeOrient(element):
 
     return type
 
-
 def getDpTee(element):
     conSet = getConnectors(element)
 
@@ -276,7 +275,6 @@ def getDpTee(element):
     except Exception:
         type = 'Ошибка'
 
-    dp = 10
     try:
         S1 = conSet[0].Height*0.3048*conSet[0].Width*0.3048
     except:
@@ -349,36 +347,63 @@ def getDpTee(element):
 def getDpTapAdjustable(element):
     conSet = getConnectors(element)
 
-    mainCon = []
-    for connector in conSet:
-        connectorSet = connector.AllRefs.ForwardIterator()
-        while connectorSet.MoveNext():
-            mainCon.append(connectorSet.Current)
-    Area = []
-    for connector in mainCon:
-        duct = connector.Owner
-        try:
-            A = duct.Width * 0.3048 * duct.Height * 0.3048
-            Area.append((A))
-        except Exception:
-            A = 3.14*((duct.Diameter * 0.3048)/2)**2
-            Area.append(A)
-    if Area[0] > Area[1]: A1 = Area[0]
-    else: A1 = Area[1]
-
     try:
-        A2 = conSet[0].Height * 0.3048 * conSet[0].Width * 0.3048
-        E = 0.7 - (A2 / A1)*0.7
-
+        Fo = conSet[0].Height*0.3048*conSet[0].Width*0.3048
+        form = "Прямоугольный отвод"
     except:
-        A2 = 3.14 * 0.3048 * 0.3048 * conSet[0].Radius ** 2
-        E = 0.5 - (A2 / A1)*0.5
+        Fo = 3.14*0.3048*0.3048*conSet[0].Radius**2
+        form = "Круглый отвод"
 
-    v = conSet[0].Flow * 101.94 / 3600 / A2
+    mainCon = []
+    connectorSet = conSet[0].AllRefs.ForwardIterator()
+    while connectorSet.MoveNext():
+        mainCon.append(connectorSet.Current)
+    duct = mainCon[0].Owner
+    ductCons = getConnectors(duct)
+    Flow = []
 
-    dp = E * 0.6 * v**2
+    for ductCon in ductCons:
+        Flow.append(ductCon.Flow*101.94)
+        try:
+            Fc = conSet[0].Height * 0.3048 * ductCon.Width * 0.3048
+            Fp = Fc
+        except:
+            Fc = 3.14 * 0.3048 * 0.3048 * ductCon.Radius ** 2
+            Fp = Fc
 
-    return dp
+    Lc = max(Flow)
+    Lo = conSet[0].Flow*101.94
+
+    f0 = Fo / Fc
+    l0 = Lo / Lc
+    fp = Fp / Fc
+
+    if str(conSet[0].DuctSystemType) == "ExhaustAir":
+        if form == "Круглый отвод":
+            if Lc > Lo:
+                K = ((1-Fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((Fp+f0)*l0)**0.5)*(Fp/(1-l0))**2
+            else:
+                K = (-0.7-6.05*(1-Fp)**3)*(f0/l0)**2+(1.32+3.23*(1-Fp)**2)*f0/l0+(0.5+0.42*Fp)-0.167*l0/f0
+        else:
+            if Lc > Lo:
+                K = (Fp/(1-l0))**2*((1-Fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((Fp+f0)*l0)**0.5)
+            else:
+                K = (f0/l0)**2*(4.1*(Fp/f0)**1.25*l0**1.5*(Fp+f0)**(0.3*(f0/Fp)**0.5/l0-2)-0.5*Fp/f0)
+
+
+    if str(conSet[0].DuctSystemType) == "SupplyAir":
+        if form == "Круглый отвод":
+            if Lc > Lo:
+                K = 0.45*(Fp/(1-l0))**2+(0.6-1.7*Fp)*Fp/(1-l0)-(0.25-0.9*Fp**2)+0.19*(1-l0)/Fp
+            else:
+                K = (f0/l0)**2-0.58*f0/l0+0.54+0.025*l0/f0
+        else:
+            if Lc > Lo:
+                K = 0.45*(Fp/(1-l0))**2+(0.6-1.7*Fp)*Fp/(1-l0)-(0.25-0.9*Fp**2)+0.19*(1-l0)/Fp
+            else:
+                K = (f0/l0)**2-0.42*f0/l0+0.81-0.06*l0/f0
+
+    return K
 
 def getLossMethods(serviceId):
     lc=[]
@@ -419,12 +444,9 @@ with revit.Transaction("Пересчет потерь напора"):
         if str(element.MEPModel.PartType) == 'Tee':
             K = getDpTee(element)
 
-        #
-        # if str(el.MEPModel.PartType) == 'TapAdjustable':
-        #     try:
-        #         dp = getDpTapAdjustable(el)
-        #     except Exception:
-        #         dp = 0
+        if str(element.MEPModel.PartType) == 'TapAdjustable':
+            K = getDpTapAdjustable(element)
+
 
         #выбираем метод потерь по гуиду, "определенный коэффициент"
         # schema = Schema.Lookup(Guid("13ded697-d107-4b0d-8dc4-2a2e4c870096"))
