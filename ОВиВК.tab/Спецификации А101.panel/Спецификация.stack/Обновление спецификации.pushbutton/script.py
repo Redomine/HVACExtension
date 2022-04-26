@@ -32,16 +32,23 @@ doc = __revit__.ActiveUIDocument.Document  # type: Document
 view = doc.ActiveView
 
 
-# class MainWindow(forms.WPFWindow):
-#     def __init__(self,):
-#         self._context = None
-#         self.xaml_source = op.join(op.dirname(__file__), 'MainWindow.xaml')
-#         super(MainWindow, self).__init__(self.xaml_source)
-#
-# main_window = MainWindow()
-# main_window.show_dialog()
-#
-# script.exit()
+def check_collection(collection):
+    for element in collection:
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+
+        ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
+        if ADSK_Izm == None:
+            error = 'Для категории ' + str(element.Category.Name) + '  не заполнен параметр ADSK_Единица измерения, заполните перед дальнейшей работой'
+            if error not in errors_list:
+                errors_list.append(error)
+        else:
+            if ADSK_Izm not in Izm_names:
+
+                error = 'Для категории ' + str(element.Category.Name) + ' у элементов единицы измерения не соответствуют расчетным(м.п., м., мп, м , м.п, шт, шт., к-т, компл, компл., м2)'
+                if error not in errors_list:
+                    errors_list.append(error)
+
 
 # Переменные для расчета
 length_reserve = 1.2 #запас длин
@@ -195,7 +202,7 @@ def duct_thickness(element):
 
     return thickness
 
-errors_list = []
+
 def make_new_name(collection):
     for element in collection:
         Spec_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
@@ -207,10 +214,8 @@ def make_new_name(collection):
             ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
 
         if ADSK_Name == None:
-            error = 'Для категории не заполнен параметр ADSK_Наименование ' + element.LookupParameter('ФОП_ВИС_Группирование').AsString()
-            if error not in errors_list:
-                errors_list.append(error)
-            continue
+            ADSK_Name = "Не заполнен ADSK_Наименование"
+
 
         New_Name = ADSK_Name
 
@@ -232,9 +237,14 @@ def make_new_name(collection):
                 S = element.LookupParameter('Площадь').AsDouble() * 0.092903
 
                 pipe = doc.GetElement(element.HostElementId)
-                if pipe.LookupParameter('Внешний диаметр') != None:
-                    d = pipe.LookupParameter('Внешний диаметр').AsDouble() * 304.8
-                    New_Name = ADSK_Name + ' внутренним диаметром Ø' + str(d)
+
+                #это на случай если(каким-то образом) изоляция трубы висит без трубы
+                try:
+                    if pipe.LookupParameter('Внешний диаметр') != None:
+                        d = pipe.LookupParameter('Внешний диаметр').AsDouble() * 304.8
+                        New_Name = ADSK_Name + ' внутренним диаметром Ø' + str(d)
+                except Exception:
+                    pass
 
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
 
@@ -422,32 +432,15 @@ if len(paraNames) > 0:
 #проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
 errors_list = []
 Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.', 'компл', 'компл.', 'м2', 'к-т']
-for collection in collections:
-    for element in collection:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-        if element.LookupParameter('ADSK_Наименование'):
-            ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
-        else:
-            ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
-        if ADSK_Name == None:
-            error = 'Для категории ' + str(element.Category.Name) + '  не заполнен параметр ADSK_Наименование, заполните перед дальнейшей работой'
-            if error not in errors_list:
-                errors_list.append(error)
-        if ADSK_Name == '!Не учитывать' or ADSK_Name == '_!Не учитывать':
-            continue
 
-        ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
-        if ADSK_Izm == None:
-            error = 'Для категории ' + str(element.Category.Name) + '  не заполнен параметр ADSK_Единица измерения, заполните перед дальнейшей работой'
-            if error not in errors_list:
-                errors_list.append(error)
-        else:
-            if ADSK_Izm not in Izm_names:
 
-                error = 'Для категории ' + str(element.Category.Name) + ' у элементов единицы измерения не соответствуют расчетным(м.п., м., мп, м , м.п, шт, шт., к-т, компл, компл., м2)'
-                if error not in errors_list:
-                    errors_list.append(error)
+check_collection(colPipeCurves)
+check_collection(colCurves)
+check_collection(colFlexCurves)
+check_collection(colFlexPipeCurves)
+
+
+
 
 if len(errors_list) > 0:
     for error in errors_list:
