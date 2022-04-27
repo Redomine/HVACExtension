@@ -32,22 +32,44 @@ doc = __revit__.ActiveUIDocument.Document  # type: Document
 view = doc.ActiveView
 
 
-def check_collection(collection):
-    for element in collection:
+def get_ADSK_Izm(element):
+    try:
+        ADSK_Izm = element.LookupParameter('ADSK_Наименование').AsString()
+    except Exception:
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
-
         ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
-        if ADSK_Izm == None:
-            error = 'Для категории ' + str(element.Category.Name) + '  не заполнен параметр ADSK_Единица измерения, заполните перед дальнейшей работой'
+
+    return ADSK_Izm
+
+def get_ADSK_Name(element):
+    if element.LookupParameter('ADSK_Наименование'):
+        ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
+    else:
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+
+    return ADSK_Name
+
+def get_ADSK_Mark(element):
+    if element.LookupParameter('ADSK_Наименование'):
+        ADSK_Mark = element.LookupParameter('ADSK_Наименование').AsString()
+    else:
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        ADSK_Mark = ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString()
+
+    return ADSK_Mark
+
+def check_collection(collection):
+    for element in collection:
+        ADSK_Izm = get_ADSK_Izm(element)
+        if ADSK_Izm not in Izm_names or ADSK_Izm == None:
+            error = 'Для категории ' + str(element.Category.Name) + ' есть элементы без подходящей единицы измерения(м.п., м., мп, м , м.п, шт, шт., м2)' \
+                                                                    '\n В такой ситуаци для труб или воздуховодов будут приняты м.п., для изоляции м2'
             if error not in errors_list:
                 errors_list.append(error)
-        else:
-            if ADSK_Izm not in Izm_names:
-
-                error = 'Для категории ' + str(element.Category.Name) + ' у элементов единицы измерения не соответствуют расчетным(м.п., м., мп, м , м.п, шт, шт., к-т, компл, компл., м2)'
-                if error not in errors_list:
-                    errors_list.append(error)
 
 
 # Переменные для расчета
@@ -206,12 +228,7 @@ def duct_thickness(element):
 def make_new_name(collection):
     for element in collection:
         Spec_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
-        if element.LookupParameter('ADSK_Наименование'):
-            ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
-        else:
-            ElemTypeId = element.GetTypeId()
-            ElemType = doc.GetElement(ElemTypeId)
-            ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+        ADSK_Name = get_ADSK_Name(element)
 
         if ADSK_Name == None:
             ADSK_Name = "Не заполнен ADSK_Наименование"
@@ -231,7 +248,7 @@ def make_new_name(collection):
             New_Name = ADSK_Name + ' толщиной ' + thickness + ' мм'
 
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '6. Материалы трубопроводной изоляции':
-            ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
+            ADSK_Izm = get_ADSK_Izm(element)
             if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
                 L = element.LookupParameter('Длина').AsDouble() * 304.8
                 S = element.LookupParameter('Площадь').AsDouble() * 0.092903
@@ -255,9 +272,7 @@ def make_new_name(collection):
 
         Spec_Name.Set(New_Name)
 
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-        ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
+        ADSK_Izm = get_ADSK_Izm(element)
         if ADSK_Izm != None:
             element.LookupParameter('ФОП_ВИС_Единица измерения').Set(ADSK_Izm)
 
@@ -315,18 +330,21 @@ def getCapacityParam(collection, position):
             if element.LookupParameter('ФОП_ВИС_Группирование'):
                 Pos = element.LookupParameter('ФОП_ВИС_Группирование')
                 Pos.Set(position)
-            ElemTypeId = element.GetTypeId()
-            ElemType = doc.GetElement(ElemTypeId)
-
-            ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
+            ADSK_Izm = get_ADSK_Izm(element)
             if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
                 param = 'Длина'
             elif ADSK_Izm == 'шт' or ADSK_Izm == 'шт.':
                 amount = element.LookupParameter('ФОП_ВИС_Число')
                 amount.Set(1)
                 continue
-            else:
+            elif ADSK_Izm == 'м2':
                 param = 'Площадь'
+            else:
+                if position == '6. Материалы трубопроводной изоляции' or position == '6. Материалы изоляции воздуховодов':
+                    param = 'Площадь'
+                else:
+                    param = 'Длина'
+
 
             if element.LookupParameter(param):
                 if param == 'Длина':
@@ -357,61 +375,55 @@ def getNumericalParam(collection, position):
             pass
 
 def getDependent(collection):
-    
-    new_group = 1
+
     d = {}
     for element in collection:
-        k = element.LookupParameter('Семейство и типоразмер').AsValueString()
-        if k not in d:
-            d[k] = new_group
-            new_group = new_group + 1
-            if element.LookupParameter('ФОП_ВИС_Группирование'):
-                Pos = element.LookupParameter('ФОП_ВИС_Группирование')
-                Pos.Set('1-'+str(d[k])+' 0'+'. Обрудование')
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        chain = ElemType.get_Parameter(Guid('c39ded76-eb20-4a21-abf3-6db36aca369b')).AsValueString()
 
+        if chain == "Нет":
+            pass
         else:
-            if element.LookupParameter('ФОП_ВИС_Группирование'):
-                Pos = element.LookupParameter('ФОП_ВИС_Группирование')
-                Pos.Set('1-'+str(d[k])+' 0'+'. Обрудование')
+            ADSK_Mark = get_ADSK_Mark(element)
+            new_group =  element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString() + " " + ADSK_Mark
+            Pos = element.LookupParameter('ФОП_ВИС_Группирование')
+            Pos.Set(new_group + " 0")
 
 
-        dependent = element.GetSubComponentIds()
+            dependent = element.GetSubComponentIds()
+            numbering = []
+            for x in dependent:
+                #перебираем вложенные семейства, но вложены могут быть даже обобщенные модели, которые спекой не обрабатываем
+                #пока что если выпадает ошибка в считывании наименования просто пропуск, если что будет видно по пустым
+                #строкам в спеке
+                try:
+                    numbering.append(doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString())
+                except Exception:
+                    pass
+            numbering.sort()
+            numbering = [el for el, _ in groupby(numbering)]
+            numbering_d = {}
 
-        numbering = []
+            number = 1
+            for name in numbering:
+                if name not in numbering_d:
+                    numbering_d[name] = number
+                    number = number + 1
 
-        for x in dependent:
-            #перебираем вложенные семейства, но вложены могут быть даже обобщенные модели, которые спекой не обрабатываем
-            #пока что если выпадает ошибка в считывании наименования просто пропуск, если что будет видно по пустым
-            #строкам в спеке
-            try:
-                numbering.append(doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString())
-            except Exception:
-                pass
-        numbering.sort()
-        numbering = [el for el, _ in groupby(numbering)]
-        numbering_d = {}
+            for x in dependent:
+                #то же что и выше
+                try:
+                    name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+                    new_name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное')
+                    new_name.Set(str(numbering_d[name]) +'. ' + name)
 
-        number = 1
-        for name in numbering:
-            if name not in numbering_d:
-                numbering_d[name] = number
-                number = number + 1
+                    Pos = doc.GetElement(x).LookupParameter('ФОП_ВИС_Группирование')
+                    Pos.Set(new_group + " " + str(numbering_d[name]))
+                except Exception:
+                    pass
 
-        for x in dependent:
-            #то же что и выше
-            try:
-                name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
-                new_name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное')
-                new_name.Set(str(numbering_d[name]) +'. ' + name)
-            except Exception:
-                pass
 
-        for x in dependent:
-            dep = doc.GetElement(x)
-            group ='1-'+str(d[k])+' 1'+'. Обрудование'
-            if dep.LookupParameter('ФОП_ВИС_Группирование'):
-                Pos = dep.LookupParameter('ФОП_ВИС_Группирование')
-                Pos.Set(group)
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число']
@@ -424,22 +436,17 @@ while it.MoveNext():
     if str(newProjectParameterData) in paraNames:
         paraNames.remove(str(newProjectParameterData))
 if len(paraNames) > 0:
-    print 'Необходимо добавить параметры экземпляра'
+    print 'Необходимо добавить параметры'
     for name in paraNames:
         print name
     sys.exit()
 
 #проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
 errors_list = []
-Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.', 'компл', 'компл.', 'м2', 'к-т']
-
-
-check_collection(colPipeCurves)
-check_collection(colCurves)
-check_collection(colFlexCurves)
-check_collection(colFlexPipeCurves)
-
-
+Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.' 'м2']
+check_izm = [colPipeCurves, colCurves, colFlexCurves, colFlexPipeCurves, colInsulations, colPipeInsulations]
+for izm in check_izm:
+    check_collection(izm)
 
 
 if len(errors_list) > 0:
@@ -447,7 +454,7 @@ if len(errors_list) > 0:
         print error
     sys.exit()
 
-with revit.Transaction("Обновление общей спеки"):
+def execute():
     getNumericalParam(colEquipment, '1. Оборудование')
     getNumericalParam(colPlumbingFixtures, '1. Оборудование')
     getNumericalParam(colAccessory, '2. Арматура')
@@ -455,7 +462,6 @@ with revit.Transaction("Обновление общей спеки"):
     getNumericalParam(colPipeAccessory, '2. Трубопроводная арматура')
     getNumericalParam(colPipeFittings, '5. Фасонные детали трубопроводов')
     getNumericalParam(colFittings, '5. Фасонные детали воздуховодов')
-
     getCapacityParam(colCurves, '4. Воздуховоды')
     getCapacityParam(colFlexCurves, '4. Гибкие воздуховоды')
     getCapacityParam(colPipeCurves, '4. Трубопроводы')
@@ -466,10 +472,13 @@ with revit.Transaction("Обновление общей спеки"):
     for collection in collections:
         make_new_name(collection)
 
-
     if len(errors_list) > 0:
         for error in errors_list:
             print error
 
     if sort_dependent_by_equipment == True:
         getDependent(colEquipment)
+
+
+with revit.Transaction("Обновление общей спеки"):
+    execute()
