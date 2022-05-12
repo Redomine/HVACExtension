@@ -430,7 +430,7 @@ def getDependent(collection):
 
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число']
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел']
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
@@ -447,15 +447,10 @@ if len(paraNames) > 0:
 
 #проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
 errors_list = []
-Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.' 'м2']
+Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.', 'м2']
 check_izm = [colPipeCurves, colCurves, colFlexCurves, colFlexPipeCurves, colInsulations, colPipeInsulations]
 for izm in check_izm:
     check_collection(izm)
-
-
-if len(errors_list) > 0:
-    for error in errors_list:
-        print error
 
 
 def update_element(element):

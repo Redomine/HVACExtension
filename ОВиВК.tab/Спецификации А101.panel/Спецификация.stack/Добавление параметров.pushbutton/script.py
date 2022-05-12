@@ -46,7 +46,7 @@ if "ФОП_v1.txt" != spFileName:
         print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt'
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число']
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел']
 
 catFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting)
 catPipeFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeFitting)
@@ -98,6 +98,8 @@ with revit.Transaction("Добавление параметров"):
                     eDef = myDefinitions.get_Item(name)
                     if name == "ФОП_ВИС_Минимальная толщина воздуховода":
                         newIB = doc.Application.Create.NewTypeBinding(catDuctSet)
+                    elif name == "ФОП_ВИС_Узел":
+                        newIB = doc.Application.Create.NewTypeBinding(catSet)
                     else:
                         newIB = doc.Application.Create.NewInstanceBinding(catSet)
                     doc.ParameterBindings.Insert(eDef, newIB)
