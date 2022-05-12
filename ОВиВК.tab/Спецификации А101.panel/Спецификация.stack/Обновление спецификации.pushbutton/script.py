@@ -70,9 +70,10 @@ def get_ADSK_Mark(element):
 def check_collection(collection):
     for element in collection:
         ADSK_Izm = get_ADSK_Izm(element)
-        if ADSK_Izm not in Izm_names or ADSK_Izm == None:
+        if str(ADSK_Izm) not in Izm_names or ADSK_Izm == None:
             error = 'Для категории ' + str(element.Category.Name) + ' есть элементы без подходящей единицы измерения(м.п., м., мп, м , м.п, шт, шт., м2)' \
                                                                     '\n В такой ситуаци для труб или воздуховодов будут приняты м.п., для изоляции м2'
+
             if error not in errors_list:
                 errors_list.append(error)
 
@@ -226,7 +227,6 @@ def make_new_name(element):
     Spec_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
     ADSK_Name = get_ADSK_Name(element)
 
-
     New_Name = ADSK_Name
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Трубопроводы':
@@ -238,7 +238,7 @@ def make_new_name(element):
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
         thickness = duct_thickness(element)
-        New_Name = ADSK_Name + ' толщиной ' + thickness + ' мм'
+        New_Name = str(ADSK_Name) + ' толщиной ' + thickness + ' мм'
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '6. Материалы трубопроводной изоляции':
         ADSK_Izm = get_ADSK_Izm(element)
@@ -258,12 +258,23 @@ def make_new_name(element):
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
 
-        New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString()
-        if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Transition' or str(element.MEPModel.PartType) == 'Tee':
+        New_Name = str(ADSK_Name) + ' ' + element.LookupParameter('Размер').AsString()
+
+        if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Tee':
             thickness = duct_thickness(element)
             New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + ' мм'
 
-    Spec_Name.Set(New_Name)
+        if str(element.MEPModel.PartType) == 'Transition':
+            thickness = duct_thickness(element)
+
+            try:
+                New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + \
+                           ' мм, длиной ' + element.LookupParameter('Длина воздуховода').AsValueString()  + ' мм'
+            except Exception:
+                New_Name = ADSK_Name + ' ' + element.LookupParameter(
+                    'Размер').AsString() + ' толщиной ' + thickness + ' мм'
+    Spec_Name.Set(str(New_Name))
+
 
 
 
