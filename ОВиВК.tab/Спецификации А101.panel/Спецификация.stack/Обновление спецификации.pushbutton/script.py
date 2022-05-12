@@ -238,7 +238,11 @@ def make_new_name(element):
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
         thickness = duct_thickness(element)
-        New_Name = str(ADSK_Name) + ' толщиной ' + thickness + ' мм'
+        try:
+            New_Name = ADSK_Name + " " + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + ' мм'
+        except Exception:
+            New_Name = ADSK_Name + " " + element.LookupParameter(
+                'Свободный размер').AsString() + ' толщиной ' + thickness + ' мм'
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '6. Материалы трубопроводной изоляции':
         ADSK_Izm = get_ADSK_Izm(element)
