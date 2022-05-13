@@ -47,7 +47,8 @@ def get_ADSK_Name(element):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == None \
+        if ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')) == None\
+                or ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == None \
                 or ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == "":
             ADSK_Name = "None"
         else:
@@ -63,7 +64,8 @@ def get_ADSK_Mark(element):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString() == None \
+        if ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')) == None \
+                or ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString() == None \
                 or ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString() == "":
             ADSK_Mark = "None"
         else:
