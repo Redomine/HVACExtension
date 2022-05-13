@@ -41,16 +41,18 @@ def get_ADSK_Izm(element):
 def get_ADSK_Name(element):
     if element.LookupParameter('ADSK_Наименование'):
         ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
-        if ADSK_Name == None:
+        if ADSK_Name == None or ADSK_Name == "":
             ADSK_Name = "None"
     else:
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')) == None:
+        if ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == None \
+                or ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == "":
             ADSK_Name = "None"
         else:
             ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+
 
     return ADSK_Name
 
@@ -61,7 +63,8 @@ def get_ADSK_Mark(element):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')) == None:
+        if ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString() == None \
+                or ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString() == "":
             ADSK_Mark = "None"
         else:
             ADSK_Mark = ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString()
@@ -277,6 +280,8 @@ def make_new_name(element):
             except Exception:
                 New_Name = ADSK_Name + ' ' + element.LookupParameter(
                     'Размер').AsString() + ' толщиной ' + thickness + ' мм'
+
+
     Spec_Name.Set(str(New_Name))
 
 
@@ -333,36 +338,39 @@ def getElementSize(element):
 
 #этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять милимметры для длины и м2 для площади)
 def getCapacityParam(element, position):
+
     if element.LookupParameter('ФОП_ВИС_Группирование'):
         Pos = element.LookupParameter('ФОП_ВИС_Группирование')
         Pos.Set(position)
     ADSK_Izm = get_ADSK_Izm(element)
-    if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
-        param = 'Длина'
-    elif ADSK_Izm == 'шт' or ADSK_Izm == 'шт.':
+
+    if ADSK_Izm == 'шт' or ADSK_Izm == 'шт.' or ADSK_Izm == 'Шт.' or ADSK_Izm == 'Шт':
         amount = element.LookupParameter('ФОП_ВИС_Число')
         amount.Set(1)
-    elif ADSK_Izm == 'м2':
-        param = 'Площадь'
     else:
-        if position == '6. Материалы трубопроводной изоляции' or position == '6. Материалы изоляции воздуховодов':
-            param = 'Площадь'
-        else:
+        if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
             param = 'Длина'
 
-
-    if element.LookupParameter(param):
-        if param == 'Длина':
-            CapacityParam = ((element.LookupParameter(param).AsDouble() * 304.8)/1000) * length_reserve
-            CapacityParam = round(CapacityParam, 2)
+        elif ADSK_Izm == 'м2':
+            param = 'Площадь'
         else:
-            CapacityParam = (element.LookupParameter(param).AsDouble() * 0.092903) * area_reserve
-            CapacityParam = round(CapacityParam, 2)
+            if position == '6. Материалы трубопроводной изоляции' or position == '6. Материалы изоляции воздуховодов':
+                param = 'Площадь'
+            else:
+                param = 'Длина'
 
-        if element.LookupParameter('ФОП_ВИС_Число'):
-            if CapacityParam == None: pass
-            Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
-            Spec_Length.Set(CapacityParam)
+        if element.LookupParameter(param):
+            if param == 'Длина':
+                CapacityParam = ((element.LookupParameter(param).AsDouble() * 304.8)/1000) * length_reserve
+                CapacityParam = round(CapacityParam, 2)
+            else:
+                CapacityParam = (element.LookupParameter(param).AsDouble() * 0.092903) * area_reserve
+                CapacityParam = round(CapacityParam, 2)
+
+            if element.LookupParameter('ФОП_ВИС_Число'):
+                if CapacityParam == None: pass
+                Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+                Spec_Length.Set(CapacityParam)
 
 #этот блок для элементов которые идут поштучно
 def getNumericalParam(element, position):
