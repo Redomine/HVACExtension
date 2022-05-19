@@ -10,6 +10,13 @@ clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
+
+import dosymep
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
+
 import sys
 import System
 import math
@@ -99,6 +106,7 @@ with revit.Transaction("Добавление формул"):
     for connector in connectorCol:
         if str(connector.Domain) == "DomainElectrical":
             connector.SystemClassification = MEPSystemClassification.PowerBalanced
+            connector.SetParamValue(BuiltInParameter.RBS_ELEC_POWER_FACTOR_STATE, 1)
     for param in set:
         if str(param.Definition.Name) == 'ADSK_Количество фаз':
             ADSK_phase = param
@@ -113,8 +121,8 @@ with revit.Transaction("Добавление формул"):
             manager.SetFormula(param, "if(ADSK_Без частотного регулятора, if(ADSK_Не нагреватель_Не шкаф, if(ADSK_Номинальная мощность < 1000 Вт, 0.65, if(ADSK_Номинальная мощность < 4000 Вт, 0.75, 0.85)), 1), 0.95)")
         if str(param.Definition.Name) == 'ADSK_Полная мощность':
             manager.SetFormula(param, "ADSK_Номинальная мощность / ADSK_Коэффициент мощности")
-        if str(param.Definition.Name) == 'ADSK_Номинальная мощность':
             ADSK_power = param
+
 
     for connector in connectorCol:
         params = connector.GetOrderedParameters()
