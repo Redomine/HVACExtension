@@ -38,8 +38,6 @@ def make_col(category):
 connectorCol = make_col(BuiltInCategory.OST_ConnectorElem)
 loadsCol = make_col(BuiltInCategory.OST_ElectricalLoadClassifications)
 
-t = Transaction(doc, 'Добавление формул')
-
 try:
     manager = doc.FamilyManager
 except Exception:
@@ -53,8 +51,10 @@ spFile = doc.Application.OpenSharedParameterFile()
 
 set = doc.FamilyManager.Parameters
 
+
+
 paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность', 'ADSK_Без частотного регулятора']
+             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность', 'ADSK_Без частотного регулятора', 'mS_Имя нагрузки']
 
 notFormula = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз']
 
@@ -88,7 +88,6 @@ if connectorNum == 0:
     sys.exit()
 
 
-
 with revit.Transaction("Добавление параметров"):
     #удаляем формулы на элементах, к которым будут присвоены свои, чтоб избежать конфликтов
     for param in set:
@@ -105,6 +104,7 @@ with revit.Transaction("Добавление параметров"):
                 manager.MakeInstance(param)
             paraNames.remove(param.Definition.Name)
 
+
     #если в списке имен после проверки осталось что-то, добавляем параметры из списка
     if len(paraNames) > 0:
         addedNames = []
@@ -113,6 +113,10 @@ with revit.Transaction("Добавление параметров"):
                 group = "04 Обязательные ИНЖЕНЕРИЯ"
                 if name == 'ADSK_Не нагреватель_Не шкаф' or name == 'ADSK_Без частотного регулятора':
                     group = "08 Необязательные ИНЖЕНЕРИЯ"
+
+                if name == 'mS_Имя нагрузки':
+                    group = "mySchema"
+
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
@@ -122,6 +126,7 @@ with revit.Transaction("Добавление параметров"):
                     else:
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
                     addedNames.append(name)
+
 
         #если все равно что-то осталось, сообщаем каких параметров не нашлось, но это вряд ли произойдет
         for name in addedNames:
