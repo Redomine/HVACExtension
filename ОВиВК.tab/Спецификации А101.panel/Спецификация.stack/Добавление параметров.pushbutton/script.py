@@ -14,6 +14,7 @@ import sys
 import System
 import math
 from Autodesk.Revit.DB import *
+import os
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
@@ -39,9 +40,11 @@ spFileName = str(doc.Application.SharedParametersFilename)
 spFileName = spFileName.split('\\')
 spFileName = spFileName[-1]
 
+
+
 if "ФОП_v1.txt" != spFileName:
     try:
-        doc.Application.SharedParametersFilename = "T:\\Проектный институт\\Отдел стандартизации BIM и RD\\BIM-Ресурсы\\2-Стандарты\\01 - ФОП\\ФОП_v1.txt"
+        doc.Application.SharedParametersFilename = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_v1.txt"
     except Exception:
         print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt'
 

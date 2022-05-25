@@ -21,6 +21,8 @@ from rpw.ui.forms import SelectFromList
 from System import Guid
 from pyrevit import revit
 from Autodesk.Revit.DB.Electrical import *
+import os
+
 
 
 doc = __revit__.ActiveUIDocument.Document
@@ -65,9 +67,11 @@ spFileName = spFileName.split('\\')
 spFileName = spFileName[-1]
 if "ФОП_ADSK.txt" != spFileName:
     try:
-        doc.Application.SharedParametersFilename = "T:\\Проектный институт\\Отдел стандартизации BIM и RD\\BIM-Ресурсы\\2-Стандарты\\01 - ФОП\\ФОП_ADSK.txt"
+        doc.Application.SharedParametersFilename = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_ADSK.txt"
     except Exception:
         print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_ADSK.txt'
+
+
 
 connectorNum = 0
 try:
