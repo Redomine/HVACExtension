@@ -83,6 +83,19 @@ def check_collection(collection):
                 errors_list.append(error)
 
 
+def get_D_type(element):
+    ElemTypeId = element.GetTypeId()
+    ElemType = doc.GetElement(ElemTypeId)
+
+    if ElemType.LookupParameter('ФОП_ВИС_Ду').AsInteger() == 1: type = "Ду"
+    elif ElemType.LookupParameter('ФОП_ВИС_Ду х Стенка').AsInteger() == 1: type = "Ду х Стенка"
+    else: type = "Днар х Стенка"
+    return type
+
+
+
+
+
 # Переменные для расчета
 length_reserve = 1.2 #запас длин
 area_reserve = 1.2 #запас площадей
@@ -238,8 +251,27 @@ def make_new_name(element):
         external_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
         internal_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
         pipe_thickness = (external_size - internal_size)/2
-        Dy = element.LookupParameter('Диаметр').AsDouble() * 304.8
-        New_Name = ADSK_Name + ' ' + 'Ду='+ str(Dy) + ' (Днар. х т.с. ' + str(external_size) + 'x' + str(pipe_thickness) + ')'
+        Dy = str(element.LookupParameter('Диаметр').AsDouble() * 304.8)
+
+
+        if Dy[-2:] == '.0':
+            Dy=Dy[:-2]
+
+        external_size = str(external_size)
+        if external_size[-2:] == '.0':
+            external_size=external_size[:-2]
+
+
+        d_type = get_D_type(element)
+
+        if d_type == "Ду":
+            New_Name = ADSK_Name + ' ' + 'DN' + Dy
+        elif d_type == "Ду х Стенка":
+            New_Name = ADSK_Name + ' ' + 'DN' + Dy + 'x' + str(pipe_thickness)
+        else:
+            New_Name = ADSK_Name + ' ' + '⌀' + external_size + 'x' + str(pipe_thickness)
+
+
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
         thickness = duct_thickness(element)
@@ -261,7 +293,10 @@ def make_new_name(element):
             try:
                 if pipe.LookupParameter('Внешний диаметр') != None:
                     d = pipe.LookupParameter('Внешний диаметр').AsDouble() * 304.8
-                    New_Name = ADSK_Name + ' внутренним диаметром Ø' + str(d)
+                    d = str(d)
+                    if d[-2:] == '.0':
+                        d = d[:-2]
+                    New_Name = ADSK_Name + ' внутренним диаметром Ø' + d
             except Exception:
                 pass
 
@@ -440,7 +475,7 @@ def getDependent(collection):
 
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел']
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings

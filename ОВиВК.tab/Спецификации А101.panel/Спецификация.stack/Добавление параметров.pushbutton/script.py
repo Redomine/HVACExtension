@@ -46,7 +46,9 @@ if "ФОП_v1.txt" != spFileName:
         print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt'
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел']
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
+
+pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
 
 catFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting)
 catPipeFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeFitting)
@@ -62,12 +64,21 @@ catInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctInsula
 catPipeInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeInsulations)
 catPlumbingFixtures = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlumbingFixtures)
 
+colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+
 cats = [catFittings, catPipeFittings, catPipeCurves, catCurves, catFlexCurves, catFlexPipeCurves, catTerminals, catAccessory,
         catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures]
 
 ductCats = [catCurves, catInsulations]
 
+nodeCats = [catTerminals, catAccessory, catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures]
+
+pipeCats = [catPipeCurves]
+
+
+
 #проверка на наличие нужных параметров
+
 map = doc.ParameterBindings
 it = map.ForwardIterator()
 while it.MoveNext():
@@ -75,17 +86,31 @@ while it.MoveNext():
     if str(newProjectParameterData) in paraNames:
         paraNames.remove(str(newProjectParameterData))
 
+
+
 uiDoc = __revit__.ActiveUIDocument
 sel = uiDoc.Selection
 
 catSet = doc.Application.Create.NewCategorySet()
 catDuctSet = doc.Application.Create.NewCategorySet()
+catPipeSet = doc.Application.Create.NewCategorySet()
+nodeCatSet = doc.Application.Create.NewCategorySet()
 
 for cat in cats:
     catSet.Insert(cat)
 
 for cat in ductCats:
     catDuctSet.Insert(cat)
+
+for cat in pipeCats:
+    catPipeSet.Insert(cat)
+
+for cat in nodeCats:
+    nodeCatSet.Insert(cat)
+
+
+colPipeTypes = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeCurves).WhereElementIsElementType().ToElements()
+
 
 with revit.Transaction("Добавление параметров"):
     if len(paraNames) > 0:
@@ -98,8 +123,22 @@ with revit.Transaction("Добавление параметров"):
                     eDef = myDefinitions.get_Item(name)
                     if name == "ФОП_ВИС_Минимальная толщина воздуховода":
                         newIB = doc.Application.Create.NewTypeBinding(catDuctSet)
+                    elif name == 'ФОП_ВИС_Ду' or name ==  'ФОП_ВИС_Ду х Стенка' or name == 'ФОП_ВИС_Днар х Стенка':
+                        newIB = doc.Application.Create.NewTypeBinding(catPipeSet)
+
                     elif name == "ФОП_ВИС_Узел":
-                        newIB = doc.Application.Create.NewTypeBinding(catSet)
+                        newIB = doc.Application.Create.NewTypeBinding(nodeCatSet)
                     else:
                         newIB = doc.Application.Create.NewInstanceBinding(catSet)
+
                     doc.ParameterBindings.Insert(eDef, newIB)
+
+                    if name == 'ФОП_ВИС_Ду' or name == 'ФОП_ВИС_Ду х Стенка' or name == 'ФОП_ВИС_Днар х Стенка':
+                        for element in colPipeTypes:
+                            if name == 'ФОП_ВИС_Днар х Стенка':
+                                element.LookupParameter(name).Set(1)
+                            else:
+                                element.LookupParameter(name).Set(0)
+
+
+
