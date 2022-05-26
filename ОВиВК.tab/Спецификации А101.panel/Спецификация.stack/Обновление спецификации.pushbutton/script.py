@@ -535,6 +535,10 @@ def script_execute():
 
     if sort_dependent_by_equipment == True:
         getDependent(colEquipment)
+        getDependent(colPlumbingFixtures)
+        getDependent(colPipeAccessory)
+        getDependent(colAccessory)
+        getDependent(colTerminals)
 
     if report_rows:
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"

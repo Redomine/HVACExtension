@@ -87,7 +87,7 @@ cats = [catFittings, catPipeFittings, catPipeCurves, catCurves, catFlexCurves, c
 
 ductCats = [catCurves, catInsulations]
 
-nodeCats = [catTerminals, catAccessory, catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures]
+nodeCats = [catTerminals, catAccessory, catPipeAccessory, catEquipment, catPlumbingFixtures]
 
 pipeCats = [catPipeCurves]
 
