@@ -26,12 +26,7 @@ from Autodesk.Revit.DB.Electrical import *
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
-def make_col(category):
-    col = FilteredElementCollector(doc)\
-                            .OfCategory(category)\
-                            .WhereElementIsNotElementType()\
-                            .ToElements()
-    return col 
+
 
 spFile = doc.Application.OpenSharedParameterFile()
 
@@ -48,7 +43,7 @@ if "ФОП_v1.txt" != spFileName:
     except Exception:
         print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt'
 
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
 
 pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
@@ -66,11 +61,29 @@ catEquipment = doc.Settings.Categories.get_Item(BuiltInCategory.OST_MechanicalEq
 catInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctInsulations)
 catPipeInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeInsulations)
 catPlumbingFixtures = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlumbingFixtures)
+catSprinklers = doc.Settings.Categories.get_Item(BuiltInCategory.OST_Sprinklers)
 
-colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+def make_type_col(category):
+    col = FilteredElementCollector(doc)\
+                            .OfCategory(category)\
+                            .WhereElementIsElementType()\
+                            .ToElements()
+    return col
+
+
+
+colTerminals = make_type_col(BuiltInCategory.OST_DuctTerminal)
+colAccessory = make_type_col(BuiltInCategory.OST_DuctAccessory)
+colPipeAccessory = make_type_col(BuiltInCategory.OST_PipeAccessory)
+colEquipment = make_type_col(BuiltInCategory.OST_MechanicalEquipment)
+colPlumbingFixtures= make_type_col(BuiltInCategory.OST_PlumbingFixtures)
+
+collections = [colTerminals, colAccessory, colPipeAccessory, colEquipment, colPlumbingFixtures]
+
+colPipeTypes = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeCurves).WhereElementIsElementType().ToElements()
 
 cats = [catFittings, catPipeFittings, catPipeCurves, catCurves, catFlexCurves, catFlexPipeCurves, catTerminals, catAccessory,
-        catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures]
+        catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures, catSprinklers]
 
 ductCats = [catCurves, catInsulations]
 
@@ -112,7 +125,7 @@ for cat in nodeCats:
     nodeCatSet.Insert(cat)
 
 
-colPipeTypes = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeCurves).WhereElementIsElementType().ToElements()
+
 
 
 with revit.Transaction("Добавление параметров"):
@@ -131,6 +144,9 @@ with revit.Transaction("Добавление параметров"):
 
                     elif name == "ФОП_ВИС_Узел":
                         newIB = doc.Application.Create.NewTypeBinding(nodeCatSet)
+
+
+
                     else:
                         newIB = doc.Application.Create.NewInstanceBinding(catSet)
 
@@ -142,6 +158,12 @@ with revit.Transaction("Добавление параметров"):
                                 element.LookupParameter(name).Set(1)
                             else:
                                 element.LookupParameter(name).Set(0)
+
+                    if name == "ФОП_ВИС_Узел":
+                        for collection in collections:
+                            for element in collection:
+                                element.LookupParameter(name).Set(0)
+
 
 
 

@@ -121,9 +121,10 @@ colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
 colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
 colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
 colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
+colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 
 collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures]
+               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
 
 def duct_thickness(element):
     mode = ''
@@ -474,7 +475,7 @@ def getDependent(collection):
                     pass
 
 
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
 
 #проверка на наличие нужных параметров
@@ -501,6 +502,7 @@ for izm in check_izm:
 def update_element(element):
     if element in colEquipment: getNumericalParam(element, '1. Оборудование')
     if element in colPlumbingFixtures:  getNumericalParam(element, '1. Оборудование')
+    if element in colSprinklers: getNumericalParam(element, '1. Оборудование')
     if element in colAccessory: getNumericalParam(element, '2. Арматура')
     if element in colTerminals: getNumericalParam(element, '3. Воздухораспределители')
     if element in colPipeAccessory: getNumericalParam(element, '2. Трубопроводная арматура')
