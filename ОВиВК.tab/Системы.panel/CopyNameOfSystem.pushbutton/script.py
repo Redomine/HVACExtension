@@ -74,7 +74,6 @@ def update_system_name(element):
 
 	system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
 
-
 	if not system_name:
 		super_component = element.SuperComponent
 		if super_component:
