@@ -15,9 +15,20 @@ from pyrevit.script import output
 
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from System import Guid
 
 document = __revit__.ActiveUIDocument.Document
 
+
+def make_col(category):
+    col = FilteredElementCollector(document)\
+                            .OfCategory(category)\
+                            .WhereElementIsElementType()\
+                            .ToElements()
+    return col
+
+
+colPipeSystem = make_col(BuiltInCategory.OST_PipingSystem)
 
 def get_elements():
 	categories = [BuiltInCategory.OST_MechanicalEquipment, 	#Оборудование
@@ -41,11 +52,29 @@ def get_elements():
 	return FilteredElementCollector(document).WherePasses(category_filter).WhereElementIsNotElementType().ToElements()
 
 
+def  get_system_reduction(system_name):
+	if system_name == None:
+		system_reduction = 'None'
+	else:
+		for system in colPipeSystem:
+			sys_abb = str(system.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM))
+
+			if sys_abb in system_name:
+				system_reduction = system.LookupParameter('ФОП_ВИС_Сокращение для системы').AsString()
+				if system_reduction == None:
+					system_reduction = 'None'
+
+	return system_reduction
+
+
+sub_element_ids = []
 def update_system_name(element):
 	if element.GetParam(SharedParamsConfig.Instance.MechanicalSystemName).IsReadOnly:
 		return
 
 	system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+
+
 	if not system_name:
 		super_component = element.SuperComponent
 		if super_component:
@@ -56,8 +85,21 @@ def update_system_name(element):
 		# Т11 3,Т12 4 -> Т11, Т12
 		system_name = ", ".join(set([s.split(" ")[0] for s in system_name.split(",")]))
 
-	element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
+	system_reduction = get_system_reduction(system_name)
 
+	if system_reduction != "None":
+		system_name = system_reduction
+
+
+
+	if hasattr(element, "GetSubComponentIds"):
+		sub_elements = [document.GetElement(element_id) for element_id in element.GetSubComponentIds()]
+		for sub_element in sub_elements:
+			sub_element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
+			sub_element_ids.append(sub_element.Id)
+
+	if element.Id not in sub_element_ids:
+		element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 
 def update_element(elements):
 	report_rows = set()
@@ -69,9 +111,7 @@ def update_element(elements):
 				continue
 
 			update_system_name(element)
-			if hasattr(element, "GetSubComponentIds"):
-				sub_elements = [document.GetElement(element_id) for element_id in element.GetSubComponentIds()]
-				update_element(sub_elements)
+
 		except: # надеюсь это маловероятный сценарий
 			pass
 
