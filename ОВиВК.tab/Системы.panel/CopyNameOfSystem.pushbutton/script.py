@@ -72,7 +72,8 @@ def get_connectors(element):
 
 
 def get_type_system(element):
-	connector = next((c for c in get_connectors(element) if c.Domain == Domain.DomainHvac), None)
+
+	connector = next((c for c in get_connectors(element) if c.Domain == Domain.DomainHvac or c.Domain == Domain.DomainPiping), None)
 	if connector:
 		return get_type_system_name(connector)
 
@@ -98,7 +99,9 @@ def update_system_name(element):
 		# Т11 3,Т12 4 -> Т11, Т12
 		system_name = ", ".join(set([s.split(" ")[0] for s in system_name.split(",")]))
 
+
 	type_system_name = get_type_system(element)
+
 	if type_system_name:
 		system_name = type_system_name
 
