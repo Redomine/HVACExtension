@@ -18,6 +18,7 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from System import Guid
 
 document = __revit__.ActiveUIDocument.Document
+sub_element_ids = []
 
 
 def make_col(category):
@@ -29,6 +30,8 @@ def make_col(category):
 
 
 colPipeSystem = make_col(BuiltInCategory.OST_PipingSystem)
+
+colDuctSystem = make_col(BuiltInCategory.OST_DuctSystem)
 
 def get_elements():
 	categories = [BuiltInCategory.OST_MechanicalEquipment, 	#Оборудование
@@ -52,28 +55,39 @@ def get_elements():
 	return FilteredElementCollector(document).WherePasses(category_filter).WhereElementIsNotElementType().ToElements()
 
 
-def  get_system_reduction(system_name):
-	if system_name == None:
-		system_reduction = 'None'
-	else:
-		for system in colPipeSystem:
-			sys_abb = str(system.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM))
+def get_connectors(element):
+	if hasattr(element, "ConnectorManager"):
+		if element.ConnectorManager:
+			return element.ConnectorManager.Connectors
 
-			if sys_abb in system_name:
-				system_reduction = system.LookupParameter('ФОП_ВИС_Сокращение для системы').AsString()
-				if system_reduction == None:
-					system_reduction = 'None'
+	if hasattr(element, "MEPModel") and element.MEPModel:
+		if element.MEPModel.ConnectorManager:
+			return element.MEPModel.ConnectorManager.Connectors
 
-	return system_reduction
+	if hasattr(element, "MEPSystem") and element.MEPSystem:
+		if element.MEPSystem.ConnectorManager:
+			return element.MEPSystem.ConnectorManager.Connectors
+
+	return []
 
 
-sub_element_ids = []
+def get_type_system(element):
+	connector = next((c for c in get_connectors(element) if c.Domain == Domain.DomainHvac), None)
+	if connector:
+		return get_type_system_name(connector)
+
+
+def get_type_system_name(element):
+	if hasattr(element, "MEPSystem") and element.MEPSystem:
+		mep_type = document.GetElement(element.MEPSystem.GetTypeId())
+		return mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
+
+
 def update_system_name(element):
 	if element.GetParam(SharedParamsConfig.Instance.MechanicalSystemName).IsReadOnly:
 		return
 
 	system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
-
 	if not system_name:
 		super_component = element.SuperComponent
 		if super_component:
@@ -84,12 +98,9 @@ def update_system_name(element):
 		# Т11 3,Т12 4 -> Т11, Т12
 		system_name = ", ".join(set([s.split(" ")[0] for s in system_name.split(",")]))
 
-	system_reduction = get_system_reduction(system_name)
-
-	if system_reduction != "None":
-		system_name = system_reduction
-
-
+	type_system_name = get_type_system(element)
+	if type_system_name:
+		system_name = type_system_name
 
 	if hasattr(element, "GetSubComponentIds"):
 		sub_elements = [document.GetElement(element_id) for element_id in element.GetSubComponentIds()]
@@ -100,19 +111,16 @@ def update_system_name(element):
 	if element.Id not in sub_element_ids:
 		element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 
+
 def update_element(elements):
 	report_rows = set()
 	for element in elements:
-		try:
-			edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
-			if edited_by and edited_by != __revit__.Application.Username:
-				report_rows.add(edited_by)
-				continue
+		edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+		if edited_by and edited_by != __revit__.Application.Username:
+			report_rows.add(edited_by)
+			continue
 
-			update_system_name(element)
-
-		except: # надеюсь это маловероятный сценарий
-			pass
+		update_system_name(element)
 
 	return report_rows
 
@@ -135,5 +143,6 @@ def script_execute():
 			print "\r\n".join(report_rows)
 
 		transaction.Commit()
+
 
 script_execute()

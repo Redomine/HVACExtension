@@ -97,8 +97,8 @@ def get_D_type(element):
 
 
 # Переменные для расчета
-length_reserve = 1.2 #запас длин
-area_reserve = 1.2 #запас площадей
+length_reserve = 1.1 #запас длин
+area_reserve = 1.1 #запас площадей
 sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
 
 def make_col(category):
