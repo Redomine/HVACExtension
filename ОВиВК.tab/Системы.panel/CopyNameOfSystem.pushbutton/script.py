@@ -81,10 +81,17 @@ def get_connectors(element):
 
 
 def get_type_system(element):
+	connectors = get_connectors(element)
+	hvac_connector = None
 
-	connector = next((c for c in get_connectors(element) if c.Domain == Domain.DomainHvac or c.Domain == Domain.DomainPiping), None)
-	if connector:
-		return get_type_system_name(connector)
+	for connector in connectors:
+		if connector.Domain == Domain.DomainHvac or connector.Domain == Domain.DomainPiping:
+			hvac_connector = connector
+			if hvac_connector:
+				if get_type_system_name(hvac_connector) != None:
+					return get_type_system_name(hvac_connector)
+
+	return None
 
 
 def get_type_system_name(element):
