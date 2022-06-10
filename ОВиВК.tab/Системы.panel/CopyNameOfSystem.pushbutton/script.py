@@ -154,12 +154,6 @@ def update_system_name(element):
 	if type_system_name:
 		system_name = type_system_name
 
-	if element.Id.IntegerValue == 2517492:
-		print system_name
-
-	if element.Id.IntegerValue == 2517492:
-		print type_system_name
-
 
 	if system_name == None:
 		if document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов') != None:
