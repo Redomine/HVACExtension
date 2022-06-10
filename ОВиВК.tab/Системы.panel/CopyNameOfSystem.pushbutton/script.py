@@ -96,11 +96,37 @@ def get_type_system_name(element):
 		return mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
 
 
+
+def rename_sub(element):
+	if hasattr(element, "GetSubComponentIds"):
+		super_component = element.SuperComponent
+		if super_component:
+			return
+
+		system_name = element.GetParamValueOrDefault("ADSK_Имя системы")
+
+		sub_elements = [document.GetElement(element_id) for element_id in element.GetSubComponentIds()]
+		for sub_element in sub_elements:
+
+			sub_element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
+			rename_sub_sub(sub_element, system_name)
+			sub_element_ids.append(sub_element.Id)
+
+def rename_sub_sub(element, system_name):
+	if not hasattr(element, "GetSubComponentIds"):
+		return
+	for element_id in element.GetSubComponentIds():
+		element = document.GetElement(element_id)
+		element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
+		rename_sub_sub(element, system_name)
+
+
 def update_system_name(element):
 	if element.GetParam(SharedParamsConfig.Instance.MechanicalSystemName).IsReadOnly:
 		return
 
 	system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+
 	if not system_name:
 		super_component = element.SuperComponent
 		if super_component:
@@ -111,30 +137,25 @@ def update_system_name(element):
 		# Т11 3,Т12 4 -> Т11, Т12
 		system_name = ", ".join(set([s.split(" ")[0] for s in system_name.split(",")]))
 
+
+
 	type_system_name = get_type_system(element)
 
-
+	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+		type_system_name = get_type_system_name(document.GetElement(element.HostElementId))
 
 	if type_system_name:
 		system_name = type_system_name
 
+	if element.Id.IntegerValue == 2517492:
+		print system_name
+
+	if element.Id.IntegerValue == 2517492:
+		print type_system_name
+
+	element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 
 
-	if hasattr(element, "GetSubComponentIds"):
-		sub_elements = [document.GetElement(element_id) for element_id in element.GetSubComponentIds()]
-
-		for sub_element in sub_elements:
-
-			sub_element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
-			sub_element_ids.append(sub_element.Id)
-
-	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
-		system_name = get_type_system_name(document.GetElement(element.HostElementId))
-
-
-
-	if element.Id not in sub_element_ids:
-		element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 
 
 def update_element(elements):
@@ -144,8 +165,14 @@ def update_element(elements):
 		if edited_by and edited_by != __revit__.Application.Username:
 			report_rows.add(edited_by)
 			continue
-
 		update_system_name(element)
+
+	#эта часть будет для проверки наличия сокращения
+	for element in elements:
+		edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+		if edited_by and edited_by != __revit__.Application.Username:
+			continue
+		rename_sub(element)
 
 	return report_rows
 
