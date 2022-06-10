@@ -28,10 +28,19 @@ def make_col(category):
                             .ToElements()
     return col
 
+def make_eks_col(category):
+    col = FilteredElementCollector(document)\
+                            .OfCategory(category)\
+                            .WhereElementIsNotElementType()\
+                            .ToElements()
+    return col
 
 colPipeSystem = make_col(BuiltInCategory.OST_PipingSystem)
 
 colDuctSystem = make_col(BuiltInCategory.OST_DuctSystem)
+colInsulation = make_eks_col(BuiltInCategory.OST_PipeInsulations)
+
+
 
 def get_elements():
 	categories = [BuiltInCategory.OST_MechanicalEquipment, 	#Оборудование
@@ -79,6 +88,9 @@ def get_type_system(element):
 
 
 def get_type_system_name(element):
+	if hasattr(element, "HostElementId"):
+		mep_type = get_type_system_name(document.GetElement(element.HostElementId))
+		return mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
 	if hasattr(element, "MEPSystem") and element.MEPSystem:
 		mep_type = document.GetElement(element.MEPSystem.GetTypeId())
 		return mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
@@ -99,17 +111,27 @@ def update_system_name(element):
 		# Т11 3,Т12 4 -> Т11, Т12
 		system_name = ", ".join(set([s.split(" ")[0] for s in system_name.split(",")]))
 
-
 	type_system_name = get_type_system(element)
+
+
 
 	if type_system_name:
 		system_name = type_system_name
 
+
+
 	if hasattr(element, "GetSubComponentIds"):
 		sub_elements = [document.GetElement(element_id) for element_id in element.GetSubComponentIds()]
+
 		for sub_element in sub_elements:
+
 			sub_element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 			sub_element_ids.append(sub_element.Id)
+
+	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+		system_name = get_type_system_name(document.GetElement(element.HostElementId))
+
+
 
 	if element.Id not in sub_element_ids:
 		element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
