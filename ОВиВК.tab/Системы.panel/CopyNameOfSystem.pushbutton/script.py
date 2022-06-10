@@ -160,6 +160,11 @@ def update_system_name(element):
 	if element.Id.IntegerValue == 2517492:
 		print type_system_name
 
+
+	if system_name == None:
+		if document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов') != None:
+			system_name = document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов')
+
 	element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 
 
@@ -174,7 +179,7 @@ def update_element(elements):
 			continue
 		update_system_name(element)
 
-	#эта часть будет для проверки наличия сокращения
+	#отдельно проходимся по суб-элементам, чтоб не перекрыть имена случайно основной проверкой
 	for element in elements:
 		edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
 		if edited_by and edited_by != __revit__.Application.Username:
