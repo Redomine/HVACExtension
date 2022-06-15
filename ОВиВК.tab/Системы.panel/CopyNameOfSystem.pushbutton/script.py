@@ -135,9 +135,12 @@ def update_system_name(element):
 	system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
 
 	if not system_name:
-		super_component = element.SuperComponent
-		if super_component:
-			system_name = super_component.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+		try:
+			super_component = element.SuperComponent
+			if super_component:
+				system_name = super_component.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+		except Exception:
+			pass
 
 	if system_name:
 		# Т11 3,Т11 4 -> Т11
