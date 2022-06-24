@@ -141,7 +141,8 @@ def duct_thickness(element):
 
     if str(element.Category.Name) == 'Соединительные детали воздуховодов':
         a = getConnectors(element)
-        if str(element.MEPModel.PartType) == 'Elbow':
+        if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Cap' \
+                or str(element.MEPModel.PartType) == 'TapAdjustable' or str(element.MEPModel.PartType) == 'Union':
             try:
                 SizeA = a[0].Width * 304.8
                 SizeB = a[0].Height * 304.8
@@ -303,21 +304,13 @@ def make_new_name(element):
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
 
-        New_Name = str(ADSK_Name) + ' ' + element.LookupParameter('Размер').AsString()
 
-        if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Tee':
+        try:
             thickness = duct_thickness(element)
-            New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + ' мм'
-
-        if str(element.MEPModel.PartType) == 'Transition':
-            thickness = duct_thickness(element)
-
-            try:
-                New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + \
-                           ' мм, длиной ' + element.LookupParameter('Длина воздуховода').AsValueString()  + ' мм'
-            except Exception:
-                New_Name = ADSK_Name + ' ' + element.LookupParameter(
-                    'Размер').AsString() + ' толщиной ' + thickness + ' мм'
+        except Exception:
+            print str(element.MEPModel.PartType)
+            print element.Id
+        New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + thickness + ' мм'
 
 
     Spec_Name.Set(str(New_Name))
@@ -410,6 +403,8 @@ def getCapacityParam(element, position):
                 Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
                 Spec_Length.Set(CapacityParam)
 
+
+
 #этот блок для элементов которые идут поштучно
 def getNumericalParam(element, position):
     try:
@@ -423,6 +418,35 @@ def getNumericalParam(element, position):
                 amount.Set(1)
     except Exception:
         pass
+    try:
+        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+            options = Options()
+            geoms = element.get_Geometry(options)
+
+            for g in geoms:
+                solids = g.GetInstanceGeometry()
+
+            area = 0
+            for solid in solids:
+                for face in solid.Faces:
+                    area = area + face.Area
+
+            connectors = getConnectors(element)
+
+            for connector in connectors:
+                try:
+                    H = connector.Height
+                    B = connector.Width
+                    S = H * B
+                except Exception:
+                    R = connector.Radius
+                    S = 3.14 * R * R
+
+                area = area - S
+                Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+                Spec_Length.Set(area)
+    except Exception:
+        print element.Id
 
 def getDependent(collection):
 
