@@ -448,6 +448,44 @@ def getNumericalParam(element, position):
     except Exception:
         print element.Id
 
+
+    try:
+        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+            options = Options()
+            geoms = element.get_Geometry(options)
+
+            for g in geoms:
+                solids = g.GetInstanceGeometry()
+
+            area = 0
+            for solid in solids:
+                for face in solid.Faces:
+                    area = area + face.Area
+
+            connectors = getConnectors(element)
+
+
+            for connector in connectors:
+                try:
+                    H = connector.Height
+                    B = connector.Width
+                    S = H * B
+                    area = area - S
+                except Exception:
+                    R = connector.Radius
+                    S = 3.14 * R * R
+                    area = area - S
+
+
+
+            Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+
+            Spec_Length.Set(area * 0.092903)
+
+
+    except Exception:
+        print element.Id
+
 def getDependent(collection):
 
     d = {}
