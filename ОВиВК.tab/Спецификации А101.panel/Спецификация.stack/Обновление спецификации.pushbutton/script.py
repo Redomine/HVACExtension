@@ -446,40 +446,6 @@ def getNumericalParam(element, position):
     except Exception:
         pass
 
-    if element.Id.IntegerValue == 5649330:
-        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
-            options = Options()
-            geoms = element.get_Geometry(options)
-
-            for g in geoms:
-                solids = g.GetInstanceGeometry()
-
-            area = 0
-
-            for solid in solids:
-                if isinstance(solid, Line):
-                    continue
-                for face in solid.Faces:
-                    area = area + face.Area
-
-            connectors = getConnectors(element)
-
-
-            for connector in connectors:
-                try:
-                    H = connector.Height
-                    B = connector.Width
-                    S = H * B
-                    area = area - S
-                except Exception:
-                    R = connector.Radius
-                    S = 3.14 * R * R
-                    area = area - S
-
-            Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
-
-            Spec_Length.Set(area * 0.092903)
-
     try:
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
             options = Options()
@@ -490,7 +456,7 @@ def getNumericalParam(element, position):
             area = 0
 
             for solid in solids:
-                if isinstance(solid, Line):
+                if isinstance(solid, Line) or isinstance(solid, Arc):
                     continue
                 for face in solid.Faces:
                     area = area + face.Area
