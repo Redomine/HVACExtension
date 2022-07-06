@@ -44,9 +44,12 @@ if "ФОП_v1.txt" != spFileName:
         print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt'
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб']
 
 pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
+
+projectparaNames = ['ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб']
 
 catFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting)
 catPipeFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeFitting)
@@ -62,6 +65,7 @@ catInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctInsula
 catPipeInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeInsulations)
 catPlumbingFixtures = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlumbingFixtures)
 catSprinklers = doc.Settings.Categories.get_Item(BuiltInCategory.OST_Sprinklers)
+catInformation = doc.Settings.Categories.get_Item(BuiltInCategory.OST_ProjectInformation)
 
 def make_type_col(category):
     col = FilteredElementCollector(doc)\
@@ -91,6 +95,8 @@ nodeCats = [catTerminals, catAccessory, catPipeAccessory, catEquipment, catPlumb
 
 pipeCats = [catPipeCurves]
 
+infCats = [catInformation]
+
 
 
 #проверка на наличие нужных параметров
@@ -111,6 +117,7 @@ catSet = doc.Application.Create.NewCategorySet()
 catDuctSet = doc.Application.Create.NewCategorySet()
 catPipeSet = doc.Application.Create.NewCategorySet()
 nodeCatSet = doc.Application.Create.NewCategorySet()
+infCatSet = doc.Application.Create.NewCategorySet()
 
 for cat in cats:
     catSet.Insert(cat)
@@ -124,8 +131,8 @@ for cat in pipeCats:
 for cat in nodeCats:
     nodeCatSet.Insert(cat)
 
-
-
+for cat in infCats:
+    infCatSet.Insert(cat)
 
 
 with revit.Transaction("Добавление параметров"):
@@ -145,7 +152,8 @@ with revit.Transaction("Добавление параметров"):
                     elif name == "ФОП_ВИС_Узел":
                         newIB = doc.Application.Create.NewTypeBinding(nodeCatSet)
 
-
+                    elif name == 'ФОП_ВИС_Запас изоляции' or name == 'ФОП_ВИС_Запас воздуховодов/труб':
+                        newIB = doc.Application.Create.NewInstanceBinding(infCatSet)
 
                     else:
                         newIB = doc.Application.Create.NewInstanceBinding(catSet)
@@ -163,6 +171,11 @@ with revit.Transaction("Добавление параметров"):
                         for collection in collections:
                             for element in collection:
                                 element.LookupParameter(name).Set(0)
+
+                    if name == 'ФОП_ВИС_Запас изоляции' or name == 'ФОП_ВИС_Запас воздуховодов/труб':
+                        inf = doc.ProjectInformation.LookupParameter(name)
+                        inf.Set(10)
+
 
 
 

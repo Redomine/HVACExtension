@@ -92,13 +92,27 @@ def get_D_type(element):
     else: type = "Днар х Стенка"
     return type
 
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб']
 
-
+#проверка на наличие нужных параметров
+map = doc.ParameterBindings
+it = map.ForwardIterator()
+while it.MoveNext():
+    newProjectParameterData = it.Key.Name
+    if str(newProjectParameterData) in paraNames:
+        paraNames.remove(str(newProjectParameterData))
+if len(paraNames) > 0:
+    print 'Необходимо добавить параметры'
+    for name in paraNames:
+        print name
+    sys.exit()
 
 
 # Переменные для расчета
-length_reserve = 1.1 #запас длин
-area_reserve = 1.1 #запас площадей
+length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
+area_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
 sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
 
 def make_col(category):
@@ -141,7 +155,8 @@ def duct_thickness(element):
 
     if str(element.Category.Name) == 'Соединительные детали воздуховодов':
         a = getConnectors(element)
-        if str(element.MEPModel.PartType) == 'Elbow':
+        if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Cap' \
+                or str(element.MEPModel.PartType) == 'TapAdjustable' or str(element.MEPModel.PartType) == 'Union':
             try:
                 SizeA = a[0].Width * 304.8
                 SizeB = a[0].Height * 304.8
@@ -303,21 +318,13 @@ def make_new_name(element):
 
     if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
 
-        New_Name = str(ADSK_Name) + ' ' + element.LookupParameter('Размер').AsString()
 
-        if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Tee':
+        try:
             thickness = duct_thickness(element)
-            New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + ' мм'
-
-        if str(element.MEPModel.PartType) == 'Transition':
-            thickness = duct_thickness(element)
-
-            try:
-                New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + \
-                           ' мм, длиной ' + element.LookupParameter('Длина воздуховода').AsValueString()  + ' мм'
-            except Exception:
-                New_Name = ADSK_Name + ' ' + element.LookupParameter(
-                    'Размер').AsString() + ' толщиной ' + thickness + ' мм'
+        except Exception:
+            print str(element.MEPModel.PartType)
+            print element.Id
+        New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + thickness + ' мм'
 
 
     Spec_Name.Set(str(New_Name))
@@ -410,6 +417,21 @@ def getCapacityParam(element, position):
                 Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
                 Spec_Length.Set(CapacityParam)
 
+        #if position == '6. Материалы изоляции воздуховодов' and CapacityParam == 0:
+        #    options = Options()
+        #    geoms = element.get_Geometry(options)
+        #
+        #    area = 0
+        #    for g in geoms:
+        #        faces = g.Faces
+        #
+        #    for face in faces:
+        #        area = area + face.Area
+
+
+        #    Spec_Length.Set(area  * 0.092903)
+
+
 #этот блок для элементов которые идут поштучно
 def getNumericalParam(element, position):
     try:
@@ -423,6 +445,78 @@ def getNumericalParam(element, position):
                 amount.Set(1)
     except Exception:
         pass
+
+    if element.Id.IntegerValue == 5649330:
+        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+            options = Options()
+            geoms = element.get_Geometry(options)
+
+            for g in geoms:
+                solids = g.GetInstanceGeometry()
+
+            area = 0
+
+            for solid in solids:
+                if isinstance(solid, Line):
+                    continue
+                for face in solid.Faces:
+                    area = area + face.Area
+
+            connectors = getConnectors(element)
+
+
+            for connector in connectors:
+                try:
+                    H = connector.Height
+                    B = connector.Width
+                    S = H * B
+                    area = area - S
+                except Exception:
+                    R = connector.Radius
+                    S = 3.14 * R * R
+                    area = area - S
+
+            Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+
+            Spec_Length.Set(area * 0.092903)
+
+    try:
+        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+            options = Options()
+            geoms = element.get_Geometry(options)
+
+            for g in geoms:
+                solids = g.GetInstanceGeometry()
+            area = 0
+
+            for solid in solids:
+                if isinstance(solid, Line):
+                    continue
+                for face in solid.Faces:
+                    area = area + face.Area
+
+            connectors = getConnectors(element)
+
+            for connector in connectors:
+                try:
+                    H = connector.Height
+                    B = connector.Width
+                    S = H * B
+                    area = area - S
+                except Exception:
+                    R = connector.Radius
+                    S = 3.14 * R * R
+                    area = area - S
+
+            Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+
+            Spec_Length.Set(area * 0.092903)
+
+    except Exception:
+        Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+        Spec_Length.Set(0)
+
+
 
 def getDependent(collection):
 
@@ -475,21 +569,7 @@ def getDependent(collection):
                     pass
 
 
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
 
-#проверка на наличие нужных параметров
-map = doc.ParameterBindings
-it = map.ForwardIterator()
-while it.MoveNext():
-    newProjectParameterData = it.Key.Name
-    if str(newProjectParameterData) in paraNames:
-        paraNames.remove(str(newProjectParameterData))
-if len(paraNames) > 0:
-    print 'Необходимо добавить параметры'
-    for name in paraNames:
-        print name
-    sys.exit()
 
 #проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
 errors_list = []
