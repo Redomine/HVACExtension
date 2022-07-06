@@ -92,13 +92,27 @@ def get_D_type(element):
     else: type = "Днар х Стенка"
     return type
 
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб']
 
-
+#проверка на наличие нужных параметров
+map = doc.ParameterBindings
+it = map.ForwardIterator()
+while it.MoveNext():
+    newProjectParameterData = it.Key.Name
+    if str(newProjectParameterData) in paraNames:
+        paraNames.remove(str(newProjectParameterData))
+if len(paraNames) > 0:
+    print 'Необходимо добавить параметры'
+    for name in paraNames:
+        print name
+    sys.exit()
 
 
 # Переменные для расчета
-length_reserve = 1.1 #запас длин
-area_reserve = 1.1 #запас площадей
+length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
+area_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
 sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
 
 def make_col(category):
@@ -403,6 +417,19 @@ def getCapacityParam(element, position):
                 Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
                 Spec_Length.Set(CapacityParam)
 
+        #if position == '6. Материалы изоляции воздуховодов' and CapacityParam == 0:
+        #    options = Options()
+        #    geoms = element.get_Geometry(options)
+        #
+        #    area = 0
+        #    for g in geoms:
+        #        faces = g.Faces
+        #
+        #    for face in faces:
+        #        area = area + face.Area
+
+
+        #    Spec_Length.Set(area  * 0.092903)
 
 
 #этот блок для элементов которые идут поштучно
@@ -542,21 +569,7 @@ def getDependent(collection):
                     pass
 
 
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка']
 
-#проверка на наличие нужных параметров
-map = doc.ParameterBindings
-it = map.ForwardIterator()
-while it.MoveNext():
-    newProjectParameterData = it.Key.Name
-    if str(newProjectParameterData) in paraNames:
-        paraNames.remove(str(newProjectParameterData))
-if len(paraNames) > 0:
-    print 'Необходимо добавить параметры'
-    for name in paraNames:
-        print name
-    sys.exit()
 
 #проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
 errors_list = []
