@@ -418,7 +418,8 @@ def getNumericalParam(element, position):
                 amount.Set(1)
     except Exception:
         pass
-    try:
+
+    if element.Id.IntegerValue == 5649330:
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
             options = Options()
             geoms = element.get_Geometry(options)
@@ -427,38 +428,10 @@ def getNumericalParam(element, position):
                 solids = g.GetInstanceGeometry()
 
             area = 0
+
             for solid in solids:
-                for face in solid.Faces:
-                    area = area + face.Area
-
-            connectors = getConnectors(element)
-
-            for connector in connectors:
-                try:
-                    H = connector.Height
-                    B = connector.Width
-                    S = H * B
-                except Exception:
-                    R = connector.Radius
-                    S = 3.14 * R * R
-
-                area = area - S
-                Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
-                Spec_Length.Set(area)
-    except Exception:
-        print element.Id
-
-
-    try:
-        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
-            options = Options()
-            geoms = element.get_Geometry(options)
-
-            for g in geoms:
-                solids = g.GetInstanceGeometry()
-
-            area = 0
-            for solid in solids:
+                if isinstance(solid, Line):
+                    continue
                 for face in solid.Faces:
                     area = area + face.Area
 
@@ -475,16 +448,48 @@ def getNumericalParam(element, position):
                     R = connector.Radius
                     S = 3.14 * R * R
                     area = area - S
-
-
 
             Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
 
             Spec_Length.Set(area * 0.092903)
 
+    try:
+        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+            options = Options()
+            geoms = element.get_Geometry(options)
+
+            for g in geoms:
+                solids = g.GetInstanceGeometry()
+            area = 0
+
+            for solid in solids:
+                if isinstance(solid, Line):
+                    continue
+                for face in solid.Faces:
+                    area = area + face.Area
+
+            connectors = getConnectors(element)
+
+            for connector in connectors:
+                try:
+                    H = connector.Height
+                    B = connector.Width
+                    S = H * B
+                    area = area - S
+                except Exception:
+                    R = connector.Radius
+                    S = 3.14 * R * R
+                    area = area - S
+
+            Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+
+            Spec_Length.Set(area * 0.092903)
 
     except Exception:
-        print element.Id
+        Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+        Spec_Length.Set(0)
+
+
 
 def getDependent(collection):
 
