@@ -94,7 +94,7 @@ def get_D_type(element):
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб']
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения']
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
@@ -561,6 +561,37 @@ def update_element(element):
     if element in colPipeInsulations: getCapacityParam(element, '6. Материалы трубопроводной изоляции')
     if element in colInsulations: getCapacityParam(element, '6. Материалы изоляции воздуховодов')
 
+
+def update_boq(element):
+    fop_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+    adsk_mark = get_ADSK_Mark(element)
+
+    boq_name = element.LookupParameter('ФОП_ТИП_Назначение')
+    if adsk_mark == "None":
+        boq_name.Set(fop_name)
+    else:
+        boq_name.Set(fop_name + ' ' + adsk_mark)
+
+    fop_izm = get_ADSK_Izm(element)
+    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды' \
+            or element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+        fop_izm = "м2"
+
+    boq_izm = element.LookupParameter('ФОП_ТИП_Единица измерения')
+    if fop_izm == None:
+        fop_izm = "None"
+    boq_izm.Set(fop_izm)
+
+    fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
+
+    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
+        fop_number = (element.LookupParameter('Площадь').AsDouble() * 0.092903) * area_reserve
+        fop_number = round(fop_number, 2)
+
+    boq_number = element.LookupParameter('ФОП_ТИП_Число')
+
+    boq_number.Set(fop_number)
+
 def script_execute():
     report_rows = set()
 
@@ -574,6 +605,7 @@ def script_execute():
 
             update_element(element)
             make_new_name(element)
+            update_boq(element)
 
     if len(errors_list) > 0:
         for error in errors_list:
@@ -586,9 +618,13 @@ def script_execute():
         getDependent(colAccessory)
         getDependent(colTerminals)
 
+
+
     if report_rows:
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
         print "\r\n".join(report_rows)
+
+
 
 with revit.Transaction("Обновление общей спеки"):
     script_execute()
