@@ -335,8 +335,7 @@ def make_new_name(element):
                         thickness = min_thickness
         except Exception:
             pass
-        if element.Id.IntegerValue == 1388425:
-            print min_thickness
+
         New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
 
 
