@@ -327,21 +327,35 @@ def make_new_name(element):
         try:
             connectors = getConnectors(element)
             for connector in connectors:
-                ElemTypeId = getDuct(connector).GetTypeId()
-                ElemType = doc.GetElement(ElemTypeId)
-                if ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')):
-                    min_thickness = ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')).AsDouble()
-                    if float(min_thickness) > float(thickness):
-                        thickness = min_thickness
+                if getDuct_test(connector) != None:
+                    ElemTypeId = getDuct_test(connector).GetTypeId()
+                    ElemType = doc.GetElement(ElemTypeId)
+                    if ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')):
+                        min_thickness = ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')).AsDouble()
+                        if float(min_thickness) > float(thickness):
+                            thickness = min_thickness
         except Exception:
             pass
+
+
 
         New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
 
 
-
-
     Spec_Name.Set(str(New_Name))
+
+
+def getDuct_test(connector):
+    mainCon = []
+    connectorSet = connector.AllRefs.ForwardIterator()
+    while connectorSet.MoveNext():
+        mainCon.append(connectorSet.Current)
+
+    for con in mainCon:
+        if con.Owner.LookupParameter('ФОП_ВИС_Группирование'):
+            if con.Owner.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
+                duct = con.Owner
+                return duct
 
 
 
@@ -352,8 +366,9 @@ def getDuct(connector):
         mainCon.append(connectorSet.Current)
 
     for con in mainCon:
-        if con.Owner.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
-            duct = con.Owner
+        if con.Owner.LookupParameter('ФОП_ВИС_Группирование'):
+            if con.Owner.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
+                duct = con.Owner
     return duct
 
 def getConnectors(element):
