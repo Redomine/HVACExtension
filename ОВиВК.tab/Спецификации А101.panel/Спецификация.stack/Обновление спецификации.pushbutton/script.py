@@ -94,7 +94,7 @@ def get_D_type(element):
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения']
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения', 'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
@@ -622,8 +622,17 @@ def update_boq(element):
         fop_number = round(fop_number, 2)
 
     boq_number = element.LookupParameter('ФОП_ТИП_Число')
-
     boq_number.Set(fop_number)
+
+    ElemTypeId = element.GetTypeId()
+    ElemType = doc.GetElement(ElemTypeId)
+    code = ElemType.LookupParameter('Код по классификатору').AsString()
+    boq_code = element.LookupParameter('ФОП_ТИП_Код')
+    boq_code.Set(code)
+
+    work_name = ElemType.LookupParameter('Описание по классификатору').AsString()
+    boq_work = element.LookupParameter('ФОП_ТИП_Наименование работы')
+    boq_work.Set(work_name)
 
 def regroop(element):
     ADSK_Mark = get_ADSK_Mark(element)
