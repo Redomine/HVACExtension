@@ -27,8 +27,7 @@ from rpw.ui.forms import TextInput
 from rpw.ui.forms import SelectFromList
 from rpw.ui.forms import Alert
 
-exel = Excel.ApplicationClass()
-filepath = select_file()
+
 
 
 
@@ -54,18 +53,24 @@ famtypeitr.Reset()
 
 
 
+
+
 is_temporary_in = False
+
 for element in famtypeitr:
     famtypeID = element
     famsymb = doc.GetElement(famtypeID)
 
-    if famsymb.Family.Name == '_Заглушка для спецификаций':
+    if famsymb.Family.Name == '_Якорный элемент':
         temporary = famsymb
         is_temporary_in = True
 
 if is_temporary_in == False:
-    print 'Не обнаружено семейство-заглушка для спецификаций, проверьте не менялось ли его имя или загружалось ли оно'
+    print 'Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
+
+exel = Excel.ApplicationClass()
+filepath = select_file()
 
 
 def setElement(element, name, setting):
@@ -80,6 +85,8 @@ def setElement(element, name, setting):
 def new_position(calculation_elements):
     #создаем заглушки по элементов собранных из таблицы
     loc = XYZ(0, 0, 0)
+
+    temporary.Activate()
     for element in calculation_elements:
         familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
 
@@ -87,7 +94,7 @@ def new_position(calculation_elements):
     colModel = make_col(BuiltInCategory.OST_GenericModel)
     Models = []
     for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
+        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
             try:
                 element.CreatedPhaseId = phaseid
             except Exception:
@@ -124,17 +131,17 @@ except Exception:
 xlrange = worksheet.Range["A1", "AZ500"]
 
 ADSK_System = 0
-FOP_Group = 1
-FOP_Name = 2
-ADSK_Maker = 3
-ADSK_Izm = 4
-FOP_Number = 5
+FOP_Group = 3
+FOP_Name = 4
+ADSK_Maker = 5
+ADSK_Izm = 6
+FOP_Number = 7
 
 
 with revit.Transaction("Добавление расчетных элементов"):
     #при каждом повторе расчета удаляем старые версии
     for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
+        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
             doc.Delete(element.Id)
 
     calculation_elements = []

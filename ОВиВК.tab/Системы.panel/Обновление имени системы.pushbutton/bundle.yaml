@@ -1,6 +1,12 @@
 title:
-  ru: Обновление имени системы
-  en_us: Update name of system
+  ru: >-
+    Обновление
+    
+    имени системы
+  en_us: >-
+    Update
+    
+    name of system
 
 tooltip:
   ru: Копирует наименование системы в общий параметр

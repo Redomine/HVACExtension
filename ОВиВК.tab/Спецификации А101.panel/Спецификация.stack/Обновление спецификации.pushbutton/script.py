@@ -94,7 +94,7 @@ def get_D_type(element):
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения']
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения', 'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
@@ -143,6 +143,7 @@ collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPi
 def duct_thickness(element):
     mode = ''
     if str(element.Category.Name) == 'Воздуховоды':
+
         a = getConnectors(element)
         try:
             SizeA = a[0].Width * 304.8
@@ -214,6 +215,32 @@ def duct_thickness(element):
                 Size = max(Size, SizeC)
                 mode = 'R'
 
+        if str(element.MEPModel.PartType) == 'Cross':
+            try:
+                SizeA = a[0].Width * 304.8
+                SizeA_1 = a[0].Height * 304.8
+                SizeB = a[1].Width * 304.8
+                SizeB_1 = a[1].Height * 304.8
+                SizeC = a[2].Width * 304.8
+                SizeC_1 = a[2].Height * 304.8
+                SizeD = a[3].Width * 304.8
+                SizeD_1 = a[3].Height * 304.8
+
+                Size = max(SizeA, SizeB)
+                Size = max(Size, SizeC)
+                Size = max(Size, SizeD)
+                mode = 'W'
+            except:
+                SizeA = a[0].Radius*2 * 304.8
+                SizeB = a[1].Radius*2 * 304.8
+                SizeC = a[2].Radius*2 * 304.8
+                SizeD = a[3].Radius*2 * 304.8
+
+                Size = max(SizeA, SizeB)
+                Size = max(Size, SizeC)
+                Size = max(Size, SizeD)
+                mode = 'R'
+
     if mode == 'R':
         if Size < 201:
             thickness = '0.5'
@@ -263,7 +290,9 @@ def make_new_name(element):
 
     New_Name = ADSK_Name
 
-    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Трубопроводы':
+
+
+    if str(element.Category.Name) == 'Трубы':
         external_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
         internal_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
         pipe_thickness = (external_size - internal_size)/2
@@ -289,7 +318,7 @@ def make_new_name(element):
 
 
 
-    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
+    if str(element.Category.Name) == 'Воздуховоды':
         thickness = duct_thickness(element)
         try:
             New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.LookupParameter('Размер').AsString()
@@ -297,7 +326,8 @@ def make_new_name(element):
             New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.LookupParameter(
                 'Свободный размер').AsString()
 
-    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '6. Материалы трубопроводной изоляции':
+
+    if str(element.Category.Name) == 'Материалы изоляции труб':
         ADSK_Izm = get_ADSK_Izm(element)
         if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
             L = element.LookupParameter('Длина').AsDouble() * 304.8
@@ -316,7 +346,7 @@ def make_new_name(element):
             except Exception:
                 pass
 
-    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+    if str(element.Category.Name) == 'Соединительные детали воздуховодов':
 
         try:
             thickness = duct_thickness(element)
@@ -419,7 +449,7 @@ def getElementSize(element):
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
 
-#этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять милимметры для длины и м2 для площади)
+#этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять милимметры для длины и м2 для площади) и для расстановки позиции
 def getCapacityParam(element, position):
 
     if element.LookupParameter('ФОП_ВИС_Группирование'):
@@ -455,22 +485,9 @@ def getCapacityParam(element, position):
                 Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
                 Spec_Length.Set(CapacityParam)
 
-        #if position == '6. Материалы изоляции воздуховодов' and CapacityParam == 0:
-        #    options = Options()
-        #    geoms = element.get_Geometry(options)
-        #
-        #    area = 0
-        #    for g in geoms:
-        #        faces = g.Faces
-        #
-        #    for face in faces:
-        #        area = area + face.Area
 
 
-        #    Spec_Length.Set(area  * 0.092903)
-
-
-#этот блок для элементов которые идут поштучно
+#этот блок для элементов которые идут поштучно и для расстановки позиции
 def getNumericalParam(element, position):
     try:
         if element.Location:
@@ -485,7 +502,7 @@ def getNumericalParam(element, position):
         pass
 
     try:
-        if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+        if str(element.Category.Name) == 'Соединительные детали воздуховодов':
             options = Options()
             geoms = element.get_Geometry(options)
 
@@ -524,8 +541,10 @@ def getNumericalParam(element, position):
 
 def getDependent(collection):
 
+
     d = {}
     for element in collection:
+
 
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
@@ -611,8 +630,10 @@ def update_boq(element):
         boq_name.Set(fop_name + ' ' + adsk_mark)
 
     fop_izm = get_ADSK_Izm(element)
-    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды' \
-            or element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+
+
+    if str(element.Category.Name) == 'Воздуховоды' \
+            or str(element.Category.Name) == 'Соединительные детали воздуховодов':
         fop_izm = "м2"
 
     boq_izm = element.LookupParameter('ФОП_ТИП_Единица измерения')
@@ -622,13 +643,34 @@ def update_boq(element):
 
     fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
 
-    if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
+    if str(element.Category.Name) == 'Воздуховоды':
         fop_number = (element.LookupParameter('Площадь').AsDouble() * 0.092903) * area_reserve
         fop_number = round(fop_number, 2)
 
     boq_number = element.LookupParameter('ФОП_ТИП_Число')
-
     boq_number.Set(fop_number)
+
+    ElemTypeId = element.GetTypeId()
+    ElemType = doc.GetElement(ElemTypeId)
+    code = ElemType.LookupParameter('Код по классификатору').AsString()
+    boq_code = element.LookupParameter('ФОП_ТИП_Код')
+    boq_code.Set(code)
+
+    work_name = ElemType.LookupParameter('Описание по классификатору').AsString()
+    boq_work = element.LookupParameter('ФОП_ТИП_Наименование работы')
+    boq_work.Set(work_name)
+
+def regroop(element):
+    ADSK_Mark = get_ADSK_Mark(element)
+    ADSK_Name = get_ADSK_Name(element)
+    FOP_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+    if str(element.Category.Name) != 'Соединительные детали воздуховодов':
+        element.LookupParameter('ФОП_ВИС_Группирование').Set(element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name + " " + ADSK_Mark)
+    else:
+        element.LookupParameter('ФОП_ВИС_Группирование').Set(element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name)
+
+
+
 
 def script_execute():
     report_rows = set()
@@ -648,6 +690,10 @@ def script_execute():
     if len(errors_list) > 0:
         for error in errors_list:
             print error
+
+    for collection in collections:
+        for element in collection:
+            regroop(element)
 
     if sort_dependent_by_equipment == True:
         getDependent(colEquipment)
