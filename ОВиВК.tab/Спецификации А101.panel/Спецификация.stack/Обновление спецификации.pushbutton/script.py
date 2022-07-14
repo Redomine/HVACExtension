@@ -215,6 +215,32 @@ def duct_thickness(element):
                 Size = max(Size, SizeC)
                 mode = 'R'
 
+        if str(element.MEPModel.PartType) == 'Cross':
+            try:
+                SizeA = a[0].Width * 304.8
+                SizeA_1 = a[0].Height * 304.8
+                SizeB = a[1].Width * 304.8
+                SizeB_1 = a[1].Height * 304.8
+                SizeC = a[2].Width * 304.8
+                SizeC_1 = a[2].Height * 304.8
+                SizeD = a[3].Width * 304.8
+                SizeD_1 = a[3].Height * 304.8
+
+                Size = max(SizeA, SizeB)
+                Size = max(Size, SizeC)
+                Size = max(Size, SizeD)
+                mode = 'W'
+            except:
+                SizeA = a[0].Radius*2 * 304.8
+                SizeB = a[1].Radius*2 * 304.8
+                SizeC = a[2].Radius*2 * 304.8
+                SizeD = a[3].Radius*2 * 304.8
+
+                Size = max(SizeA, SizeB)
+                Size = max(Size, SizeC)
+                Size = max(Size, SizeD)
+                mode = 'R'
+
     if mode == 'R':
         if Size < 201:
             thickness = '0.5'
