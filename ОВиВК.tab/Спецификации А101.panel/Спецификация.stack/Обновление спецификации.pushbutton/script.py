@@ -357,8 +357,8 @@ def make_new_name(element):
         try:
             connectors = getConnectors(element)
             for connector in connectors:
-                if getDuct_test(connector) != None:
-                    ElemTypeId = getDuct_test(connector).GetTypeId()
+                if getDuct(connector) != None:
+                    ElemTypeId = getDuct(connector).GetTypeId()
                     ElemType = doc.GetElement(ElemTypeId)
                     if ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')):
                         min_thickness = ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')).AsDouble()
@@ -375,20 +375,6 @@ def make_new_name(element):
     Spec_Name.Set(str(New_Name))
 
 
-def getDuct_test(connector):
-    mainCon = []
-    connectorSet = connector.AllRefs.ForwardIterator()
-    while connectorSet.MoveNext():
-        mainCon.append(connectorSet.Current)
-
-    for con in mainCon:
-        if con.Owner.LookupParameter('ФОП_ВИС_Группирование'):
-            if con.Owner.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
-                duct = con.Owner
-                return duct
-
-
-
 def getDuct(connector):
     mainCon = []
     connectorSet = connector.AllRefs.ForwardIterator()
@@ -397,9 +383,13 @@ def getDuct(connector):
 
     for con in mainCon:
         if con.Owner.LookupParameter('ФОП_ВИС_Группирование'):
-            if con.Owner.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Воздуховоды':
+            if str(con.Owner.Category.Name) == 'Воздуховоды':
                 duct = con.Owner
-    return duct
+                return duct
+
+
+
+
 
 def getConnectors(element):
     connectors = []
