@@ -68,16 +68,45 @@ for element in famtypeitr:
 if is_temporary_in == False:
     print 'Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
+             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
+
+
+#проверка на наличие нужных параметров
+map = doc.ParameterBindings
+it = map.ForwardIterator()
+while it.MoveNext():
+    newProjectParameterData = it.Key.Name
+    if str(newProjectParameterData) in paraNames:
+        paraNames.remove(str(newProjectParameterData))
+if len(paraNames) > 0:
+    print 'Необходимо добавить параметры'
+    for name in paraNames:
+        print name
+    sys.exit()
+
 
 exel = Excel.ApplicationClass()
 filepath = select_file()
+
+
+
 
 
 def setElement(element, name, setting):
     try:
         if setting == None:
             pass
-        else: element.LookupParameter(name).Set(setting)
+        else:
+            element.LookupParameter(name).Set(setting)
+            if name == 'ADSK_Единица измерения':
+                element.LookupParameter('ФОП_ТИП_Единица измерения').Set(setting)
+            if name == 'ФОП_ВИС_Число':
+                element.LookupParameter('ФОП_ТИП_Число').Set(setting)
+            if name == 'ФОП_ВИС_Наименование комбинированное':
+                element.LookupParameter('ФОП_ТИП_Назначение').Set(setting)
     except Exception:
         pass
 
@@ -106,11 +135,17 @@ def new_position(calculation_elements):
     for element in calculation_elements:
         dummy = Models[0]
         setElement(dummy, 'ADSK_Имя системы', element[0])
-        setElement(dummy, 'ФОП_ВИС_Группирование', element[1])
-        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element[2])
-        setElement(dummy, 'ADSK_Завод-изготовитель', element[3])
-        setElement(dummy, 'ФОП_ВИС_Единица измерения', element[4])
-        setElement(dummy, 'ФОП_ВИС_Число', element[5])
+        setElement(dummy, 'ФОП_ТИП_Код', element[1])
+        setElement(dummy, 'ФОП_ТИП_Наименование работы', element[2])
+        setElement(dummy, 'ФОП_ВИС_Группирование', element[3])
+        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element[4])
+        setElement(dummy, 'ADSK_Марка', element[5])
+        setElement(dummy, 'ADSK_Код изделия', element[6])
+        setElement(dummy, 'ADSK_Завод-изготовитель', element[7])
+        setElement(dummy, 'ADSK_Единица измерения', element[8])
+        setElement(dummy, 'ФОП_ВИС_Число', element[9])
+        setElement(dummy, 'ADSK_Масса', element[10])
+        setElement(dummy, 'ADSK_Примечание', element[11])
         Models.pop(0)
 
 ADSK_System_Names = []
@@ -131,14 +166,30 @@ except Exception:
 xlrange = worksheet.Range["A1", "AZ500"]
 
 ADSK_System = 0
+FOP_class = 1
+FOP_work = 2
 FOP_Group = 3
 FOP_Name = 4
-ADSK_Maker = 5
-ADSK_Izm = 6
-FOP_Number = 7
+ADSK_Mark = 5
+ADSK_Art = 6
+ADSK_Maker = 7
+ADSK_Izm = 8
+FOP_Number = 9
+FOP_Mass = 10
+ADSK_Comment = 11
 
+report_rows = set()
+
+
+for element in colModel:
+    edited_by = element.LookupParameter('Редактирует').AsString()
+    if edited_by and edited_by != __revit__.Application.Username:
+        print "Якорные элементы не были обработаны, так как были заняты пользователями:"
+        print edited_by
+        sys.exit()
 
 with revit.Transaction("Добавление расчетных элементов"):
+
     #при каждом повторе расчета удаляем старые версии
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
@@ -150,13 +201,21 @@ with revit.Transaction("Добавление расчетных элементо
         if xlrange.value2[row, FOP_Name] == None:
             break
         System = xlrange.value2[row, ADSK_System]
+        Class = xlrange.value2[row, FOP_class]
+        Work = xlrange.value2[row, FOP_work]
         Group = xlrange.value2[row, FOP_Group]
         Name = xlrange.value2[row, FOP_Name]
+        Mark = xlrange.value2[row, ADSK_Mark]
+        Art = xlrange.value2[row, ADSK_Art]
         Maker = xlrange.value2[row, ADSK_Maker]
         Izm = xlrange.value2[row, ADSK_Izm]
         Number = xlrange.value2[row, FOP_Number]
+        Mass = xlrange.value2[row, FOP_Mass]
+        Comment = xlrange.value2[row, ADSK_Comment]
+
         row += 1
-        calculation_elements.append([System, Group, Name, Maker, Izm, Number])
+        calculation_elements.append([System, Class, Work, Group, Name, Mark, Art, Maker, Izm, Number, Mass, Comment])
+
 
 
     for phase in doc.Phases:

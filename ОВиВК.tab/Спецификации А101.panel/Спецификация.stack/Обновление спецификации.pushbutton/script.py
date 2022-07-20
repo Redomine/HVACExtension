@@ -92,9 +92,10 @@ def get_D_type(element):
     else: type = "Днар х Стенка"
     return type
 
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения', 'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
+             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
@@ -619,17 +620,23 @@ def update_boq(element):
     else:
         boq_name.Set(fop_name + ' ' + adsk_mark)
 
-    fop_izm = get_ADSK_Izm(element)
-
-
-    if str(element.Category.Name) == 'Воздуховоды' \
-            or str(element.Category.Name) == 'Соединительные детали воздуховодов':
-        fop_izm = "м2"
-
     boq_izm = element.LookupParameter('ФОП_ТИП_Единица измерения')
-    if fop_izm == None:
-        fop_izm = "None"
-    boq_izm.Set(fop_izm)
+    fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
+
+    adsk_izm = get_ADSK_Izm(element)
+
+    if adsk_izm == None:
+        adsk_izm = "None"
+
+
+    if str(element.Category.Name) == 'Соединительные детали воздуховодов':
+        fop_izm.Set("м2")
+        boq_izm.Set("м2")
+    elif str(element.Category.Name) == 'Воздуховоды':
+        boq_izm.Set("м2")
+    else:
+        boq_izm.Set(adsk_izm)
+        fop_izm.Set(adsk_izm)
 
     fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
 
