@@ -177,8 +177,18 @@ FOP_Number = 9
 FOP_Mass = 10
 ADSK_Comment = 11
 
+report_rows = set()
+
+
+for element in colModel:
+    edited_by = element.LookupParameter('Редактирует').AsString()
+    if edited_by and edited_by != __revit__.Application.Username:
+        print "Якорные элементы не были обработаны, так как были заняты пользователями:"
+        print edited_by
+        sys.exit()
 
 with revit.Transaction("Добавление расчетных элементов"):
+
     #при каждом повторе расчета удаляем старые версии
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
