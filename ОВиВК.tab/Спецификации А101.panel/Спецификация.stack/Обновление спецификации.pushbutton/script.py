@@ -609,7 +609,7 @@ def update_element(element):
     if element in colPipeInsulations: getCapacityParam(element, '6. Материалы трубопроводной изоляции')
     if element in colInsulations: getCapacityParam(element, '6. Материалы изоляции воздуховодов')
 
-
+#Обновляем параметры для ВОР и перебиваем единицы измерения
 def update_boq(element):
     fop_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
     adsk_mark = get_ADSK_Mark(element)
@@ -634,6 +634,7 @@ def update_boq(element):
         boq_izm.Set("м2")
     elif str(element.Category.Name) == 'Воздуховоды':
         boq_izm.Set("м2")
+        fop_izm.Set(adsk_izm)
     else:
         boq_izm.Set(adsk_izm)
         fop_izm.Set(adsk_izm)
