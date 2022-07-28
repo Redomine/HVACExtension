@@ -90,12 +90,18 @@ def copyEF(collection):
 
 
 def getDependent(collection):
-    for element in collection:
-        EF = element.LookupParameter('ФОП_Экономическая функция').AsString()
-        dependent = element.GetSubComponentIds()
 
-        for depend in dependent:
-            depend.LookupParameter('ФОП_Экономическая функция').Set(EF)
+    for element in collection:
+
+        EF = element.LookupParameter('ФОП_Экономическая функция').AsString()
+
+        try:
+            dependent = element.GetSubComponentIds()
+
+            for depend in dependent:
+                doc.GetElement(depend).LookupParameter('ФОП_Экономическая функция').Set(EF)
+        except Exception:
+            pass
 
 def getSystemDict(collection):
     Dict = {}
@@ -147,3 +153,4 @@ pipeDict = getSystemDict(colPipeSystems)
 with revit.Transaction("Обновление общей спеки"):
     for collection in collections:
         copyEF(collection)
+        getDependent(collection)
