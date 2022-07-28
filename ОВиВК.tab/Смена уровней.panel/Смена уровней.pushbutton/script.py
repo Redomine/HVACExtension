@@ -127,14 +127,22 @@ def change_level(element, new_level, new_offset, offset_param, height_param):
     offset_param.Set(new_offset)
     return element
 
+method = SelectFromList('Выберите метод привязки', ['Все элементы к ближайшим уровням', 'Все элементы на активном виде к выбранному уровню', 'Выбранные элементы к выбранному уровню'])
 
-selected_view = True
+if method != 'Все элементы к ближайшим уровням':
+    selected_view = True
+else:
+    selected_view = False
+
 levelCol = make_col(BuiltInCategory.OST_Levels)
 
 levels = []
 
 for levelEl in levelCol:
 	levels.append(levelEl.Name)
+
+
+
 
 level_name = SelectFromList('Выберите уровень', levels)
 
@@ -145,8 +153,10 @@ for levelEl in levelCol:
 
 
 try:
-    #elements = pick_elements(uidoc)
-    elements = FilteredElementCollector(doc, doc.ActiveView.Id)
+    if method == 'Выбранные элементы к выбранному уровню':
+        elements = pick_elements(uidoc)
+    if method == 'Все элементы на активном виде к выбранному уровню':
+        elements = FilteredElementCollector(doc, doc.ActiveView.Id)
 except Exception:
     print "Элементы не выбраны"
     sys.exit()
