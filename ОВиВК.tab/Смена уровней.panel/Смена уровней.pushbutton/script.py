@@ -127,35 +127,34 @@ def change_level(element, new_level, new_offset, offset_param, height_param):
     offset_param.Set(new_offset)
     return element
 
-method = SelectFromList('Выберите метод привязки', ['Все элементы к ближайшим уровням', 'Все элементы на активном виде к выбранному уровню', 'Выбранные элементы к выбранному уровню'])
+method = SelectFromList('Выберите метод привязки', ['Все элементы на активном виде к ближайшим уровням', 'Все элементы на активном виде к выбранному уровню', 'Выбранные элементы к выбранному уровню'])
 
-if method != 'Все элементы к ближайшим уровням':
+if method != 'Все элементы на активном виде к ближайшим уровням':
     selected_view = True
+
+    levelCol = make_col(BuiltInCategory.OST_Levels)
+
+    levels = []
+
+    for levelEl in levelCol:
+        levels.append(levelEl.Name)
+
+    level_name = SelectFromList('Выберите уровень', levels)
+
+    for levelEl in levelCol:
+        if levelEl.Name == level_name:
+            level = levelEl
+
 else:
     selected_view = False
 
-levelCol = make_col(BuiltInCategory.OST_Levels)
-
-levels = []
-
-for levelEl in levelCol:
-	levels.append(levelEl.Name)
-
-
-
-
-level_name = SelectFromList('Выберите уровень', levels)
-
-for levelEl in levelCol:
-    if levelEl.Name == level_name:
-        level = levelEl
 
 
 
 try:
     if method == 'Выбранные элементы к выбранному уровню':
         elements = pick_elements(uidoc)
-    if method == 'Все элементы на активном виде к выбранному уровню':
+    if method == 'Все элементы на активном виде к выбранному уровню' or method == 'Все элементы на активном виде к ближайшим уровням':
         elements = FilteredElementCollector(doc, doc.ActiveView.Id)
 except Exception:
     print "Элементы не выбраны"
