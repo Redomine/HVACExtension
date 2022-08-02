@@ -12,6 +12,7 @@ clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 
 import sys
+
 from Autodesk.Revit.DB import *
 from System import Guid
 from itertools import groupby
@@ -20,9 +21,20 @@ from pyrevit import revit
 from pyrevit.script import output
 
 
+
+
+
+
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 view = doc.ActiveView
 
+
+def make_col(category):
+    col = FilteredElementCollector(doc) \
+        .OfCategory(category) \
+        .WhereElementIsNotElementType() \
+        .ToElements()
+    return col
 
 def get_ADSK_Izm(element):
     try:
@@ -82,7 +94,6 @@ def check_collection(collection):
             if error not in errors_list:
                 errors_list.append(error)
 
-
 def get_D_type(element):
     ElemTypeId = element.GetTypeId()
     ElemType = doc.GetElement(ElemTypeId)
@@ -91,55 +102,6 @@ def get_D_type(element):
     elif ElemType.LookupParameter('ФОП_ВИС_Ду х Стенка').AsInteger() == 1: type = "Ду х Стенка"
     else: type = "Днар х Стенка"
     return type
-
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
-             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
-
-#проверка на наличие нужных параметров
-map = doc.ParameterBindings
-it = map.ForwardIterator()
-while it.MoveNext():
-    newProjectParameterData = it.Key.Name
-    if str(newProjectParameterData) in paraNames:
-        paraNames.remove(str(newProjectParameterData))
-if len(paraNames) > 0:
-    print 'Необходимо добавить параметры'
-    for name in paraNames:
-        print name
-    sys.exit()
-
-
-# Переменные для расчета
-length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
-area_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
-sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
-
-def make_col(category):
-    col = FilteredElementCollector(doc)\
-                            .OfCategory(category)\
-                            .WhereElementIsNotElementType()\
-                            .ToElements()
-    return col
-
-colFittings = make_col(BuiltInCategory.OST_DuctFitting)
-colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
-colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
-colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
-colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
-colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
-colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
-colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
-colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
-colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
-colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
-colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
-colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
-
-collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
 
 def duct_thickness(element):
     mode = ''
@@ -284,7 +246,6 @@ def duct_thickness(element):
 
     return thickness
 
-
 def make_new_name(element):
     Spec_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
     ADSK_Name = get_ADSK_Name(element)
@@ -375,7 +336,6 @@ def make_new_name(element):
 
     Spec_Name.Set(str(New_Name))
 
-
 def getDuct(connector):
     mainCon = []
     connectorSet = connector.AllRefs.ForwardIterator()
@@ -387,10 +347,6 @@ def getDuct(connector):
             if str(con.Owner.Category.Name) == 'Воздуховоды':
                 duct = con.Owner
                 return duct
-
-
-
-
 
 def getConnectors(element):
     connectors = []
@@ -476,8 +432,6 @@ def getCapacityParam(element, position):
                 Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
                 Spec_Length.Set(CapacityParam)
 
-
-
 #этот блок для элементов которые идут поштучно и для расстановки позиции
 def getNumericalParam(element, position):
     try:
@@ -527,8 +481,6 @@ def getNumericalParam(element, position):
     except Exception:
         Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
         Spec_Length.Set(0)
-
-
 
 def getDependent(collection):
 
@@ -581,17 +533,6 @@ def getDependent(collection):
                     Pos.Set(new_group + " " + str(numbering_d[name]))
                 except Exception:
                     pass
-
-
-
-
-#проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
-errors_list = []
-Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.', 'м2']
-check_izm = [colPipeCurves, colCurves, colFlexCurves, colFlexPipeCurves, colInsulations, colPipeInsulations]
-for izm in check_izm:
-    check_collection(izm)
-
 
 def update_element(element):
     if element in colEquipment: getNumericalParam(element, '1. Оборудование')
@@ -667,16 +608,16 @@ def regroop(element):
     else:
         element.LookupParameter('ФОП_ВИС_Группирование').Set(element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name)
 
-
-
-
 def script_execute():
     report_rows = set()
 
     for collection in collections:
         for element in collection:
 
-            edited_by = element.LookupParameter('Редактирует').AsString()
+            try:
+                edited_by = element.LookupParameter('Редактирует').AsString()
+            except Exception:
+                print element.Id
             if edited_by and edited_by != __revit__.Application.Username:
                 report_rows.add(edited_by)
                 continue
@@ -707,6 +648,59 @@ def script_execute():
         print "\r\n".join(report_rows)
 
 
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
+             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
+             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
 
-with revit.Transaction("Обновление общей спеки"):
-    script_execute()
+
+
+#проверка на наличие нужных параметров
+map = doc.ParameterBindings
+it = map.ForwardIterator()
+while it.MoveNext():
+    newProjectParameterData = it.Key.Name
+    if str(newProjectParameterData) in paraNames:
+        paraNames.remove(str(newProjectParameterData))
+if len(paraNames) > 0:
+    try:
+        import paraSpec
+        print 'Были добавлен параметры, перезапустите скрипт'
+    except Exception:
+        print 'Не удалось добавить параметры'
+else:
+    # Переменные для расчета
+    length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
+    area_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
+    sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
+
+
+    colFittings = make_col(BuiltInCategory.OST_DuctFitting)
+    colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
+    colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+    colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+    colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
+    colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
+    colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
+    colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
+    colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
+    colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
+    colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
+    colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+    colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
+    colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
+
+    collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
+                   colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
+
+
+
+    #проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
+    errors_list = []
+    Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.', 'м2']
+    check_izm = [colPipeCurves, colCurves, colFlexCurves, colFlexPipeCurves, colInsulations, colPipeInsulations]
+    for izm in check_izm:
+        check_collection(izm)
+
+    with revit.Transaction("Обновление общей спеки"):
+        script_execute()

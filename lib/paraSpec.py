@@ -10,18 +10,11 @@ clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 
-import sys
-import System
-import math
 from Autodesk.Revit.DB import *
 import os
-from Autodesk.Revit.UI import TaskDialog
-from Autodesk.Revit.UI.Selection import ObjectType
-from System.Collections.Generic import List
-from rpw.ui.forms import SelectFromList
-from System import Guid
 from pyrevit import revit
-from Autodesk.Revit.DB.Electrical import *
+import sys
+
 
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
@@ -97,6 +90,7 @@ nodeCats = [catTerminals, catAccessory, catPipeAccessory, catEquipment, catPlumb
 pipeCats = [catPipeCurves]
 
 infCats = [catInformation]
+
 
 
 
@@ -178,6 +172,8 @@ with revit.Transaction("Добавление параметров"):
                     if name == 'ФОП_ВИС_Запас изоляции' or name == 'ФОП_ВИС_Запас воздуховодов/труб':
                         inf = doc.ProjectInformation.LookupParameter(name)
                         inf.Set(10)
+
+
 
 
 

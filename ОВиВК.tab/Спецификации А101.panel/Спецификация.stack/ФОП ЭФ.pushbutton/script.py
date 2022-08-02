@@ -130,27 +130,23 @@ while it.MoveNext():
     if str(newProjectParameterData) in paraNames:
         paraNames.remove(str(newProjectParameterData))
 if len(paraNames) > 0:
-    print 'Необходимо добавить параметры'
-    for name in paraNames:
-        print name
-    sys.exit()
-
-
-
-try:
-    if doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString() == None:
-        print 'ФОП_Экономическая функция не заполнен в сведениях о проекте'
+    import paraEF
+    print 'Были добавлен параметры, перезапустите скрипт'
+else:
+    try:
+        if doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString() == None:
+            print 'ФОП_Экономическая функция не заполнен в сведениях о проекте'
+            sys.exit()
+    except Exception:
+        print 'Не найден параметр ФОП_Экономическая функция'
         sys.exit()
-except Exception:
-    print 'Не найден параметр ФОП_Экономическая функция'
-    sys.exit()
 
-ductDict = getSystemDict(colDuctSystems)
+    ductDict = getSystemDict(colDuctSystems)
 
-pipeDict = getSystemDict(colPipeSystems)
+    pipeDict = getSystemDict(colPipeSystems)
 
 
-with revit.Transaction("Обновление общей спеки"):
-    for collection in collections:
-        copyEF(collection)
-        getDependent(collection)
+    with revit.Transaction("Обновление общей спеки"):
+        for collection in collections:
+            copyEF(collection)
+            getDependent(collection)
