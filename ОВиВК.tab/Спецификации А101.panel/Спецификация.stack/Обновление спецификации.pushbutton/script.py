@@ -66,6 +66,14 @@ def get_ADSK_Name(element):
         else:
             ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
 
+    if str(element.Category.Name) == 'Трубы':
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        if ElemType.get_Parameter(Guid('e84ed706-336f-4c35-b9c4-3ed44ff71cbb')):
+            if ElemType.get_Parameter(Guid('e84ed706-336f-4c35-b9c4-3ed44ff71cbb')).AsInteger() == 1:
+                ADSK_Name = element.LookupParameter('Описание сегмента').AsString()
+
+
 
     return ADSK_Name
 
@@ -251,7 +259,6 @@ def make_new_name(element):
     ADSK_Name = get_ADSK_Name(element)
 
     New_Name = ADSK_Name
-
 
 
     if str(element.Category.Name) == 'Трубы':
@@ -651,7 +658,7 @@ def script_execute():
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
              'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
-             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
+             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента']
 
 
 
