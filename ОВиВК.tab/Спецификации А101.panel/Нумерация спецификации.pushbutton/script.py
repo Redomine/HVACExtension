@@ -63,7 +63,12 @@ tData = vs.GetTableData()
 tsData = tData.GetSectionData(SectionType.Header)
 sectionData = vs.GetTableData().GetSectionData(SectionType.Body)
 
-
+def make_col(category):
+    col = FilteredElementCollector(doc) \
+        .OfCategory(category) \
+        .WhereElementIsNotElementType() \
+        .ToElements()
+    return col
 
 sortColumnHeaders = []
 sortGroupNamesInds = []
@@ -133,3 +138,21 @@ with revit.Transaction("Запись номера"):
         if i in hidden:
             definition.GetField(i).IsHidden = True
         i += 1
+
+
+
+    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
+        colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+
+        duct_dict = {}
+        for element in colCurves:
+            index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
+            if index not in duct_dict:
+                duct_dict[index] = element.LookupParameter('ФОП_ТИП_Число').AsDouble()
+            else:
+                duct_dict[index] = duct_dict[index] + element.LookupParameter('ФОП_ТИП_Число').AsDouble()
+
+        for element in colCurves:
+            note = element.LookupParameter('ADSK_Примечание')
+            index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
+            note.Set(str(duct_dict[index])+' м²')
