@@ -111,20 +111,22 @@ with revit.Transaction("Добавление формул"):
         if str(param.Definition.Name) == 'ADSK_Количество фаз':
             ADSK_phase = param
             manager.SetFormula(param, "if(ADSK_Напряжение < 250 В, 1, 3)")
+
         if str(param.Definition.Name) == 'ADSK_Напряжение':
             ADSK_U = param
         if str(param.Definition.Name) == 'ADSK_Классификация нагрузок':
             ADSK_Class = param
-
         if str(param.Definition.Name) == 'ADSK_Коэффициент мощности':
             ADSK_K = param
             manager.SetFormula(param, "if(ADSK_Без частотного регулятора, if(ADSK_Не нагреватель_Не шкаф, if(ADSK_Номинальная мощность < 1000 Вт, 0.65, if(ADSK_Номинальная мощность < 4000 Вт, 0.75, 0.85)), 1), 0.95)")
+
         if str(param.Definition.Name) == 'ADSK_Полная мощность':
             manager.SetFormula(param, "ADSK_Номинальная мощность / ADSK_Коэффициент мощности")
             ADSK_power = param
 
         if str(param.Definition.Name) == 'mS_Имя нагрузки':
             manager.SetFormula(param, "ADSK_Наименование")
+
 
 
     for connector in connectorCol:

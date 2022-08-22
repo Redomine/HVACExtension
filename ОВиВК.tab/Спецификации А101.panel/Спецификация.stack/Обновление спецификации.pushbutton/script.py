@@ -92,16 +92,6 @@ def get_ADSK_Mark(element):
             ADSK_Mark = ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString()
     return ADSK_Mark
 
-def check_collection(collection):
-    for element in collection:
-        ADSK_Izm = get_ADSK_Izm(element)
-        if str(ADSK_Izm) not in Izm_names or ADSK_Izm == None:
-            error = 'Для категории ' + str(element.Category.Name) + ' есть элементы без подходящей единицы измерения(м.п., м., мп, м , м.п, шт, шт., м2)' \
-                                                                    '\n В такой ситуаци для труб или воздуховодов будут приняты м.п., для изоляции м2'
-
-            if error not in errors_list:
-                errors_list.append(error)
-
 def get_D_type(element):
     ElemTypeId = element.GetTypeId()
     ElemType = doc.GetElement(ElemTypeId)
@@ -633,9 +623,7 @@ def script_execute():
             make_new_name(element)
             update_boq(element)
 
-    if len(errors_list) > 0:
-        for error in errors_list:
-            print error
+
 
     for collection in collections:
         for element in collection:
@@ -658,7 +646,8 @@ def script_execute():
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
              'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
-             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента']
+             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Позиция', 'ФОП_ВИС_Площади воздуховодов в примечания',
+             'ФОП_ВИС_Нумерация позиций']
 
 
 
@@ -701,13 +690,9 @@ else:
                    colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
 
 
-
-    #проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
-    errors_list = []
-    Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.', 'м2']
-    check_izm = [colPipeCurves, colCurves, colFlexCurves, colFlexPipeCurves, colInsulations, colPipeInsulations]
-    for izm in check_izm:
-        check_collection(izm)
-
     with revit.Transaction("Обновление общей спеки"):
         script_execute()
+
+
+if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
+    import numerateSpec
