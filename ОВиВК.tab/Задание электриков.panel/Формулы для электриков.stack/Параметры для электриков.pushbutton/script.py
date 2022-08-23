@@ -90,7 +90,6 @@ def update_fop(version):
     return spFile
 
 
-
 connectorNum = 0
 try:
     for connector in connectorCol:
@@ -165,13 +164,8 @@ with revit.Transaction("Добавление параметров"):
             if str(dG.Name) == group:
                 myDefinitions = dG.Definitions
                 eDef = myDefinitions.get_Item(name)
-                manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
 
-
-
-
-
-
-
-
-
+                if name == 'ФОП_ВИС_Мощность нагревателя' or name == 'ФОП_ВИС_Частотный регулятор':
+                    manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
+                else:
+                    manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)

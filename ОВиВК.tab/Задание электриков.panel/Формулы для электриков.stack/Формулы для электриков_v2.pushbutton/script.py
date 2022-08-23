@@ -103,6 +103,25 @@ loadsCol = make_col(BuiltInCategory.OST_ElectricalLoadClassifications)
 
 
 with revit.Transaction("Добавление формул"):
+    for element in loadsCol:
+        if element.Name == "HVAC": HVAC = element.Id
+
+    for param in set:
+        if str(param.Definition.Name) == 'ADSK_Классификация нагрузок': load = param
+
+        if str(param.Definition.Name) == "ФОП_ВИС_Частотный регулятор": regulator = param
+
+        if str(param.Definition.Name) == "ФОП_ВИС_Нагреватель или шкаф": heater = param
+
+    typeset = manager.Types
+    for famType in typeset:
+        manager.CurrentType = famType
+        manager.Set(load, HVAC)
+        manager.Set(heater, 0)
+        manager.Set(regulator, 0)
+
+
+
 
     #если не присвоить значение, то потом в процессе получается деление на ноль
     for param in set:
@@ -110,12 +129,7 @@ with revit.Transaction("Добавление формул"):
             manager.SetFormula(param, "1")
     #нельзя присвоить значение в коннекторе, если классификатор обозначен в типе никак.
 
-    for element in loadsCol:
-        if element.Name == "HVAC":
 
-            for param in set:
-                if str(param.Definition.Name) == 'ADSK_Классификация нагрузок':
-                    manager.Set(param, element.Id)
 
     for connector in connectorCol:
         if str(connector.Domain) == "DomainElectrical":
@@ -145,11 +159,7 @@ with revit.Transaction("Добавление формул"):
         if str(param.Definition.Name) == 'mS_Имя нагрузки':
             manager.SetFormula(param, "ADSK_Наименование")
 
-        if str(param.Definition.Name) == "ФОП_ВИС_Частотный регулятор":
-            manager.Set(param, 0)
 
-        if str(param.Definition.Name) == "ФОП_ВИС_Нагреватель или шкаф":
-            manager.Set(param, 0)
 
     for connector in connectorCol:
         params = connector.GetOrderedParameters()
