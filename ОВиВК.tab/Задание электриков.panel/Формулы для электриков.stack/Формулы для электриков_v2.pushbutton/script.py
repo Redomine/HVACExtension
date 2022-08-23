@@ -21,6 +21,7 @@ import sys
 import System
 import math
 from Autodesk.Revit.DB import *
+from Autodesk.Revit.DB import Electrical
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
@@ -43,7 +44,7 @@ def make_col(category):
 connectorCol = make_col(BuiltInCategory.OST_ConnectorElem)
 loadsCol = make_col(BuiltInCategory.OST_ElectricalLoadClassifications)
 
-t = Transaction(doc, 'Добавление формул')
+
 
 try:
     manager = doc.FamilyManager
@@ -60,7 +61,8 @@ spFile = doc.Application.OpenSharedParameterFile()
 set = doc.FamilyManager.Parameters
 
 paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность', 'ADSK_Без частотного регулятора', 'mS_Имя нагрузки']
+             'ADSK_Классификация нагрузок',  'ADSK_Номинальная мощность', 'mS_Имя нагрузки', 'ФОП_ВИС_Нагреватель или шкаф',
+             'ФОП_ВИС_Частотный регулятор']
 
 for param in set:
     if str(param.Definition.Name) in paraNames:
@@ -90,15 +92,27 @@ if connectorNum == 0:
     print "Не найдено электрических коннекторов, должен быть один"
     sys.exit()
 
+with revit.Transaction("Настройка классификации нагрузок"):
+    loadsColNames = []
+    for element in loadsCol:
+        loadsColNames.append(element.Name)
+    if "HVAC" not in loadsColNames:
+        Electrical.ElectricalLoadClassification.Create(doc, "HVAC")
+
+loadsCol = make_col(BuiltInCategory.OST_ElectricalLoadClassifications)
+
 
 with revit.Transaction("Добавление формул"):
+
     #если не присвоить значение, то потом в процессе получается деление на ноль
     for param in set:
         if str(param.Definition.Name) == 'ADSK_Коэффициент мощности':
             manager.SetFormula(param, "1")
     #нельзя присвоить значение в коннекторе, если классификатор обозначен в типе никак.
+
     for element in loadsCol:
-        if element.Name == "HVAC" or element.Name == "Прочее" or element.Name == "Other" or element.Name == "ОВ":
+        if element.Name == "HVAC":
+
             for param in set:
                 if str(param.Definition.Name) == 'ADSK_Классификация нагрузок':
                     manager.Set(param, element.Id)
@@ -108,17 +122,21 @@ with revit.Transaction("Добавление формул"):
             connector.SystemClassification = MEPSystemClassification.PowerBalanced
             connector.SetParamValue(BuiltInParameter.RBS_ELEC_POWER_FACTOR_STATE, 1)
     for param in set:
+
         if str(param.Definition.Name) == 'ADSK_Количество фаз':
             ADSK_phase = param
             manager.SetFormula(param, "if(ADSK_Напряжение < 250 В, 1, 3)")
 
         if str(param.Definition.Name) == 'ADSK_Напряжение':
             ADSK_U = param
+
         if str(param.Definition.Name) == 'ADSK_Классификация нагрузок':
             ADSK_Class = param
+
+
         if str(param.Definition.Name) == 'ADSK_Коэффициент мощности':
             ADSK_K = param
-            manager.SetFormula(param, "if(ADSK_Без частотного регулятора, if(ADSK_Не нагреватель_Не шкаф, if(ADSK_Номинальная мощность < 1000 Вт, 0.65, if(ADSK_Номинальная мощность < 4000 Вт, 0.75, 0.85)), 1), 0.95)")
+            manager.SetFormula(param, 'if(ФОП_ВИС_Частотный регулятор, 0.95, if(ФОП_ВИС_Нагреватель или шкаф, 1, if(ADSK_Номинальная мощность < 1000 Вт, 0.65, if(ADSK_Номинальная мощность < 4000 Вт, 0.75, 0.85))))')
 
         if str(param.Definition.Name) == 'ADSK_Полная мощность':
             manager.SetFormula(param, "ADSK_Номинальная мощность / ADSK_Коэффициент мощности")
@@ -127,7 +145,11 @@ with revit.Transaction("Добавление формул"):
         if str(param.Definition.Name) == 'mS_Имя нагрузки':
             manager.SetFormula(param, "ADSK_Наименование")
 
+        if str(param.Definition.Name) == "ФОП_ВИС_Частотный регулятор":
+            manager.Set(param, 0)
 
+        if str(param.Definition.Name) == "ФОП_ВИС_Нагреватель или шкаф":
+            manager.Set(param, 0)
 
     for connector in connectorCol:
         params = connector.GetOrderedParameters()
@@ -142,3 +164,4 @@ with revit.Transaction("Добавление формул"):
                 associate(param, ADSK_phase)
             if param.Definition.Name == 'Классификация нагрузок':
                 associate(param, ADSK_Class)
+

@@ -49,27 +49,45 @@ except Exception:
 def associate(param, famparam):
     manager.AssociateElementParameterToFamilyParameter(param, famparam)
 
-spFile = doc.Application.OpenSharedParameterFile()
+
 
 set = doc.FamilyManager.Parameters
 
 
 
 paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность', 'ADSK_Без частотного регулятора', 'mS_Имя нагрузки']
+             'ADSK_Классификация нагрузок',  'ADSK_Номинальная мощность', 'mS_Имя нагрузки']
+
+paraNames_V1 = ['ФОП_ВИС_Нагреватель или шкаф', 'ФОП_ВИС_Частотный регулятор', 'ФОП_ВИС_Мощность нагревателя', 'ФОП_ВИС_Напряжение нагревателя']
 
 notFormula = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз']
 
 
-#проверяем тот ли файл общих параметров подгружен
-spFileName = str(doc.Application.SharedParametersFilename)
-spFileName = spFileName.split('\\')
-spFileName = spFileName[-1]
-if "ФОП_ADSK.txt" != spFileName:
-    try:
-        doc.Application.SharedParametersFilename = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_ADSK.txt"
-    except Exception:
-        print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_ADSK.txt'
+def update_fop(version):
+
+    if version == "ADSK":
+        #проверяем тот ли файл общих параметров подгружен
+        spFileName = str(doc.Application.SharedParametersFilename)
+        spFileName = spFileName.split('\\')
+        spFileName = spFileName[-1]
+        if "ФОП_ADSK.txt" != spFileName:
+            try:
+                doc.Application.SharedParametersFilename = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_ADSK.txt"
+            except Exception:
+                print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_ADSK.txt'
+    else:
+        spFileName = str(doc.Application.SharedParametersFilename)
+        spFileName = spFileName.split('\\')
+        spFileName = spFileName[-1]
+
+        try:
+            doc.Application.SharedParametersFilename = str(
+                os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_v1.txt"
+        except Exception:
+            print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt'
+
+    spFile = doc.Application.OpenSharedParameterFile()
+    return spFile
 
 
 
@@ -79,7 +97,6 @@ try:
         if str(connector.Domain) == "DomainElectrical":
             connectorNum = connectorNum + 1
 except Exception:
-
     print "Не найдено электрических коннекторов, должен быть один"
     sys.exit()
 
@@ -92,7 +109,16 @@ if connectorNum == 0:
     sys.exit()
 
 
+
 with revit.Transaction("Добавление параметров"):
+    #если в семействе нет никаких типоразмеров, ревит почему-то не даст создать формулы. Создаем хотя бы один тип
+    typeNumber = 0
+    for type in doc.FamilyManager.Types:
+        typeNumber = typeNumber + 1
+    if typeNumber < 1:
+        doc.FamilyManager.NewType('Стандарт')
+
+
     #удаляем формулы на элементах, к которым будут присвоены свои, чтоб избежать конфликтов
     for param in set:
         if str(param.Definition.Name) in notFormula:
@@ -101,6 +127,7 @@ with revit.Transaction("Добавление параметров"):
     #проверяем наличие параметров из списка имен в проекте, присваиваем им параметры типа или экземпляра
     for param in set:
         if str(param.Definition.Name) in paraNames:
+
             #мощность и напряжение иногда уже проставлены и могут быть любого типа, просто их не трогаю
             if str(param.Definition.Name) == 'ADSK_Номинальная мощность' or str(param.Definition.Name) == 'ADSK_Напряжение':
                pass
@@ -108,44 +135,43 @@ with revit.Transaction("Добавление параметров"):
                 manager.MakeInstance(param)
             paraNames.remove(param.Definition.Name)
 
+        if str(param.Definition.Name) in paraNames_V1:
+            manager.MakeInstance(param)
+            paraNames_V1.remove(param.Definition.Name)
+
+
 
     #если в списке имен после проверки осталось что-то, добавляем параметры из списка
     if len(paraNames) > 0:
-        addedNames = []
+        spFile = update_fop("ADSK")
         for name in paraNames:
             for dG in spFile.Groups:
                 group = "04 Обязательные ИНЖЕНЕРИЯ"
-                if name == 'ADSK_Не нагреватель_Не шкаф' or name == 'ADSK_Без частотного регулятора':
-                    group = "08 Необязательные ИНЖЕНЕРИЯ"
-
-                if name == 'mS_Имя нагрузки':
-                    group = "mySchema"
-
+                if name == 'mS_Имя нагрузки': group = "mySchema"
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф'\
-                            or name == 'ADSK_Без частотного регулятора' or name == 'ADSK_Классификация нагрузок':
+                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Классификация нагрузок':
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
                     else:
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
-                    addedNames.append(name)
+
+with revit.Transaction("Добавление параметров"):
+    spFile = update_fop("v1")
+    for dG in spFile.Groups:
+        for name in paraNames_V1:
+
+            group = "03_ВИС"
+            if str(dG.Name) == group:
+                myDefinitions = dG.Definitions
+                eDef = myDefinitions.get_Item(name)
+                manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
 
 
-        #если все равно что-то осталось, сообщаем каких параметров не нашлось, но это вряд ли произойдет
-        for name in addedNames:
-            if name in paraNames:
-                paraNames.remove(name)
-        if len(paraNames) > 0:
-            print 'Проблема при добавлении параметров'
-            for name in paraNames:
-                print name
 
-    #если в семействе нет никаких типоразмеров, ревит почему-то не даст создать формулы. Создаем хотя бы один тип
-    typeNumber = 0
-    for type in doc.FamilyManager.Types:
-        typeNumber = typeNumber + 1
-    if typeNumber < 1:
-        doc.FamilyManager.NewType('Стандарт')
+
+
+
+
 
 
