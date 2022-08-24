@@ -7,10 +7,20 @@ __doc__ = "Обновляет число подсчетных элементов
 import os.path as op
 
 import clr
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
-clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 
+
+
+import dosymep
+
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
+
+from dosymep.Bim4Everyone.Templates import ProjectParameters
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 import sys
 
 from Autodesk.Revit.DB import *
@@ -43,10 +53,10 @@ def get_ADSK_Izm(element):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')) == None:
+        if ElemType.LookupParameter('ADSK_Единица измерения') == None:
             ADSK_Izm = "None"
         else:
-            ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
+            ADSK_Izm = ElemType.LookupParameter('ADSK_Единица измерения').AsString()
 
     return ADSK_Izm
 
@@ -59,18 +69,18 @@ def get_ADSK_Name(element):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')) == None\
-                or ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == None \
-                or ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == "":
+        if ElemType.LookupParameter('ADSK_Наименование') == None\
+                or ElemType.LookupParameter('ADSK_Наименование').AsString() == None \
+                or ElemType.LookupParameter('ADSK_Наименование').AsString() == "":
             ADSK_Name = "None"
         else:
-            ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+            ADSK_Name = ElemType.LookupParameter('ADSK_Наименование').AsString()
 
     if str(element.Category.Name) == 'Трубы':
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.get_Parameter(Guid('e84ed706-336f-4c35-b9c4-3ed44ff71cbb')):
-            if ElemType.get_Parameter(Guid('e84ed706-336f-4c35-b9c4-3ed44ff71cbb')).AsInteger() == 1:
+        if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента'):
+            if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента').AsInteger() == 1:
                 ADSK_Name = element.LookupParameter('Описание сегмента').AsString()
 
 
@@ -84,12 +94,12 @@ def get_ADSK_Mark(element):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')) == None \
-                or ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString() == None \
-                or ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString() == "":
+        if ElemType.LookupParameter('ADSK_Марка') == None \
+                or ElemType.LookupParameter('ADSK_Марка').AsString() == None \
+                or ElemType.LookupParameter('ADSK_Марка').AsString() == "":
             ADSK_Mark = "None"
         else:
-            ADSK_Mark = ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString()
+            ADSK_Mark = ElemType.LookupParameter('ADSK_Марка').AsString()
     return ADSK_Mark
 
 def get_D_type(element):
@@ -103,8 +113,7 @@ def get_D_type(element):
 
 def duct_thickness(element):
     mode = ''
-    if str(element.Category.Name) == 'Воздуховоды':
-
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         a = getConnectors(element)
         try:
             SizeA = a[0].Width * 304.8
@@ -115,7 +124,7 @@ def duct_thickness(element):
             Size = a[0].Radius*2 * 304.8
             mode = 'R'
 
-    if str(element.Category.Name) == 'Соединительные детали воздуховодов':
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
         a = getConnectors(element)
         if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Cap' \
                 or str(element.MEPModel.PartType) == 'TapAdjustable' or str(element.MEPModel.PartType) == 'Union':
@@ -230,15 +239,16 @@ def duct_thickness(element):
         el = doc.GetElement(elid)
         ElemTypeId = el.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')):
-            min_thickness = ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')).AsDouble()
+
+        if ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
+            min_thickness = ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
             if min_thickness == None: min_thickness = 0
             if float(thickness) < min_thickness: thickness = str(min_thickness)
 
     ElemTypeId = element.GetTypeId()
     ElemType = doc.GetElement(ElemTypeId)
-    if ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')):
-        min_thickness = ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')).AsDouble()
+    if ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
+        min_thickness = ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
         if min_thickness == None: min_thickness = 0
         if float(thickness) < min_thickness: thickness = str(min_thickness)
 
@@ -247,16 +257,15 @@ def duct_thickness(element):
 def make_new_name(element):
     Spec_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
     ADSK_Name = get_ADSK_Name(element)
-
     New_Name = ADSK_Name
 
 
-    if str(element.Category.Name) == 'Трубы':
-        external_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
-        internal_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
+    if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
+        internal_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_INNER_DIAM_PARAM) * 304.8
         pipe_thickness = (external_size - internal_size)/2
-        Dy = str(element.LookupParameter('Диаметр').AsDouble() * 304.8)
 
+        Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
 
         if Dy[-2:] == '.0':
             Dy=Dy[:-2]
@@ -264,7 +273,6 @@ def make_new_name(element):
         external_size = str(external_size)
         if external_size[-2:] == '.0':
             external_size=external_size[:-2]
-
 
         d_type = get_D_type(element)
 
@@ -275,29 +283,25 @@ def make_new_name(element):
         else:
             New_Name = ADSK_Name + ' ' + '⌀' + external_size + 'x' + str(pipe_thickness)
 
-
-
-    if str(element.Category.Name) == 'Воздуховоды':
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         thickness = duct_thickness(element)
         try:
-            New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.LookupParameter('Размер').AsString()
+            New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
         except Exception:
-            New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.LookupParameter(
-                'Свободный размер').AsString()
+            New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(BuiltInParameter.RBS_REFERENCE_FREESIZE)
 
-
-    if str(element.Category.Name) == 'Материалы изоляции труб':
+    if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
         ADSK_Izm = get_ADSK_Izm(element)
         if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
-            L = element.LookupParameter('Длина').AsDouble() * 304.8
-            S = element.LookupParameter('Площадь').AsDouble() * 0.092903
+            L = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH) * 304.8
+            S = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903
 
             pipe = doc.GetElement(element.HostElementId)
 
             #это на случай если(каким-то образом) изоляция трубы висит без трубы
             try:
-                if pipe.LookupParameter('Внешний диаметр') != None:
-                    d = pipe.LookupParameter('Внешний диаметр').AsDouble() * 304.8
+                if pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) != None:
+                    d = pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
                     d = str(d)
                     if d[-2:] == '.0':
                         d = d[:-2]
@@ -305,13 +309,9 @@ def make_new_name(element):
             except Exception:
                 pass
 
-    if str(element.Category.Name) == 'Соединительные детали воздуховодов':
 
-        try:
-            thickness = duct_thickness(element)
-        except Exception:
-            print str(element.MEPModel.PartType)
-            print element.Id
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        thickness = duct_thickness(element)
 
         try:
             connectors = getConnectors(element)
@@ -319,8 +319,8 @@ def make_new_name(element):
                 if getDuct(connector) != None:
                     ElemTypeId = getDuct(connector).GetTypeId()
                     ElemType = doc.GetElement(ElemTypeId)
-                    if ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')):
-                        min_thickness = ElemType.get_Parameter(Guid('7af80795-5115-46e4-867f-f276a2510250')).AsDouble()
+                    if ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
+                        min_thickness = ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
                         if float(min_thickness) > float(thickness):
                             thickness = min_thickness
         except Exception:
@@ -341,7 +341,7 @@ def getDuct(connector):
 
     for con in mainCon:
         if con.Owner.LookupParameter('ФОП_ВИС_Группирование'):
-            if str(con.Owner.Category.Name) == 'Воздуховоды':
+            if str(con.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves)):
                 duct = con.Owner
                 return duct
 
@@ -361,37 +361,6 @@ def getConnectors(element):
             while a.MoveNext():
                 connectors.append(a.Current)
     return connectors
-
-#в этом блоке получаем размеры воздуховодов и труб для наименования в спеке
-def getElementSize(element):
-
-    Size = ''
-    if element.LookupParameter('Внешний диаметр'):
-        outer_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
-        interior_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
-        thickness = (float(outer_size) - float(interior_size))/2
-        outer_size = str(outer_size)
-
-        a = outer_size.split('.') #убираем 0 после запятой в наружном диаметре если он не имеет значения
-        if a[1] == '0':
-            outer_size = outer_size.replace(".0","")
-        Size = "Ø" + outer_size + "x" + str(thickness)
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
-    elif element.LookupParameter('Размер'):
-        Size = element.LookupParameter('Размер').AsString()
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
-
-    elif element.LookupParameter('Диаметр'):
-        Size = element.LookupParameter('Диаметр').AsValueString()
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
-
-    elif element.LookupParameter('Размер трубы'):
-        Size = element.LookupParameter('Размер трубы').AsString()
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
 
 #этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять милимметры для длины и м2 для площади) и для расстановки позиции
 def getCapacityParam(element, position):
@@ -418,10 +387,20 @@ def getCapacityParam(element, position):
 
         if element.LookupParameter(param):
             if param == 'Длина':
-                CapacityParam = ((element.LookupParameter(param).AsDouble() * 304.8)/1000) * length_reserve
+
+                lenght = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
+                if lenght == None:
+                    lenght = 0
+
+                CapacityParam = ((lenght * 304.8)/1000) * length_reserve
                 CapacityParam = round(CapacityParam, 2)
             else:
-                CapacityParam = (element.LookupParameter(param).AsDouble() * 0.092903) * area_reserve
+
+                area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+                if area == None:
+                    area = 0
+
+                CapacityParam = (area * 0.092903) * area_reserve
                 CapacityParam = round(CapacityParam, 2)
 
             if element.LookupParameter('ФОП_ВИС_Число'):
@@ -444,7 +423,7 @@ def getNumericalParam(element, position):
         pass
 
     try:
-        if str(element.Category.Name) == 'Соединительные детали воздуховодов':
+        if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             options = Options()
             geoms = element.get_Geometry(options)
 
@@ -481,11 +460,8 @@ def getNumericalParam(element, position):
 
 def getDependent(collection):
 
-
     d = {}
     for element in collection:
-
-
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
         chain = ElemType.get_Parameter(Guid('c39ded76-eb20-4a21-abf3-6db36aca369b')).AsValueString()
@@ -497,7 +473,6 @@ def getDependent(collection):
             new_group =  element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString() + " " + ADSK_Mark
             Pos = element.LookupParameter('ФОП_ВИС_Группирование')
             Pos.Set(new_group + " 0")
-
 
             dependent = element.GetSubComponentIds()
             numbering = []
@@ -549,7 +524,10 @@ def update_element(element):
 
 #Обновляем параметры для ВОР и перебиваем единицы измерения
 def update_boq(element):
+
+
     fop_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+
     adsk_mark = get_ADSK_Mark(element)
 
     boq_name = element.LookupParameter('ФОП_ТИП_Назначение')
@@ -567,10 +545,10 @@ def update_boq(element):
         adsk_izm = "None"
 
 
-    if str(element.Category.Name) == 'Соединительные детали воздуховодов':
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
         fop_izm.Set("м2")
         boq_izm.Set("м2")
-    elif str(element.Category.Name) == 'Воздуховоды':
+    elif element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         boq_izm.Set("м2")
         fop_izm.Set(adsk_izm)
     else:
@@ -579,8 +557,8 @@ def update_boq(element):
 
     fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
 
-    if str(element.Category.Name) == 'Воздуховоды':
-        fop_number = (element.LookupParameter('Площадь').AsDouble() * 0.092903) * area_reserve
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+        fop_number = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) * area_reserve
         fop_number = round(fop_number, 2)
 
     boq_number = element.LookupParameter('ФОП_ТИП_Число')
@@ -588,11 +566,17 @@ def update_boq(element):
 
     ElemTypeId = element.GetTypeId()
     ElemType = doc.GetElement(ElemTypeId)
-    code = ElemType.LookupParameter('Код по классификатору').AsString()
+
+    fop_number = round(fop_number, 2)
+    code = str(ElemType.GetParamValue(BuiltInParameter.UNIFORMAT_CODE))
+    if code == None:
+        code = ""
     boq_code = element.LookupParameter('ФОП_ТИП_Код')
     boq_code.Set(code)
 
-    work_name = ElemType.LookupParameter('Описание по классификатору').AsString()
+    work_name = ElemType.GetParamValue(BuiltInParameter.UNIFORMAT_DESCRIPTION)
+    if work_name == None:
+        work_name = ""
     boq_work = element.LookupParameter('ФОП_ТИП_Наименование работы')
     boq_work.Set(work_name)
 
@@ -600,19 +584,22 @@ def regroop(element):
     ADSK_Mark = get_ADSK_Mark(element)
     ADSK_Name = get_ADSK_Name(element)
     FOP_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
-    if str(element.Category.Name) != 'Соединительные детали воздуховодов':
-        element.LookupParameter('ФОП_ВИС_Группирование').Set(element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name + " " + ADSK_Mark)
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        element.LookupParameter('ФОП_ВИС_Группирование').Set(
+            element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name)
     else:
-        element.LookupParameter('ФОП_ВИС_Группирование').Set(element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name)
+        element.LookupParameter('ФОП_ВИС_Группирование').Set(
+            element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name + " " + ADSK_Mark)
+
+
 
 def script_execute():
     report_rows = set()
 
     for collection in collections:
         for element in collection:
-
             try:
-                edited_by = element.LookupParameter('Редактирует').AsString()
+                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
             except Exception:
                 print element.Id
             if edited_by and edited_by != __revit__.Application.Username:
