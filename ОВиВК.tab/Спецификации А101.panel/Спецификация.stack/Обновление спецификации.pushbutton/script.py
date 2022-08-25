@@ -293,8 +293,14 @@ def make_new_name(element):
     if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
         ADSK_Izm = get_ADSK_Izm(element)
         if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
-            L = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH) * 304.8
-            S = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903
+            lenght = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
+            if lenght == None:
+                lenght = 0
+            area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+            if area == None:
+                area = 0
+            L = lenght * 304.8
+            S = area * 0.092903
 
             pipe = doc.GetElement(element.HostElementId)
 
@@ -364,6 +370,7 @@ def getConnectors(element):
 
 #этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять милимметры для длины и м2 для площади) и для расстановки позиции
 def getCapacityParam(element, position):
+    fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
 
     if element.LookupParameter('ФОП_ВИС_Группирование'):
         Pos = element.LookupParameter('ФОП_ВИС_Группирование')
@@ -371,14 +378,17 @@ def getCapacityParam(element, position):
     ADSK_Izm = get_ADSK_Izm(element)
 
     if ADSK_Izm == 'шт' or ADSK_Izm == 'шт.' or ADSK_Izm == 'Шт.' or ADSK_Izm == 'Шт':
+        fop_izm.Set('шт.')
         amount = element.LookupParameter('ФОП_ВИС_Число')
         amount.Set(1)
     else:
         if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
             param = 'Длина'
 
+
         elif ADSK_Izm == 'м2':
             param = 'Площадь'
+
         else:
             if position == '6. Материалы трубопроводной изоляции' or position == '6. Материалы изоляции воздуховодов':
                 param = 'Площадь'
@@ -387,6 +397,7 @@ def getCapacityParam(element, position):
 
         if element.LookupParameter(param):
             if param == 'Длина':
+                fop_izm.Set('м.п.')
 
                 lenght = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
                 if lenght == None:
@@ -395,7 +406,7 @@ def getCapacityParam(element, position):
                 CapacityParam = ((lenght * 304.8)/1000) * length_reserve
                 CapacityParam = round(CapacityParam, 2)
             else:
-
+                fop_izm.Set('м²')
                 area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
                 if area == None:
                     area = 0
@@ -421,6 +432,9 @@ def getNumericalParam(element, position):
                 amount.Set(1)
     except Exception:
         pass
+
+    fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
+    fop_izm.Set('шт.')
 
     try:
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
@@ -546,14 +560,13 @@ def update_boq(element):
 
 
     if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-        fop_izm.Set("м2")
-        boq_izm.Set("м2")
+        fop_izm.Set("м²")
+        boq_izm.Set("м²")
     elif element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        boq_izm.Set("м2")
-        fop_izm.Set(adsk_izm)
+        boq_izm.Set("м²")
     else:
-        boq_izm.Set(adsk_izm)
-        fop_izm.Set(adsk_izm)
+        boq_izm.Set(fop_izm.ToString())
+
 
     fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
 
