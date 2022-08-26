@@ -553,6 +553,7 @@ def update_boq(element):
     boq_izm = element.LookupParameter('ФОП_ТИП_Единица измерения')
     fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
 
+
     adsk_izm = get_ADSK_Izm(element)
 
     if adsk_izm == None:
@@ -565,7 +566,7 @@ def update_boq(element):
     elif element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         boq_izm.Set("м²")
     else:
-        boq_izm.Set(fop_izm.ToString())
+        boq_izm.Set(fop_izm.AsString())
 
 
     fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
@@ -694,5 +695,5 @@ else:
         script_execute()
 
 
-if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
-    import numerateSpec
+    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
+        import numerateSpec

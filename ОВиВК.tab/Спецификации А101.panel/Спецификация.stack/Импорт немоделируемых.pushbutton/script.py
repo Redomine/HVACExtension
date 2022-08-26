@@ -71,7 +71,8 @@ if is_temporary_in == False:
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
              'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
-             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы']
+             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Позиция', 'ФОП_ВИС_Площади воздуховодов в примечания',
+             'ФОП_ВИС_Нумерация позиций']
 
 
 #проверка на наличие нужных параметров
@@ -96,17 +97,24 @@ filepath = select_file()
 
 
 def setElement(element, name, setting):
+
+
+    if name == "ФОП_ВИС_Масса":
+        element.LookupParameter(name).Set(str(setting))
+
+    if name == 'ADSK_Единица измерения':
+        element.LookupParameter('ФОП_ТИП_Единица измерения').Set(str(setting))
+        element.LookupParameter('ФОП_ВИС_Единица измерения').Set(str(setting))
     try:
         if setting == None:
             pass
         else:
             element.LookupParameter(name).Set(setting)
-            if name == 'ADSK_Единица измерения':
-                element.LookupParameter('ФОП_ТИП_Единица измерения').Set(setting)
             if name == 'ФОП_ВИС_Число':
-                element.LookupParameter('ФОП_ТИП_Число').Set(setting)
+                element.LookupParameter('ФОП_ТИП_Число').Set(str(setting))
             if name == 'ФОП_ВИС_Наименование комбинированное':
                 element.LookupParameter('ФОП_ТИП_Назначение').Set(setting)
+
     except Exception:
         pass
 
@@ -127,7 +135,7 @@ def new_position(calculation_elements):
             try:
                 element.CreatedPhaseId = phaseid
             except Exception:
-                print 'Не удалось присовить стадию спецификация, проверьте список стадий'
+                print 'Не удалось присвоить стадию спецификация, проверьте список стадий'
 
             Models.append(element)
 
@@ -144,8 +152,9 @@ def new_position(calculation_elements):
         setElement(dummy, 'ADSK_Завод-изготовитель', element[7])
         setElement(dummy, 'ADSK_Единица измерения', element[8])
         setElement(dummy, 'ФОП_ВИС_Число', element[9])
-        setElement(dummy, 'ADSK_Масса', element[10])
+        setElement(dummy, 'ФОП_ВИС_Масса', element[10])
         setElement(dummy, 'ADSK_Примечание', element[11])
+        setElement(dummy, 'ФОП_Экономическая функция', element[12])
         Models.pop(0)
 
 ADSK_System_Names = []
@@ -177,6 +186,7 @@ ADSK_Izm = 8
 FOP_Number = 9
 FOP_Mass = 10
 ADSK_Comment = 11
+FOP_EF = 12
 
 report_rows = set()
 
@@ -212,9 +222,10 @@ with revit.Transaction("Добавление расчетных элементо
         Number = xlrange.value2[row, FOP_Number]
         Mass = xlrange.value2[row, FOP_Mass]
         Comment = xlrange.value2[row, ADSK_Comment]
+        EF = xlrange.value2[row, FOP_EF]
 
         row += 1
-        calculation_elements.append([System, Class, Work, Group, Name, Mark, Art, Maker, Izm, Number, Mass, Comment])
+        calculation_elements.append([System, Class, Work, Group, Name, Mark, Art, Maker, Izm, Number, Mass, Comment, EF])
 
 
 
