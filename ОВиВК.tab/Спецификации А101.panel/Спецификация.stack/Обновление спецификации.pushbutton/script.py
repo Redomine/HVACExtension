@@ -403,7 +403,10 @@ def getCapacityParam(element, position):
                 if lenght == None:
                     lenght = 0
 
-                CapacityParam = ((lenght * 304.8)/1000) * length_reserve
+                if position == '6. Материалы трубопроводной изоляции' or position == '6. Материалы изоляции воздуховодов':
+                    CapacityParam = (lenght * 0.092903) * isol_reserve
+                else:
+                    CapacityParam = ((lenght * 304.8)/1000) * length_reserve
                 CapacityParam = round(CapacityParam, 2)
             else:
                 fop_izm.Set('м²')
@@ -411,7 +414,11 @@ def getCapacityParam(element, position):
                 if area == None:
                     area = 0
 
-                CapacityParam = (area * 0.092903) * area_reserve
+                if position == '6. Материалы трубопроводной изоляции' or position == '6. Материалы изоляции воздуховодов':
+                    CapacityParam = (area * 0.092903) * isol_reserve
+                else:
+                    CapacityParam = ((area * 304.8)/1000) * length_reserve
+
                 CapacityParam = round(CapacityParam, 2)
 
             if element.LookupParameter('ФОП_ВИС_Число'):
@@ -572,7 +579,7 @@ def update_boq(element):
     fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
 
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        fop_number = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) * area_reserve
+        fop_number = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) * length_reserve
         fop_number = round(fop_number, 2)
 
     boq_number = element.LookupParameter('ФОП_ТИП_Число')
@@ -668,7 +675,7 @@ if len(paraNames) > 0:
 else:
     # Переменные для расчета
     length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
-    area_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
+    isol_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
     sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
 
 
