@@ -102,6 +102,8 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
         print "\r\n".join(report_rows)
     else:
         with revit.Transaction("Запись айди"):
+            rollback_itemized = False
+            rollback_header = False
 
             #если заголовки показаны изначально или если спека изначально развернута - сворачивать назад не нужно
             if definition.IsItemized == False:
@@ -127,7 +129,6 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
 
         startIndex = 0 #Стартовый значение для номера
         with revit.Transaction("Запись номера"):
-
             #получаем по каким столбикам мы сортируем
             sortGroupInd = getSortGroupInd()[0] #список параметров с сортировкой
             FOP_pos_ind = getSortGroupInd()[1] #индекс столбика с позицией
@@ -139,7 +140,6 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
                 newSheduleString = ''
                 for ind in sortGroupInd:
                     newSheduleString = newSheduleString + vs.GetCellText(SectionType.Body, row, ind)
-
                 #получаем элемент по записанному айди
                 elId = vs.GetCellText(SectionType.Body, row, FOP_pos_ind)
 
@@ -172,8 +172,6 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
                 if i in hidden:
                     definition.GetField(i).IsHidden = True
                 i += 1
-
-
 
             if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
                 colCurves = make_col(BuiltInCategory.OST_DuctCurves)

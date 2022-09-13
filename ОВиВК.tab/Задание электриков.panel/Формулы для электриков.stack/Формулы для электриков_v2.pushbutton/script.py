@@ -120,16 +120,11 @@ with revit.Transaction("Добавление формул"):
         manager.Set(heater, 0)
         manager.Set(regulator, 0)
 
-
-
-
     #если не присвоить значение, то потом в процессе получается деление на ноль
     for param in set:
         if str(param.Definition.Name) == 'ADSK_Коэффициент мощности':
             manager.SetFormula(param, "1")
     #нельзя присвоить значение в коннекторе, если классификатор обозначен в типе никак.
-
-
 
     for connector in connectorCol:
         if str(connector.Domain) == "DomainElectrical":
