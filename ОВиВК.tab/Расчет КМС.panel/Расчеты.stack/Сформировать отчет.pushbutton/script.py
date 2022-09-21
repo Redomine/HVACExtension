@@ -134,36 +134,41 @@ def getDpTapAdjustable(element):
     Lc = max(Flow)
     Lo = conSet[0].Flow*101.94
 
+
+
     f0 = Fo / Fc
     l0 = Lo / Lc
     fp = Fp / Fc
 
+
     if str(conSet[0].DuctSystemType) == "ExhaustAir" or str(conSet[0].DuctSystemType) == "ReturnAir":
         if form == "Круглый отвод":
             if Lc > Lo:
-                K = ((1-Fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((Fp+f0)*l0)**0.5)*(Fp/(1-l0))**2
+                K = ((1-fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)*(fp/(1-l0))**2
             else:
-                K = (-0.7-6.05*(1-Fp)**3)*(f0/l0)**2+(1.32+3.23*(1-Fp)**2)*f0/l0+(0.5+0.42*Fp)-0.167*l0/f0
+                K = (-0.7-6.05*(1-fp)**3)*(f0/l0)**2+(1.32+3.23*(1-fp)**2)*f0/l0+(0.5+0.42*fp)-0.167*l0/f0
         else:
             if Lc > Lo:
-                K = (Fp/(1-l0))**2*((1-Fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((Fp+f0)*l0)**0.5)
+                K = (fp/(1-l0))**2*((1-fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)
             else:
-                K = (f0/l0)**2*(4.1*(Fp/f0)**1.25*l0**1.5*(Fp+f0)**(0.3*(f0/Fp)**0.5/l0-2)-0.5*Fp/f0)
+                K = (f0/l0)**2*(4.1*(fp/f0)**1.25*l0**1.5*(fp+f0)**(0.3*(f0/fp)**0.5/l0-2)-0.5*fp/f0)
+
 
 
     if str(conSet[0].DuctSystemType) == "SupplyAir":
         if form == "Круглый отвод":
             if Lc > Lo:
-                K = 0.45*(Fp/(1-l0))**2+(0.6-1.7*Fp)*Fp/(1-l0)-(0.25-0.9*Fp**2)+0.19*(1-l0)/Fp
+                K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
             else:
                 K = (f0/l0)**2-0.58*f0/l0+0.54+0.025*l0/f0
         else:
             if Lc > Lo:
-                K = 0.45*(Fp/(1-l0))**2+(0.6-1.7*Fp)*Fp/(1-l0)-(0.25-0.9*Fp**2)+0.19*(1-l0)/Fp
+                K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
             else:
                 K = (f0/l0)**2-0.42*f0/l0+0.81-0.06*l0/f0
 
     return K
+
 
 
 passed_taps = []
@@ -203,7 +208,8 @@ for number in path_numbers:
 
         lenght = '-'
         try:
-            lenght = section.GetSegmentLength(elementId)
+            lenght = section.GetSegmentLength(elementId) * 304.8 / 1000
+            lenght = float('{:.2f}'.format(lenght))
         except Exception:
             pass
 
@@ -216,19 +222,24 @@ for number in path_numbers:
 
         flow = 0
         try:
-            flow = section.Flow
+            flow = section.Flow * 101.941317259
+            flow = int(flow)
         except Exception:
             pass
 
-        velocity = 0
+        velocity = '-'
         try:
-            velocity = section.Velocity
+            velocity = section.Velocity * 0.30473037475
+            velocity = float('{:.2f}'.format(velocity))
         except Exception:
             pass
+        if velocity == 0:
+            velocity = '-'
 
         pressure_drop = 0
         try:
             pressure_drop = section.GetPressureDrop(elementId) * 3.280839895
+
 
         except Exception:
             pass
@@ -238,11 +249,17 @@ for number in path_numbers:
                 if element.Id not in passed_taps:
                     Pd = (1.21 * velocity * velocity)/2 #Динамическое давление
                     K = getDpTapAdjustable(element) #КМС
+                    K = float('{:.2f}'.format(K))
                     Z = Pd * K
+                    coef = K
                     pressure_drop = Z
                     passed_taps.append(element.Id)
 
+
+        pressure_drop = float('{:.2f}'.format(pressure_drop))
+
         summ_pressure += pressure_drop
+
         if pressure_drop == 0:
             continue
         else:
