@@ -456,77 +456,75 @@ def getServerById(serverGUID, serviceId):
             return server
     return None
 
+def script_execute():
+    with revit.Transaction("Пересчет потерь напора"):
+        for element in colFittings:
+            K = 0
 
-with revit.Transaction("Пересчет потерь напора"):
-    for element in colFittings:
-        K = 0
+            try:
+                if str(element.MEPModel.PartType) == 'Elbow':
+                    K = getDpElbow(element)
+            except Exception:
+                pass
 
-        try:
-            if str(element.MEPModel.PartType) == 'Elbow':
-                K = getDpElbow(element)
-        except Exception:
-            pass
+            try:
+                if str(element.MEPModel.PartType) == 'Transition':
+                    K = getDpTransition(element)
+            except Exception:
+                pass
 
-        try:
-            if str(element.MEPModel.PartType) == 'Transition':
-                K = getDpTransition(element)
-        except Exception:
-            pass
+            try:
+                if str(element.MEPModel.PartType) == 'Tee':
+                    K = getDpTee(element)
+            except Exception:
+                pass
 
-        try:
-            if str(element.MEPModel.PartType) == 'Tee':
-                K = getDpTee(element)
-        except Exception:
-            pass
-
-        try:
-            if str(element.MEPModel.PartType) == 'TapAdjustable':
-                K = getDpTapAdjustable(element)
-        except Exception:
-            pass
-
-
-        #выбираем метод потерь по гуиду, "определенный коэффициент"
-        # schema = Schema.Lookup(Guid("13ded697-d107-4b0d-8dc4-2a2e4c870096"))
-        # fitting = doc.GetElement(element.Id)
-        # param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
-        # param.Set("Coefficient")
-        # entity = element.GetEntity(schema)
-        # field = schema.GetField("Coefficient")
-        # entity.Set[field.ValueType](field, str(K))
-        # element.SetEntity(entity)
-
-        eleId = element.Id
-        if eleId.IntegerValue == 2752996:
-            print K
-        fitting = doc.GetElement(eleId)
-        param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
-        lc = getLossMethods(ExternalServices.BuiltInExternalServices.DuctFittingAndAccessoryPressureDropService)
-        param.Set(lc[6].ToString()) # установка метода потерь
-        schema = lc[8].GetDataSchema()
-
-        field = schema.GetField("Coefficient")
-        entity=fitting.GetEntity(schema)
-
-        try:
-            entity.Set[field.ValueType](field, str(K))
-            fitting.SetEntity(entity)
-        except Exception:
-            pass
+            try:
+                if str(element.MEPModel.PartType) == 'TapAdjustable':
+                    K = getDpTapAdjustable(element)
+            except Exception:
+                pass
 
 
+            #выбираем метод потерь по гуиду, "определенный коэффициент"
+            # schema = Schema.Lookup(Guid("13ded697-d107-4b0d-8dc4-2a2e4c870096"))
+            # fitting = doc.GetElement(element.Id)
+            # param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
+            # param.Set("Coefficient")
+            # entity = element.GetEntity(schema)
+            # field = schema.GetField("Coefficient")
+            # entity.Set[field.ValueType](field, str(K))
+            # element.SetEntity(entity)
+
+            eleId = element.Id
+            fitting = doc.GetElement(eleId)
+            param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
+            lc = getLossMethods(ExternalServices.BuiltInExternalServices.DuctFittingAndAccessoryPressureDropService)
+            param.Set(lc[6].ToString()) # установка метода потерь
+            schema = lc[8].GetDataSchema()
+
+            field = schema.GetField("Coefficient")
+            entity=fitting.GetEntity(schema)
+
+            try:
+                entity.Set[field.ValueType](field, str(K))
+                fitting.SetEntity(entity)
+            except Exception:
+                pass
 
 
+    with revit.Transaction("Выключение систем"):
+        colSystems = make_col(BuiltInCategory.OST_DuctSystem)
+        for el in colSystems:
+            sysType = doc.GetElement(el.GetTypeId())
+            sysType.CalculationLevel = sysType.CalculationLevel.None
 
+    with revit.Transaction("Включение систем"):
+        colSystems = make_col(BuiltInCategory.OST_DuctSystem)
+        for el in colSystems:
+            sysType = doc.GetElement(el.GetTypeId())
+            sysType.CalculationLevel = sysType.CalculationLevel.All
 
-with revit.Transaction("Выключение систем"):
-    colSystems = make_col(BuiltInCategory.OST_DuctSystem)
-    for el in colSystems:
-        sysType = doc.GetElement(el.GetTypeId())
-        sysType.CalculationLevel = sysType.CalculationLevel.None
+script_execute()
 
-with revit.Transaction("Включение систем"):
-    colSystems = make_col(BuiltInCategory.OST_DuctSystem)
-    for el in colSystems:
-        sysType = doc.GetElement(el.GetTypeId())
-        sysType.CalculationLevel = sysType.CalculationLevel.All
+script_execute()
