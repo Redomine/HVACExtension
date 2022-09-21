@@ -6,12 +6,14 @@ __doc__ = "Формирует отчет о расчете аэродинами�
 
 
 import clr
+
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
-
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
 import dosymep
 
 clr.ImportExtensions(dosymep.Revit)
@@ -74,7 +76,7 @@ def optimise_list(data_list):
     #for data in data_list:
     #    count, name, lenght, size, pressure_drop, summ_pressure, elementId
 
-
+output = script.get_output()
 for number in path_numbers:
     count += 1
     section = system.GetSectionByNumber(number)
@@ -90,6 +92,15 @@ for number in path_numbers:
             name = 'Оборудование'
         elif element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             name = 'Фасонный элемент воздуховода'
+            if str(element.MEPModel.PartType) == 'Elbow':
+                name = 'Отвод воздуховода'
+            if str(element.MEPModel.PartType) == 'Transition':
+                name = 'Переход между сечениями'
+            if str(element.MEPModel.PartType) == 'Tee':
+                name = 'Тройник'
+            if str(element.MEPModel.PartType) == 'TapAdjustable':
+                name = 'Врезка'
+
         else:
             name = 'Арматура'
 
@@ -102,7 +113,6 @@ for number in path_numbers:
         lenght = '-'
         try:
             lenght = section.GetSegmentLength(elementId)
-            lenght = str(lenght) + ' м.п.'
         except Exception:
             pass
 
@@ -113,21 +123,27 @@ for number in path_numbers:
             except Exception:
                 pass
 
+        flow = 0
+        try:
+            flow = section.Flow
+        except Exception:
+            pass
+
         pressure_drop = 0
         try:
             pressure_drop = section.GetPressureDrop(elementId) * 3.280839895
             summ_pressure += pressure_drop
         except Exception:
             pass
-        #if pressure_drop == 0:
-        #    continue
-        #else:
-        data.append([count, name, lenght, size, coef, pressure_drop, summ_pressure, elementId])
+        if pressure_drop == 0:
+            continue
+        else:
+            data.append([count, name, lenght, size, flow, coef, pressure_drop, summ_pressure, output.linkify(elementId)])
 
-output = script.get_output()
+
 
 output.print_table(table_data=data,
                    title=("Отчет о расчете аэродинамики системы " + system_name),
-                   columns=["Номер участка", "Наименование элемента", "Длина","Размер", "КМС", "Потери напора элемента", "Суммарные потери напора", "Id элемента"],
+                   columns=["Номер участка", "Наименование элемента", "Длина, м.п.","Размер", "Расход, м3/ч", "КМС", "Потери напора элемента, Па", "Суммарные потери напора, Па", "Id элемента"],
                    formats=['', '', ''],
                    )

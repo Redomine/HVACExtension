@@ -6,9 +6,15 @@ __doc__ = "Пересчитывает КМС соединительных дет
 
 
 import clr
+
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
+import dosymep
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
 
 import sys
 import System
@@ -22,7 +28,11 @@ from System.Collections.Generic import List
 from System import Guid
 from pyrevit import revit
 
-doc = __revit__.ActiveUIDocument.Document
+from dosymep.Bim4Everyone.Templates import ProjectParameters
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+
+
+doc = __revit__.ActiveUIDocument.Document # type: Document
 view = doc.ActiveView
 
 
@@ -353,10 +363,31 @@ def getDpTapAdjustable(element):
         form = "Круглый отвод"
 
     mainCon = []
-    connectorSet = conSet[0].AllRefs.ForwardIterator()
-    while connectorSet.MoveNext():
-        mainCon.append(connectorSet.Current)
+    #if element.Id.IntegerValue == 2752996:
+    #    for con in conSet:
+    #        print con.AllRefs.ForwardIterator().Current
+            #.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
+
+
+    connectorSet_0 = conSet[0].AllRefs.ForwardIterator()
+
+    connectorSet_1 = conSet[1].AllRefs.ForwardIterator()
+
+    old_flow = 0
+    for con in conSet:
+        connectorSet = con.AllRefs.ForwardIterator()
+        while connectorSet.MoveNext():
+            flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
+            if flow > old_flow:
+                mainCon = []
+                mainCon.append(connectorSet.Current)
+                old_flow = flow
+
+
+
     duct = mainCon[0].Owner
+
+
     ductCons = getConnectors(duct)
     Flow = []
 
@@ -454,8 +485,6 @@ with revit.Transaction("Пересчет потерь напора"):
         except Exception:
             pass
 
-        if element.LookupParameter("ФОП_ВИС_Расчет_КМС"):
-            element.LookupParameter("ФОП_ВИС_Расчет_КМС").Set(K)
 
         #выбираем метод потерь по гуиду, "определенный коэффициент"
         # schema = Schema.Lookup(Guid("13ded697-d107-4b0d-8dc4-2a2e4c870096"))
@@ -468,6 +497,8 @@ with revit.Transaction("Пересчет потерь напора"):
         # element.SetEntity(entity)
 
         eleId = element.Id
+        if eleId.IntegerValue == 2752996:
+            print K
         fitting = doc.GetElement(eleId)
         param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
         lc = getLossMethods(ExternalServices.BuiltInExternalServices.DuctFittingAndAccessoryPressureDropService)
@@ -476,6 +507,7 @@ with revit.Transaction("Пересчет потерь напора"):
 
         field = schema.GetField("Coefficient")
         entity=fitting.GetEntity(schema)
+
         try:
             entity.Set[field.ValueType](field, str(K))
             fitting.SetEntity(entity)
