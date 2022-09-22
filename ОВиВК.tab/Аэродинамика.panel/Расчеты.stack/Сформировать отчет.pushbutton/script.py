@@ -40,13 +40,19 @@ doc = __revit__.ActiveUIDocument.Document
 uidoc = __revit__.ActiveUIDocument
 selectedIds = uidoc.Selection.GetElementIds()
 if 0 == selectedIds.Count:
-    print 'Выделите систему для формирования отчета перед запуском плагина'
+    print 'Для формирования отчета выделите систему перед запуском плагина'
+    sys.exit()
 if selectedIds.Count > 1:
     print 'Нужно выделить только одну систему'
-
+    sys.exit()
 system = doc.GetElement(selectedIds[0])
 if selectedIds.Count == 1 and system.Category.IsId(BuiltInCategory.OST_DuctSystem) == False:
     print 'Обработке подлежат только системы воздуховодов'
+    sys.exit()
+
+if len(system.GetCriticalPathSectionNumbers()) == 0 or system.PressureLossOfCriticalPath == 0:
+    print 'У выделенной системы не ведется расчет статического давления или оно зануляется'
+    sys.exit()
 
 view = doc.ActiveView
 
@@ -59,7 +65,7 @@ def make_col(category):
                             .ToElements()
     return col 
     
-path_numbers = system.GetCriticalPathSectionNumbers()
+
 
 data = []
 count = 0
@@ -100,10 +106,6 @@ def getDpTapAdjustable(element):
             #.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
 
 
-    connectorSet_0 = conSet[0].AllRefs.ForwardIterator()
-
-    connectorSet_1 = conSet[1].AllRefs.ForwardIterator()
-
     old_flow = 0
     for con in conSet:
         connectorSet = con.AllRefs.ForwardIterator()
@@ -122,10 +124,11 @@ def getDpTapAdjustable(element):
     ductCons = getConnectors(duct)
     Flow = []
 
+
     for ductCon in ductCons:
         Flow.append(ductCon.Flow*101.94)
         try:
-            Fc = conSet[0].Height * 0.3048 * ductCon.Width * 0.3048
+            Fc = ductCon.Height * 0.3048 * ductCon.Width * 0.3048
             Fp = Fc
         except:
             Fc = 3.14 * 0.3048 * 0.3048 * ductCon.Radius ** 2
@@ -169,12 +172,18 @@ def getDpTapAdjustable(element):
 
     return K
 
-
+path_numbers = system.GetCriticalPathSectionNumbers()
+path = []
+for number in path_numbers:
+    path.append(number)
+if str(system.SystemType) == "SupplyAir":
+    path.reverse()
 
 passed_taps = []
 output = script.get_output()
-for number in path_numbers:
-    count += 1
+old_flow = 0
+for number in path:
+
     section = system.GetSectionByNumber(number)
     elementsIds = section.GetElementIds()
     for elementId in elementsIds:
@@ -226,7 +235,9 @@ for number in path_numbers:
             flow = int(flow)
         except Exception:
             pass
-
+        if old_flow < flow:
+            old_flow = flow
+            count += 1
         velocity = '-'
         try:
             velocity = section.Velocity * 0.30473037475
@@ -248,13 +259,14 @@ for number in path_numbers:
             if str(element.MEPModel.PartType) == 'TapAdjustable':
                 if element.Id not in passed_taps:
                     Pd = (1.21 * velocity * velocity)/2 #Динамическое давление
+
                     K = getDpTapAdjustable(element) #КМС
+
                     K = float('{:.2f}'.format(K))
                     Z = Pd * K
                     coef = K
                     pressure_drop = Z
                     passed_taps.append(element.Id)
-
 
         pressure_drop = float('{:.2f}'.format(pressure_drop))
 
@@ -264,7 +276,6 @@ for number in path_numbers:
             continue
         else:
             data.append([count, name, lenght, size, flow, velocity, coef, pressure_drop, summ_pressure, output.linkify(elementId)])
-
 
 
 output.print_table(table_data=data,
