@@ -40,11 +40,13 @@ paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Един
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
              'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
              'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Позиция', 'ФОП_ВИС_Площади воздуховодов в примечания',
-             'ФОП_ВИС_Нумерация позиций']
+             'ФОП_ВИС_Нумерация позиций', 'ФОП_ВИС_Расчет комплектов заделки', 'ФОП_ВИС_Расчет краски и грунтовки', 'ФОП_ВИС_Расчет металла для креплений']
 
-pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка', 'ФОП_ВИС_Имя трубы из сегмента']
+pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Расчет краски и грунтовки']
 
-projectparaNames = ['ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ВИС_Нумерация позиций', 'ФОП_ВИС_Площади воздуховодов в примечания']
+
+
+projectparaNames = ['ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ВИС_Нумерация позиций', 'ФОП_ВИС_Площади воздуховодов в примечания',  'ФОП_ВИС_Расчет комплектов заделки']
 
 catFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting)
 catPipeFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeFitting)
@@ -92,6 +94,8 @@ pipeCats = [catPipeCurves]
 
 infCats = [catInformation]
 
+ductandpipeCats = [catCurves, catPipeCurves]
+
 
 
 
@@ -114,6 +118,8 @@ catDuctSet = doc.Application.Create.NewCategorySet()
 catPipeSet = doc.Application.Create.NewCategorySet()
 nodeCatSet = doc.Application.Create.NewCategorySet()
 infCatSet = doc.Application.Create.NewCategorySet()
+ductandpipeCatSet = doc.Application.Create.NewCategorySet()
+
 
 for cat in cats:
     catSet.Insert(cat)
@@ -130,6 +136,9 @@ for cat in nodeCats:
 for cat in infCats:
     infCatSet.Insert(cat)
 
+for cat in ductandpipeCats:
+    ductandpipeCatSet.Insert(cat)
+
 with revit.Transaction("Добавление параметров"):
     if len(paraNames) > 0:
         addedNames = []
@@ -143,6 +152,8 @@ with revit.Transaction("Добавление параметров"):
                     eDef = myDefinitions.get_Item(name)
                     if name == "ФОП_ВИС_Минимальная толщина воздуховода":
                         newIB = doc.Application.Create.NewTypeBinding(catDuctSet)
+                    if name == 'ФОП_ВИС_Расчет металла для креплений':
+                        newIB = doc.Application.Create.NewTypeBinding(ductandpipeCatSet)
                     elif name in pipeparaNames:
                         newIB = doc.Application.Create.NewTypeBinding(catPipeSet)
 
