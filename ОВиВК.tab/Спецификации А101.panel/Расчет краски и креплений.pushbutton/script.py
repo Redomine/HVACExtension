@@ -8,11 +8,20 @@ __doc__ = "Генерирует в модели элементы с расчет
 import clr
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
-clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
+
 
 import sys
 import System
+import dosymep
 
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
+
+
+from dosymep.Bim4Everyone.Templates import ProjectParameters
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -20,7 +29,7 @@ from System.Collections.Generic import List
 from System import Guid
 from pyrevit import revit
 
-from Microsoft.Office.Interop import Excel
+
 from System.Runtime.InteropServices import Marshal
 from rpw.ui.forms import select_file
 from rpw.ui.forms import TextInput
@@ -44,6 +53,7 @@ def make_col(category):
 colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 colModel = make_col(BuiltInCategory.OST_GenericModel)
+colSystems = make_col(BuiltInCategory.OST_DuctSystem)
 # create a filtered element collector set to Category OST_Mass and Class FamilySymbol
 collector = FilteredElementCollector(doc)
 collector.OfCategory(BuiltInCategory.OST_GenericModel)
@@ -80,6 +90,8 @@ def setElement(element, name, setting):
     if name == "ФОП_ВИС_Масса":
         element.LookupParameter(name).Set(str(setting))
 
+
+
     if name == 'ADSK_Единица измерения':
         element.LookupParameter('ФОП_ТИП_Единица измерения').Set(str(setting))
         element.LookupParameter('ФОП_ВИС_Единица измерения').Set(str(setting))
@@ -97,8 +109,28 @@ def setElement(element, name, setting):
         pass
 
 
+def duct_material(element):
+    area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
+    if element.GetParamValue(BuiltInParameter.RBS_EQ_DIAMETER_PARAM) == element.GetParamValue(BuiltInParameter.RBS_HYDRAULIC_DIAMETER_PARAM):
+        D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
+        P = 3.14 * D
+    else:
+        A = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM)
+        B = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)
+        P = 2 * (A + B)
+
+    if P < 1001:
+        kg = area * 65
+    elif P < 1801:
+        kg = area * 122
+    else:
+        kg = area * 225
+
+    return kg
+
 def new_position(calculation_elements):
     # создаем заглушки по элементов собранных из таблицы
+
     loc = XYZ(0, 0, 0)
 
     temporary.Activate()
@@ -118,13 +150,15 @@ def new_position(calculation_elements):
 
             Models.append(element)
 
+
     # для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
     for element in calculation_elements:
+        group = str(element[3]) + str(element[4]) + str(element[5])
         dummy = Models[0]
         setElement(dummy, 'ADSK_Имя системы', element[0])
         setElement(dummy, 'ФОП_ТИП_Код', element[1])
         setElement(dummy, 'ФОП_ТИП_Наименование работы', element[2])
-        setElement(dummy, 'ФОП_ВИС_Группирование', element[3])
+        setElement(dummy, 'ФОП_ВИС_Группирование', group)
         setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element[4])
         setElement(dummy, 'ADSK_Марка', element[5])
         setElement(dummy, 'ADSK_Код изделия', element[6])
@@ -164,7 +198,6 @@ else:
             sys.exit()
 
     with revit.Transaction("Добавление расчетных элементов"):
-
         #при каждом повторе расчета удаляем старые версии
         for element in colModel:
             if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
@@ -172,15 +205,13 @@ else:
 
         calculation_elements = []
 
-
-
-        #while True:
-        #    calculation_elements.append([System, Class, Work, Group, Name, Mark, Art, Maker, Izm, Number, Mass, Comment, EF])
-
-
-
-
         for phase in doc.Phases:
+            if phase.Name == 'Спецификация':
+                phaseid = phase.Id
+
+        duct_metal = []
+        duct_dict = {}
+        for element in colCurves:
             Class = ''
             Work = ''
             Group = '8. Расчетные элементы'
@@ -188,23 +219,17 @@ else:
             Mark = ''
             Art = ''
             Maker = ''
-            Izm = 'кг'
+            Izm = 'кг.'
             Mass = ''
             Comment = ''
 
-            if phase.Name == 'Спецификация':
-                phaseid = phase.Id
-
-        duct_metal = []
-        duct_dict = {}
-        for element in colCurves:
             elemType = doc.GetElement(element.GetTypeId())
             if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1:
 
                 EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
                 System = str(element.LookupParameter('ADSK_Имя системы').AsString())
                 Key = EF + " " + System
-                Number = 1
+                Number = duct_material(element)
 
                 if Key not in duct_dict:
                     duct_dict[Key] = Number
@@ -220,8 +245,39 @@ else:
             duct_metal.append([key[1], Class, Work, Group, Name, Mark, Art, Maker, Izm, duct_dict[duct], Mass, Comment, EF])
 
         # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
-        new_position(duct_metal)
+        #new_position(duct_metal)
 
+
+        if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Расчет комплектов заделки').AsInteger() == 1:
+            Class = ''
+            Work = ''
+            Group = '8. Расчетные элементы'
+            Name = "Комплект заделки отверстий с восстановлением предела огнестойкости"
+            Mark = ''
+            Art = ''
+            Maker = ''
+            Izm = 'компл.'
+            Mass = ''
+            Comment = ''
+
+            EF_dict = {}
+            system_list = []
+            for element in colCurves:
+                EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
+                System = str(element.LookupParameter('ADSK_Имя системы').AsString())
+
+                if System not in EF_dict:
+                    EF_dict[System] = EF
+
+            for system in EF_dict:
+                system_list.append(
+                    [system, Class, Work, Group, Name, Mark, Art, Maker, Izm, 1, Mass, Comment, EF_dict[system]])
+
+            # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
+            #new_position(system_list)
+
+        calculation_elements = system_list + duct_metal
+        new_position(calculation_elements)
 
 
 

@@ -141,11 +141,12 @@ def new_position(calculation_elements):
 
     #для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
     for element in calculation_elements:
+        group = str(element[3]) + str(element[4]) + str(element[5])
         dummy = Models[0]
         setElement(dummy, 'ADSK_Имя системы', element[0])
         setElement(dummy, 'ФОП_ТИП_Код', element[1])
         setElement(dummy, 'ФОП_ТИП_Наименование работы', element[2])
-        setElement(dummy, 'ФОП_ВИС_Группирование', element[3])
+        setElement(dummy, 'ФОП_ВИС_Группирование', group)
         setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element[4])
         setElement(dummy, 'ADSK_Марка', element[5])
         setElement(dummy, 'ADSK_Код изделия', element[6])
