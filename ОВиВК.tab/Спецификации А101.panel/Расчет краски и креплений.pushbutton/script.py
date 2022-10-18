@@ -89,9 +89,6 @@ paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Един
 def setElement(element, name, setting):
     if name == "ФОП_ВИС_Масса":
         element.LookupParameter(name).Set(str(setting))
-
-
-
     if name == 'ADSK_Единица измерения':
         element.LookupParameter('ФОП_ТИП_Единица измерения').Set(str(setting))
         element.LookupParameter('ФОП_ВИС_Единица измерения').Set(str(setting))
@@ -127,6 +124,54 @@ def duct_material(element):
         kg = area * 225
 
     return kg
+
+def pipe_material(element):
+    kg = 1
+    return kg
+
+
+def line_elements(collection, name):
+    metal = []
+    line_dict = {}
+
+    for element in collection:
+        Class = ''
+        Work = ''
+        Group = '8. Расчетные элементы'
+        Name = name
+        Mark = ''
+        Art = ''
+        Maker = ''
+        Izm = 'кг.'
+        Mass = ''
+        Comment = ''
+
+        elemType = doc.GetElement(element.GetTypeId())
+        if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1:
+
+            EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
+            System = str(element.LookupParameter('ADSK_Имя системы').AsString())
+            Key = EF + " " + System
+            if len(Key.split()) == 1:
+                Key = "None None"
+
+            if collection == colCurves:
+                Number = duct_material(element)
+            if collection == colPipes:
+                Number = pipe_material(element)
+
+            if Key not in line_dict:
+                line_dict[Key] = Number
+            else:
+                line_dict[Key] = line_dict[Key] + Number
+
+    for line in line_dict:
+        key = str(line).split()
+        EF = key[0]
+
+        metal.append([key[1], Class, Work, Group, Name, Mark, Art, Maker, Izm, line_dict[line], Mass, Comment, EF])
+
+    return metal
 
 def new_position(calculation_elements):
     # создаем заглушки по элементов собранных из таблицы
@@ -172,6 +217,7 @@ def new_position(calculation_elements):
 
 
 
+
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
 it = map.ForwardIterator()
@@ -188,8 +234,6 @@ if len(paraNames) > 0:
         print 'Не удалось добавить параметры'
 
 else:
-
-
     for element in colModel:
         edited_by = element.LookupParameter('Редактирует').AsString()
         if edited_by and edited_by != __revit__.Application.Username:
@@ -209,44 +253,13 @@ else:
             if phase.Name == 'Спецификация':
                 phaseid = phase.Id
 
-        duct_metal = []
-        duct_dict = {}
-        for element in colCurves:
-            Class = ''
-            Work = ''
-            Group = '8. Расчетные элементы'
-            Name = "Металлические крепления для воздуховодов"
-            Mark = ''
-            Art = ''
-            Maker = ''
-            Izm = 'кг.'
-            Mass = ''
-            Comment = ''
 
-            elemType = doc.GetElement(element.GetTypeId())
-            if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1:
+        duct_metal = line_elements(colCurves, "Металлические крепления для воздуховодов")
 
-                EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
-                System = str(element.LookupParameter('ADSK_Имя системы').AsString())
-                Key = EF + " " + System
-                Number = duct_material(element)
+        if len(duct_metal) > 0:
+            calculation_elements = calculation_elements + duct_metal
 
-                if Key not in duct_dict:
-                    duct_dict[Key] = Number
-                else:
-                    duct_dict[Key] = duct_dict[Key] + Number
-
-
-
-        for duct in duct_dict:
-            key = str(duct).split()
-            EF = key[0]
-
-            duct_metal.append([key[1], Class, Work, Group, Name, Mark, Art, Maker, Izm, duct_dict[duct], Mass, Comment, EF])
-
-        # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
-        #new_position(duct_metal)
-
+        pipe_metal = line_elements(colPipes, "Металлические крепления для трубопроводов")
 
         if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Расчет комплектов заделки').AsInteger() == 1:
             Class = ''
@@ -275,8 +288,8 @@ else:
 
             # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
             #new_position(system_list)
+            calculation_elements = calculation_elements + system_list
 
-        calculation_elements = system_list + duct_metal
         new_position(calculation_elements)
 
 
