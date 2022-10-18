@@ -126,7 +126,28 @@ def duct_material(element):
     return kg
 
 def pipe_material(element):
-    kg = 1
+    lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))/1000
+
+    D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+
+    if D < 25:
+        kg = 0.9 * lenght
+    elif D < 33:
+        kg = 0.73 * lenght
+    elif D < 41:
+        kg = 0.64 * lenght
+    elif D < 51:
+        kg = 0.67 * lenght
+    elif D < 66:
+        kg = 0.53 * lenght
+    elif D < 81:
+        kg = 0.7 * lenght
+    elif D < 101:
+        kg = 0.64 * lenght
+    elif D < 126:
+        kg = 1.16 * lenght
+    else:
+        kg = 0.96 * lenght
     return kg
 
 
@@ -260,6 +281,9 @@ else:
             calculation_elements = calculation_elements + duct_metal
 
         pipe_metal = line_elements(colPipes, "Металлические крепления для трубопроводов")
+
+        if len(pipe_metal) > 0:
+            calculation_elements = calculation_elements + pipe_metal
 
         if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Расчет комплектов заделки').AsInteger() == 1:
             Class = ''
