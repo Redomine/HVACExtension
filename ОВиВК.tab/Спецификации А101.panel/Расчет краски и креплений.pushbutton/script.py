@@ -168,18 +168,22 @@ def line_elements(collection, name):
         Comment = ''
 
         elemType = doc.GetElement(element.GetTypeId())
-        if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1:
-
+        if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1\
+                or elemType.LookupParameter('ФОП_ВИС_Расчет краски и грунтовки').AsInteger() == 1:
             EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
             System = str(element.LookupParameter('ADSK_Имя системы').AsString())
             Key = EF + " " + System
             if len(Key.split()) == 1:
                 Key = "None None"
 
-            if collection == colCurves:
-                Number = duct_material(element)
-            if collection == colPipes:
-                Number = pipe_material(element)
+            if name == "Металлические крепления для трубопроводов"\
+                or name == "Металлические крепления для воздуховодов":
+                if collection == colCurves:
+                    Number = duct_material(element)
+                if collection == colPipes:
+                    Number = pipe_material(element)
+            else:
+                Number = pip
 
             if Key not in line_dict:
                 line_dict[Key] = Number
