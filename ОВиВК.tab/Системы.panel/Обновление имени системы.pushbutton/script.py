@@ -183,7 +183,11 @@ def update_element(elements):
 		edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
 		if edited_by and edited_by != __revit__.Application.Username:
 			continue
-		rename_sub(element)
+
+		try:
+			rename_sub(element)
+		except Exception:
+			print element.Id
 
 	return report_rows
 

@@ -623,6 +623,9 @@ def script_execute():
 
     for collection in collections:
         for element in collection:
+            if element.LookupParameter('ФОП_Экономическая функция'):
+                if element.LookupParameter('ФОП_Экономическая функция').AsString() == None:
+                    element.LookupParameter('ФОП_Экономическая функция').Set('None')
             try:
                 edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
             except Exception:
