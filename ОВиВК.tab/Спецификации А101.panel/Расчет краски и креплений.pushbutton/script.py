@@ -150,6 +150,20 @@ def pipe_material(element):
         kg = 0.96 * lenght
     return kg
 
+def pipe_grunt(element):
+    lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)) / 1000
+    D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+    S = (D * 3.14 * lenght)/1000
+    kg = 0.2 * S
+    return kg
+
+def pipe_color(element):
+    lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)) / 1000
+    D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+    S = (D * 3.14 * lenght)/1000
+    kg = 0.1 * S
+    return kg
+
 
 def line_elements(collection, name):
     metal = []
@@ -183,7 +197,11 @@ def line_elements(collection, name):
                 if collection == colPipes:
                     Number = pipe_material(element)
             else:
-                Number = pip
+                if name == "Краска антикоррозионная за два раза":
+                    Number = pipe_color(element)
+                if name == "Грунт ГФ-031":
+                    Number = pipe_grunt(element)
+
 
             if Key not in line_dict:
                 line_dict[Key] = Number
@@ -285,9 +303,15 @@ else:
             calculation_elements = calculation_elements + duct_metal
 
         pipe_metal = line_elements(colPipes, "Металлические крепления для трубопроводов")
+        pipe_paint_1 = line_elements(colPipes, "Краска антикоррозионная за два раза")
+        pipe_paint_2 = line_elements(colPipes, "Грунт ГФ-031")
 
         if len(pipe_metal) > 0:
             calculation_elements = calculation_elements + pipe_metal
+        if len(pipe_paint_1) > 0:
+            calculation_elements = calculation_elements + pipe_paint_1
+        if len(pipe_paint_2) > 0:
+            calculation_elements = calculation_elements + pipe_paint_2
 
         if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Расчет комплектов заделки').AsInteger() == 1:
             Class = ''
