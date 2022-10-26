@@ -110,7 +110,10 @@ def getDpTapAdjustable(element):
     for con in conSet:
         connectorSet = con.AllRefs.ForwardIterator()
         while connectorSet.MoveNext():
-            flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
+            try:
+                flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
+            except Exception:
+                flow = 0
             if flow > old_flow:
                 mainCon = []
                 mainCon.append(connectorSet.Current)
