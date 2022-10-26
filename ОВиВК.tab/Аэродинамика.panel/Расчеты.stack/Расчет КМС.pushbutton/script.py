@@ -33,6 +33,12 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 
 
 doc = __revit__.ActiveUIDocument.Document # type: Document
+
+uidoc = __revit__.ActiveUIDocument
+
+
+
+
 view = doc.ActiveView
 
 
@@ -43,8 +49,10 @@ def make_col(category):
                             .WhereElementIsNotElementType()\
                             .ToElements()
     return col 
-    
-colFittings = make_col(BuiltInCategory.OST_DuctFitting)    
+
+
+
+colFittings = make_col(BuiltInCategory.OST_DuctFitting)
 colSystem = make_col(BuiltInCategory.OST_DuctSystem)
 
 
@@ -363,11 +371,6 @@ def getDpTapAdjustable(element):
         form = "Круглый отвод"
 
     mainCon = []
-    #if element.Id.IntegerValue == 2752996:
-    #    for con in conSet:
-    #        print con.AllRefs.ForwardIterator().Current
-            #.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
-
 
     connectorSet_0 = conSet[0].AllRefs.ForwardIterator()
 
@@ -377,7 +380,10 @@ def getDpTapAdjustable(element):
     for con in conSet:
         connectorSet = con.AllRefs.ForwardIterator()
         while connectorSet.MoveNext():
-            flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
+            try:
+                flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
+            except Exception:
+                flow = 0
             if flow > old_flow:
                 mainCon = []
                 mainCon.append(connectorSet.Current)
@@ -463,6 +469,8 @@ def getServerById(serverGUID, serviceId):
 def script_execute():
     with revit.Transaction("Пересчет потерь напора"):
         for element in colFittings:
+
+
             K = 0
 
             try:
@@ -488,6 +496,8 @@ def script_execute():
                     K = getDpTapAdjustable(element)
             except Exception:
                 pass
+
+            #print element.Id.IntegerValue
 
 
             #выбираем метод потерь по гуиду, "определенный коэффициент"
