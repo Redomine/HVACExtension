@@ -22,6 +22,7 @@ clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 import sys
+import paraSpec
 
 from Autodesk.Revit.DB import *
 from System import Guid
@@ -29,8 +30,6 @@ from itertools import groupby
 
 from pyrevit import revit
 from pyrevit.script import output
-
-
 
 
 
@@ -638,8 +637,6 @@ def script_execute():
             make_new_name(element)
             update_boq(element)
 
-
-
     for collection in collections:
         for element in collection:
             regroop(element)
@@ -651,63 +648,43 @@ def script_execute():
         getDependent(colAccessory)
         getDependent(colTerminals)
 
-
-
     if report_rows:
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
         print "\r\n".join(report_rows)
 
+status = paraSpec.check_parameters()
 
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
-             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Позиция', 'ФОП_ВИС_Площади воздуховодов в примечания',
-             'ФОП_ВИС_Нумерация позиций', 'ФОП_ВИС_Расчет комплектов заделки', 'ФОП_ВИС_Расчет краски и грунтовки', 'ФОП_ВИС_Расчет металла для креплений']
+if status:
+    sys.exit()
 
-
-
-#проверка на наличие нужных параметров
-map = doc.ParameterBindings
-it = map.ForwardIterator()
-while it.MoveNext():
-    newProjectParameterData = it.Key.Name
-    if str(newProjectParameterData) in paraNames:
-        paraNames.remove(str(newProjectParameterData))
-if len(paraNames) > 0:
-    try:
-        import paraSpec
-        print 'Были добавлен параметры, перезапустите скрипт'
-    except Exception:
-        print 'Не удалось добавить параметры'
-else:
-    # Переменные для расчета
-    length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
-    isol_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
-    sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
+# Переменные для расчета
+length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
+isol_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
+sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
 
 
-    colFittings = make_col(BuiltInCategory.OST_DuctFitting)
-    colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
-    colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
-    colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-    colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
-    colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
-    colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
-    colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
-    colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
-    colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
-    colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
-    colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
-    colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
-    colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
+colFittings = make_col(BuiltInCategory.OST_DuctFitting)
+colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
+colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
+colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
+colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
+colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
+colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
+colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
+colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
+colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
+colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 
-    collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-                   colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
-
-
-    with revit.Transaction("Обновление общей спеки"):
-        script_execute()
+collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
+               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
 
 
-    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
-        import numerateSpec
+with revit.Transaction("Обновление общей спеки"):
+    script_execute()
+
+
+if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
+    import numerateSpec
