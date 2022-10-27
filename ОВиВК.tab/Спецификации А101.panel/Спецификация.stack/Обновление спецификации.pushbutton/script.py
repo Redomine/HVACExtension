@@ -654,8 +654,8 @@ def script_execute():
 
 status = paraSpec.check_parameters()
 
-if status:
-    sys.exit()
+#if status:
+    #sys.exit()
 
 # Переменные для расчета
 length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
@@ -682,9 +682,10 @@ collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPi
                colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
 
 
-with revit.Transaction("Обновление общей спеки"):
-    script_execute()
+if not status:
+    #sys.exit()
+    with revit.Transaction("Обновление общей спеки"):
+        script_execute()
 
-
-if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
-    import numerateSpec
+    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
+        import numerateSpec
