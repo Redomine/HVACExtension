@@ -467,9 +467,16 @@ def getServerById(serverGUID, serviceId):
     return None
 
 def script_execute():
+    report_rows = set()
     with revit.Transaction("Пересчет потерь напора"):
         for element in colFittings:
-
+            try:
+                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+            except Exception:
+                print element.Id
+            if edited_by and edited_by != __revit__.Application.Username:
+                report_rows.add(edited_by)
+                continue
 
             K = 0
 
@@ -526,6 +533,9 @@ def script_execute():
             except Exception:
                 pass
 
+    if report_rows:
+        print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
+        print "\r\n".join(report_rows)
 
     with revit.Transaction("Выключение систем"):
         colSystems = make_col(BuiltInCategory.OST_DuctSystem)
