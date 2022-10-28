@@ -604,22 +604,25 @@ def regroop(element):
     ADSK_Mark = get_ADSK_Mark(element)
     ADSK_Name = get_ADSK_Name(element)
     FOP_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+    FOP_Group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
+
+    if FOP_Group == None:
+        FOP_Group = 'None'
 
     if FOP_Name == None:
         FOP_Name = 'None'
 
     if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
         element.LookupParameter('ФОП_ВИС_Группирование').Set(
-            element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name)
+            FOP_Group + " " + FOP_Name)
     else:
         element.LookupParameter('ФОП_ВИС_Группирование').Set(
-            element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + FOP_Name + " " + ADSK_Mark)
+            FOP_Group + " " + FOP_Name + " " + ADSK_Mark)
 
 
 
 def script_execute():
     report_rows = set()
-
     for collection in collections:
         for element in collection:
             if element.LookupParameter('ФОП_Экономическая функция'):
@@ -683,7 +686,6 @@ collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPi
 
 
 if not status:
-    #sys.exit()
     with revit.Transaction("Обновление общей спеки"):
         script_execute()
 
