@@ -289,11 +289,15 @@ def make_new_name(element):
         except Exception:
             New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(BuiltInParameter.RBS_REFERENCE_FREESIZE)
 
-        if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Изоляция совместно с воздуховодами').AsInteger() == 1:
-            cons = getConnectors(element)
-            for con in cons:
-                for el in con.AllRefs:
-                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+
+
+
+        cons = getConnectors(element)
+        for con in cons:
+            for el in con.AllRefs:
+                if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                    insType = doc.GetElement(el.Owner.GetTypeId())
+                    if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
                         New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
 
 
