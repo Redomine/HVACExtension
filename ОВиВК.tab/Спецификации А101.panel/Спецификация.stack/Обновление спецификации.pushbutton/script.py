@@ -329,7 +329,6 @@ def make_new_name(element):
 
     if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
         thickness = duct_thickness(element)
-
         try:
             connectors = getConnectors(element)
             for connector in connectors:
@@ -344,7 +343,17 @@ def make_new_name(element):
         except Exception:
             pass
 
+
+
         New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
+
+        cons = getConnectors(element)
+        for con in cons:
+            for el in con.AllRefs:
+                if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                    insType = doc.GetElement(el.Owner.GetTypeId())
+                    if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                        New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
 
     if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
         insType = doc.GetElement(element.GetTypeId())
