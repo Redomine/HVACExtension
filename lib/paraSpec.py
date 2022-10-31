@@ -25,7 +25,7 @@ paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Един
              'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Позиция',
              'ФОП_ВИС_Площади воздуховодов в примечания',
              'ФОП_ВИС_Нумерация позиций', 'ФОП_ВИС_Расчет комплектов заделки', 'ФОП_ВИС_Расчет краски и грунтовки',
-             'ФОП_ВИС_Расчет металла для креплений', 'ФОП_ВИС_Изоляция совместно с воздуховодами']
+             'ФОП_ВИС_Расчет металла для креплений', 'ФОП_ВИС_Совместно с воздуховодом']
 
 
 def check_parameters():
@@ -72,8 +72,7 @@ def script_execute():
                      'ФОП_ВИС_Расчет краски и грунтовки']
 
     projectparaNames = ['ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ВИС_Нумерация позиций',
-                        'ФОП_ВИС_Площади воздуховодов в примечания',  'ФОП_ВИС_Расчет комплектов заделки',
-                        'ФОП_ВИС_Изоляция совместно с воздуховодами']
+                        'ФОП_ВИС_Площади воздуховодов в примечания',  'ФОП_ВИС_Расчет комплектов заделки']
 
     catFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting)
     catPipeFittings = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeFitting)
@@ -107,6 +106,8 @@ def script_execute():
 
     ductCats = [catCurves, catInsulations]
 
+    ductInsCats = [catInsulations]
+
     nodeCats = [catTerminals, catAccessory, catPipeAccessory, catEquipment, catPlumbingFixtures]
 
     pipeCats = [catPipeCurves]
@@ -127,6 +128,7 @@ def script_execute():
     uiDoc = __revit__.ActiveUIDocument
     sel = uiDoc.Selection
 
+    ductInsCatSet = doc.Application.Create.NewCategorySet()
     catSet = doc.Application.Create.NewCategorySet()
     catDuctSet = doc.Application.Create.NewCategorySet()
     catPipeSet = doc.Application.Create.NewCategorySet()
@@ -152,6 +154,9 @@ def script_execute():
     for cat in ductandpipeCats:
         ductandpipeCatSet.Insert(cat)
 
+    for cat in ductInsCats:
+        ductInsCatSet.Insert(cat)
+
     with revit.Transaction("Добавление параметров"):
         if len(paraNames) > 0:
             addedNames = []
@@ -167,6 +172,10 @@ def script_execute():
                             newIB = doc.Application.Create.NewTypeBinding(catDuctSet)
                         if name == 'ФОП_ВИС_Расчет металла для креплений':
                             newIB = doc.Application.Create.NewTypeBinding(ductandpipeCatSet)
+
+                        if name == 'ФОП_ВИС_Совместно с воздуховодом':
+                            newIB = doc.Application.Create.NewTypeBinding(ductInsCatSet)
+
                         elif name in pipeparaNames:
                             newIB = doc.Application.Create.NewTypeBinding(catPipeSet)
 
