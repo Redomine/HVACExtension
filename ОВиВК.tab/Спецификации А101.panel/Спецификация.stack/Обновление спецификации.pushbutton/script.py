@@ -333,13 +333,14 @@ def make_new_name(element):
         try:
             connectors = getConnectors(element)
             for connector in connectors:
-                if getDuct(connector) != None:
-                    ElemTypeId = getDuct(connector).GetTypeId()
-                    ElemType = doc.GetElement(ElemTypeId)
-                    if ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
-                        min_thickness = ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
-                        if float(min_thickness) > float(thickness):
-                            thickness = min_thickness
+                for el in connector.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                        ductType = doc.GetElement(el.Owner.GetTypeId())
+                        if ductType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
+                            min_thickness = ductType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
+                            if float(min_thickness) > float(thickness):
+                                thickness = min_thickness
+
         except Exception:
             pass
 
@@ -641,23 +642,27 @@ def script_execute():
     report_rows = set()
     for collection in collections:
         for element in collection:
-            if element.LookupParameter('ФОП_Экономическая функция'):
-                if element.LookupParameter('ФОП_Экономическая функция').AsString() == None:
-                    element.LookupParameter('ФОП_Экономическая функция').Set('None')
             try:
                 edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
             except Exception:
                 print element.Id
+
             if edited_by and edited_by != __revit__.Application.Username:
                 report_rows.add(edited_by)
                 continue
 
+            if element.LookupParameter('ФОП_Экономическая функция'):
+                if element.LookupParameter('ФОП_Экономическая функция').AsString() == None:
+                    element.LookupParameter('ФОП_Экономическая функция').Set('None')
             update_element(element)
             make_new_name(element)
             update_boq(element)
 
     for collection in collections:
         for element in collection:
+            if edited_by and edited_by != __revit__.Application.Username:
+                continue
+
             regroop(element)
 
     if sort_dependent_by_equipment == True:
