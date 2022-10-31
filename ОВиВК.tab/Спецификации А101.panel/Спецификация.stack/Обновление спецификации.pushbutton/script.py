@@ -344,12 +344,11 @@ def make_new_name(element):
         except Exception:
             pass
 
-
-
         New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
 
-    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Изоляция совместно с воздуховодами').AsInteger() == 1:
-        if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+    if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+        insType = doc.GetElement(element.GetTypeId())
+        if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
             New_Name = '!Не учитывать'
 
 
