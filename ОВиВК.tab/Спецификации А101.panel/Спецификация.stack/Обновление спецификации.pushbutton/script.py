@@ -289,6 +289,14 @@ def make_new_name(element):
         except Exception:
             New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(BuiltInParameter.RBS_REFERENCE_FREESIZE)
 
+        if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Изоляция совместно с воздуховодами').AsInteger() == 1:
+            cons = getConnectors(element)
+            for con in cons:
+                for el in con.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                        New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+
+
     if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
         ADSK_Izm = get_ADSK_Izm(element)
         if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
@@ -334,6 +342,10 @@ def make_new_name(element):
 
 
         New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
+
+    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Изоляция совместно с воздуховодами').AsInteger() == 1:
+        if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+            New_Name = '!Не учитывать'
 
 
     Spec_Name.Set(str(New_Name))
