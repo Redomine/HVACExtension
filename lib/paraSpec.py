@@ -28,13 +28,17 @@ paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Един
              'ФОП_ВИС_Расчет металла для креплений', 'ФОП_ВИС_Совместно с воздуховодом', 'ФОП_ВИС_Марка']
 
 
+wrong_group = []
+
 def check_parameters():
     # проверка на наличие нужных параметров
     map = doc.ParameterBindings
     it = map.ForwardIterator()
     while it.MoveNext():
         newProjectParameterData = it.Key.Name
-        #print it.Key.ParameterGroup
+        if str(it.Key.ParameterGroup) != 'PG_DATA':
+            if str(it.Key.Name) not in wrong_group:
+                wrong_group.append(str(it.Key.Name))
         if str(newProjectParameterData) in paraNames:
             paraNames.remove(str(newProjectParameterData))
 
