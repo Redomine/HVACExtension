@@ -53,17 +53,20 @@ def getSortGroupInd():
 
     index = 0
     for field in definition.GetFieldOrder():
-
         for scheduleSortGroupField in definition.GetSortGroupFields():
             if scheduleSortGroupField.FieldId.ToString() == field.ToString():
                 sortGroupInd.append(index)
 
         index += 1
 
-    if posInShed == False:
+    if posInShed == False and doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
         print "В таблице нет параметра ФОП_ВИС_Позиция"
         sys.exit()
+    if posInShed == False and doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 0:
+        FOP_pos_ind = 0
     return [sortGroupInd, FOP_pos_ind]
+
+
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 vs = doc.ActiveView
 
