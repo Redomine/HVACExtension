@@ -59,11 +59,9 @@ def getSortGroupInd():
 
         index += 1
 
-    if posInShed == False and doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1:
+    if posInShed == False:
         print "В таблице нет параметра ФОП_ВИС_Позиция"
         sys.exit()
-    if posInShed == False and doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 0:
-        FOP_pos_ind = 0
     return [sortGroupInd, FOP_pos_ind]
 
 
