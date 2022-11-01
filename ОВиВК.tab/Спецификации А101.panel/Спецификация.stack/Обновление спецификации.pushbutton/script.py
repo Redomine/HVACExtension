@@ -626,10 +626,13 @@ def update_boq(element):
     boq_work.Set(work_name)
 
 def regroop(element):
-    ADSK_Mark = get_ADSK_Mark(element)
+    FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка').AsString()
     ADSK_Name = get_ADSK_Name(element)
     FOP_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
     FOP_Group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
+
+    if FOP_Mark == None:
+        FOP_Mark = 'None'
 
     if FOP_Group == None:
         FOP_Group = 'None'
@@ -642,8 +645,14 @@ def regroop(element):
             FOP_Group + " " + FOP_Name)
     else:
         element.LookupParameter('ФОП_ВИС_Группирование').Set(
-            FOP_Group + " " + FOP_Name + " " + ADSK_Mark)
+            FOP_Group + " " + FOP_Name + " " + FOP_Mark)
 
+
+def make_new_mark(element):
+    mark = get_ADSK_Mark(element)
+    if mark == 'None':
+        mark = ''
+    element.LookupParameter('ФОП_ВИС_Марка').Set(mark)
 
 
 def script_execute():
@@ -658,10 +667,11 @@ def script_execute():
             if edited_by and edited_by != __revit__.Application.Username:
                 report_rows.add(edited_by)
                 continue
-
             if element.LookupParameter('ФОП_Экономическая функция'):
                 if element.LookupParameter('ФОП_Экономическая функция').AsString() == None:
                     element.LookupParameter('ФОП_Экономическая функция').Set('None')
+
+            make_new_mark(element)
             update_element(element)
             make_new_name(element)
             update_boq(element)
@@ -670,7 +680,6 @@ def script_execute():
         for element in collection:
             if edited_by and edited_by != __revit__.Application.Username:
                 continue
-
             regroop(element)
 
     if sort_dependent_by_equipment == True:
