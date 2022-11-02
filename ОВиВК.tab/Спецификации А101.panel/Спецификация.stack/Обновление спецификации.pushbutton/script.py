@@ -5,29 +5,21 @@ __title__ = 'Обновление спецификации'
 __doc__ = "Обновляет число подсчетных элементов"
 
 import os.path as op
-
 import clr
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
-
-
-
 import dosymep
-
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
-
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 import sys
 import paraSpec
-
 from Autodesk.Revit.DB import *
 from System import Guid
 from itertools import groupby
-
 from pyrevit import revit
 from pyrevit.script import output
 
@@ -354,15 +346,21 @@ def make_new_name(element):
             for el in con.AllRefs:
                 if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                     insType = doc.GetElement(el.Owner.GetTypeId())
-                    if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                        if get_ADSK_Name(el.Owner) not in New_Name:
-                            New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                    try:
+                        if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                            if get_ADSK_Name(el.Owner) not in New_Name:
+                                New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                    except Exception:
+                        print insType.Id
 
 
     if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
         insType = doc.GetElement(element.GetTypeId())
-        if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-            New_Name = '!Не учитывать'
+        try:
+            if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                New_Name = '!Не учитывать'
+        except Exception:
+            print insType.Id
 
 
     Spec_Name.Set(str(New_Name))
@@ -396,7 +394,8 @@ def getConnectors(element):
                 connectors.append(a.Current)
     return connectors
 
-#этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять милимметры для длины и м2 для площади) и для расстановки позиции
+#этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны
+# стоять милимметры для длины и м2 для площади) и для расстановки позиции
 def getCapacityParam(element, position):
     fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
 
@@ -574,7 +573,6 @@ def update_element(element):
 #Обновляем параметры для ВОР и перебиваем единицы измерения
 def update_boq(element):
 
-
     fop_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
 
     adsk_mark = get_ADSK_Mark(element)
@@ -651,15 +649,15 @@ def regroop(element):
         element.LookupParameter('ФОП_ВИС_Группирование').Set(
             FOP_Group + " " + FOP_Name + " " + FOP_Mark)
 
-
 def make_new_mark(element):
     mark = get_ADSK_Mark(element)
     if mark == 'None':
         mark = ''
     element.LookupParameter('ФОП_ВИС_Марка').Set(mark)
 
-
 def script_execute():
+
+
     report_rows = set()
     for collection in collections:
         for element in collection:
@@ -679,7 +677,7 @@ def script_execute():
             make_new_mark(element)
             update_element(element)
             make_new_name(element)
-            update_boq(element)
+            #update_boq(element)
 
     for collection in collections:
         for element in collection:
@@ -697,18 +695,6 @@ def script_execute():
     if report_rows:
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
         print "\r\n".join(report_rows)
-
-
-status = paraSpec.check_parameters()
-
-#if status:
-    #sys.exit()
-
-# Переменные для расчета
-length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
-isol_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
-sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
-
 
 colFittings = make_col(BuiltInCategory.OST_DuctFitting)
 colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
@@ -728,9 +714,18 @@ colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
                colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
 
+status = paraSpec.check_parameters()
+
+
 
 if not status:
     with revit.Transaction("Обновление общей спеки"):
+        # Переменные для расчета
+        length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
+            'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+        isol_reserve = 1 + (
+                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+        sort_dependent_by_equipment = True  # включаем или выключаем сортировку вложенных семейств по их родителям
         script_execute()
 
     if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
