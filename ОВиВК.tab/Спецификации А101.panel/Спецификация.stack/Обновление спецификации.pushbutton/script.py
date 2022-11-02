@@ -656,12 +656,7 @@ def make_new_mark(element):
     element.LookupParameter('ФОП_ВИС_Марка').Set(mark)
 
 def script_execute():
-    # Переменные для расчета
-    length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
-        'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
-    isol_reserve = 1 + (
-                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
-    sort_dependent_by_equipment = True  # включаем или выключаем сортировку вложенных семейств по их родителям
+
 
     report_rows = set()
     for collection in collections:
@@ -716,8 +711,8 @@ colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
 colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 
-collections = make_collections([colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers])
+collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
+               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
 
 status = paraSpec.check_parameters()
 
@@ -725,6 +720,12 @@ status = paraSpec.check_parameters()
 
 if not status:
     with revit.Transaction("Обновление общей спеки"):
+        # Переменные для расчета
+        length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
+            'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+        isol_reserve = 1 + (
+                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+        sort_dependent_by_equipment = True  # включаем или выключаем сортировку вложенных семейств по их родителям
         script_execute()
 
     if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:

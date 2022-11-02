@@ -39,13 +39,15 @@ def make_col(category):
     return col
 
 def get_duct_area(element):
+    length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
+        'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         fop_number = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) * length_reserve
         fop_number = round(fop_number, 2)
     return fop_number
+
 def getSortGroupInd():
     sortGroupInd = []
-
     posInShed = False
     index = 0
     for scheduleGroupField in definition.GetFieldOrder():
@@ -73,7 +75,6 @@ doc = __revit__.ActiveUIDocument.Document  # type: Document
 vs = doc.ActiveView
 
 if vs.Category.IsId(BuiltInCategory.OST_Schedules):
-
     uiapp = DocumentManager.Instance.CurrentUIApplication
     #app = uiapp.Application
     uidoc = __revit__.ActiveUIDocument
