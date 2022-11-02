@@ -38,8 +38,12 @@ def make_col(category):
         .ToElements()
     return col
 
+def get_duct_area(element):
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+        fop_number = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) * length_reserve
+        fop_number = round(fop_number, 2)
+    return fop_number
 def getSortGroupInd():
-
     sortGroupInd = []
 
     posInShed = False
@@ -180,10 +184,11 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
                 duct_dict = {}
                 for element in colCurves:
                     index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
+
                     if index not in duct_dict:
-                        duct_dict[index] = element.LookupParameter('ФОП_ТИП_Число').AsDouble()
+                        duct_dict[index] = get_duct_area(element)
                     else:
-                        duct_dict[index] = duct_dict[index] + element.LookupParameter('ФОП_ТИП_Число').AsDouble()
+                        duct_dict[index] = duct_dict[index] + get_duct_area(element)
 
                 for element in colCurves:
                     note = element.LookupParameter('ADSK_Примечание')

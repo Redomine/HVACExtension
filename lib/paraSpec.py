@@ -9,6 +9,13 @@ import clr
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
+
+import dosymep
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
+
 
 from Autodesk.Revit.DB import *
 import os
@@ -16,6 +23,8 @@ from pyrevit import revit
 import sys
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
+parameters_added = False
+
 
 class shared_parameter:
     def insert(self, eDef, set, istype):
@@ -25,59 +34,31 @@ class shared_parameter:
             newBinding = doc.Application.Create.NewInstanceBinding(set)
         doc.ParameterBindings.Insert(eDef, newBinding, BuiltInParameterGroup.PG_DATA)
 
-    def reinsert(self, eDef, set, istype):
-        if istype:
-            newBinding = doc.Application.Create.NewTypeBinding(set)
-        else:
-            newBinding = doc.Application.Create.NewInstanceBinding(set)
-        doc.ParameterBindings.Reinsert(eDef, newBinding, BuiltInParameterGroup.PG_DATA)
-
-    def __init__(self, name, definition):
-        self.name = name
-        self.group = "03_ВИС"
-        if "ФОП_ТИП" in self.name:
-            self.group = "10_ТИП_Классификатор видов работ"
-        self.eDef = definition.get_Item(name)
-        self.set = catSet
-        self.istype = False
-
-        if name == "ФОП_ВИС_Минимальная толщина воздуховода":
-            self.istype = True
-            self.set = catDuctSet
-        if name == 'ФОП_ВИС_Расчет металла для креплений':
-            self.istype = True
-            self.set = ductandpipeCatSet
-        if name == 'ФОП_ВИС_Совместно с воздуховодом':
-            self.istype = True
-            self.set = ductInsCatSet
-        if name == 'ФОП_ВИС_Узел':
-            self.istype = True
-            self.set = nodeCatSet
+    def default_values(self, name):
+        pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка', 'ФОП_ВИС_Имя трубы из сегмента',
+                         'ФОП_ВИС_Расчет краски и грунтовки']
         if name in pipeparaNames:
-            self.istype = True
-            self.set = catPipeSet
-        if name in projectparaNames:
-            self.istype = False
-            self.set = infCatSet
+            colPipeTypes = FilteredElementCollector(doc).OfCategory(
+                BuiltInCategory.OST_PipeCurves).WhereElementIsElementType().ToElements()
+            for element in colPipeTypes:
+                if name == 'ФОП_ВИС_Днар х Стенка':
+                    element.LookupParameter(name).Set(1)
+                else:
+                    element.LookupParameter(name).Set(0)
 
-        self.insert(self.eDef, self.set, self.istype)
+        if name == 'ФОП_ВИС_Запас изоляции' or name == 'ФОП_ВИС_Запас воздуховодов/труб':
 
-def check_parameters():
-    # проверка на наличие нужных параметров
-    map = doc.ParameterBindings
-    it = map.ForwardIterator()
-    while it.MoveNext():
-        newProjectParameterData = it.Key.Name
-        if str(newProjectParameterData) in paraNames:
-            paraNames.remove(str(newProjectParameterData))
 
-    if len(paraNames) > 0:
-        try:
-            script_execute()
-            print 'Были добавлен параметры, перезапустите скрипт'
-            return True
-        except Exception:
-            print 'Не удалось добавить параметры'
+            inf = doc.ProjectInformation.LookupParameter(name)
+            inf.Set(10)
+
+    def __init__(self, name, definition, set, istype = False):
+        if not is_exists_params(name):
+            self.eDef = definition.get_Item(name)
+            self.insert(self.eDef, set, istype)
+            self.default_values(name)
+            global parameters_added
+            parameters_added = True
 
 def make_type_col(category):
     col = FilteredElementCollector(doc)\
@@ -95,50 +76,7 @@ def get_cats(list_of_cats):
         set.Insert(cat)
     return set
 
-
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса',
-             'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду',
-             'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число',
-             'ФОП_ТИП_Единица измерения',
-             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Позиция',
-             'ФОП_ВИС_Площади воздуховодов в примечания',
-             'ФОП_ВИС_Нумерация позиций', 'ФОП_ВИС_Расчет комплектов заделки', 'ФОП_ВИС_Расчет краски и грунтовки',
-             'ФОП_ВИС_Расчет металла для креплений', 'ФОП_ВИС_Совместно с воздуховодом', 'ФОП_ВИС_Марка']
-
-pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка', 'ФОП_ВИС_Имя трубы из сегмента',
-                 'ФОП_ВИС_Расчет краски и грунтовки']
-
-projectparaNames = ['ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ВИС_Нумерация позиций',
-                    'ФОП_ВИС_Площади воздуховодов в примечания', 'ФОП_ВИС_Расчет комплектов заделки']
-
-# сеты категорий идущие по стандарту
-
-catSet = get_cats([BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeCurves,
-                   BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_FlexDuctCurves,
-                   BuiltInCategory.OST_FlexPipeCurves,
-                   BuiltInCategory.OST_DuctTerminal, BuiltInCategory.OST_DuctAccessory,
-                   BuiltInCategory.OST_PipeAccessory,
-                   BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctInsulations,
-                   BuiltInCategory.OST_PipeInsulations,
-                   BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers])
-
-# нестандартные сеты категорий
-catDuctSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctInsulations])
-ductInsCatSet = get_cats([BuiltInCategory.OST_DuctInsulations])
-nodeCatSet = get_cats([BuiltInCategory.OST_DuctTerminal, BuiltInCategory.OST_DuctAccessory,
-                       BuiltInCategory.OST_PipeAccessory, BuiltInCategory.OST_MechanicalEquipment,
-                       BuiltInCategory.OST_PlumbingFixtures])
-catPipeSet = get_cats([BuiltInCategory.OST_PipeCurves])
-infCatSet = get_cats([BuiltInCategory.OST_ProjectInformation])
-ductandpipeCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves])
-
-
-
-
-
-def script_execute():
+def check_spfile():
     spFile = doc.Application.OpenSharedParameterFile()
     # проверяем тот ли файл общих параметров подгружен
     spFileName = str(doc.Application.SharedParametersFilename)
@@ -147,63 +85,78 @@ def script_execute():
 
     if "ФОП_v1.txt" != spFileName:
         try:
-            doc.Application.SharedParametersFilename = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_v1.txt"
+            doc.Application.SharedParametersFilename = str(
+                os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_v1.txt"
         except Exception:
-            print 'По стандартному пути не найден файл общих параметров, обратитесь в BIM-отдел или замените вручную на ФОП_v1.txt'
+            print
+            'По стандартному пути не найден файл общих параметров, обратитесь в BIM-отдел или замените вручную на ФОП_v1.txt'
             sys.exit()
-
-
-    #проверка на наличие нужных параметров
-    map = doc.ParameterBindings
-    it = map.ForwardIterator()
-    while it.MoveNext():
-        newProjectParameterData = it.Key.Name
-        if str(newProjectParameterData) in paraNames:
-            paraNames.remove(str(newProjectParameterData))
-
-    uiDoc = __revit__.ActiveUIDocument
-    sel = uiDoc.Selection
 
     for dG in spFile.Groups:
         vis_group = "03_ВИС"
-        type_group = "10_ТИП_Классификатор видов работ"
         if str(dG.Name) == vis_group:
             visDefinitions = dG.Definitions
-        if str(dG.Name) == type_group:
-            typeDefinitions = dG.Definitions
+            return visDefinitions
 
-    colPipeTypes = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeCurves).WhereElementIsElementType().ToElements()
+def is_exists_params(Name):
+    if not doc.IsExistsSharedParam(Name):
+        return False
+    return True
 
+def script_execute():
+    # сеты категорий идущие по стандарту
+    defaultCatSet = get_cats(
+        [BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeCurves,
+         BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_FlexDuctCurves,
+         BuiltInCategory.OST_FlexPipeCurves,
+         BuiltInCategory.OST_DuctTerminal, BuiltInCategory.OST_DuctAccessory,
+         BuiltInCategory.OST_PipeAccessory,
+         BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctInsulations,
+         BuiltInCategory.OST_PipeInsulations,
+         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers])
 
+    # нестандартные сеты категорий
+    ductCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctInsulations])
+    ductInsCatSet = get_cats([BuiltInCategory.OST_DuctInsulations])
+    nodeCatSet = get_cats([BuiltInCategory.OST_DuctTerminal, BuiltInCategory.OST_DuctAccessory,
+                           BuiltInCategory.OST_PipeAccessory, BuiltInCategory.OST_MechanicalEquipment,
+                           BuiltInCategory.OST_PlumbingFixtures])
+    pipeCatSet = get_cats([BuiltInCategory.OST_PipeCurves])
+    projectCatSet = get_cats([BuiltInCategory.OST_ProjectInformation])
+    ductandpipeCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves])
 
+    #получаем группу из которой выбираем параметры
+    visDefinitions = check_spfile()
 
     with revit.Transaction("Добавление параметров"):
-        for name in paraNames:
-            eDef = visDefinitions
-            if "ФОП_ТИП" in name:
-                eDef = typeDefinitions
+        shared_parameter('ФОП_ВИС_Группирование', visDefinitions, defaultCatSet),
+        shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet),
+        shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet),
+        shared_parameter('ФОП_ВИС_Наименование комбинированное', visDefinitions, defaultCatSet),
+        shared_parameter('ФОП_ВИС_Позиция', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Марка', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
 
-            parameter = shared_parameter(name, eDef)
+        shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet),
+        shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet),
+        shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet),
 
+        shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet),
+        shared_parameter('ФОП_ВИС_Ду', visDefinitions, pipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Ду х Стенка', visDefinitions, pipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Днар х Стенка', visDefinitions, pipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Имя трубы из сегмента', visDefinitions, pipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Расчет краски и грунтовки', visDefinitions, pipeCatSet, istype=True),
 
-            if name in pipeparaNames:
-                for element in colPipeTypes:
-                    if name == 'ФОП_ВИС_Днар х Стенка':
-                        element.LookupParameter(name).Set(1)
-                    else:
-                        element.LookupParameter(name).Set(0)
+        shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet),
+        shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet),
+        shared_parameter('ФОП_ВИС_Нумерация позиций', visDefinitions, projectCatSet),
+        shared_parameter('ФОП_ВИС_Площади воздуховодов в примечания', visDefinitions, projectCatSet),
+        shared_parameter('ФОП_ВИС_Расчет комплектов заделки', visDefinitions, projectCatSet)
 
-                if name == 'ФОП_ВИС_Запас изоляции' or name == 'ФОП_ВИС_Запас воздуховодов/труб':
-                    inf = doc.ProjectInformation.LookupParameter(name)
-                    inf.Set(10)
+    if parameters_added:
+        print 'Были добавлены параметры, перезапустите скрипт'
 
-
-
-
-
-
-
-
-
-
-
+def check_parameters():
+    script_execute()
+    return parameters_added

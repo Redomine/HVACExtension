@@ -354,15 +354,21 @@ def make_new_name(element):
             for el in con.AllRefs:
                 if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                     insType = doc.GetElement(el.Owner.GetTypeId())
-                    if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                        if get_ADSK_Name(el.Owner) not in New_Name:
-                            New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                    try:
+                        if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                            if get_ADSK_Name(el.Owner) not in New_Name:
+                                New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                    except Exception:
+                        print insType.Id
 
 
     if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
         insType = doc.GetElement(element.GetTypeId())
-        if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-            New_Name = '!Не учитывать'
+        try:
+            if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                New_Name = '!Не учитывать'
+        except Exception:
+            print insType.Id
 
 
     Spec_Name.Set(str(New_Name))
@@ -574,7 +580,6 @@ def update_element(element):
 #Обновляем параметры для ВОР и перебиваем единицы измерения
 def update_boq(element):
 
-
     fop_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
 
     adsk_mark = get_ADSK_Mark(element)
@@ -679,7 +684,7 @@ def script_execute():
             make_new_mark(element)
             update_element(element)
             make_new_name(element)
-            update_boq(element)
+            #update_boq(element)
 
     for collection in collections:
         for element in collection:
@@ -697,7 +702,6 @@ def script_execute():
     if report_rows:
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
         print "\r\n".join(report_rows)
-
 
 status = paraSpec.check_parameters()
 
