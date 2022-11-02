@@ -355,7 +355,9 @@ def make_new_name(element):
                 if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                     insType = doc.GetElement(el.Owner.GetTypeId())
                     if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                        New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                        if get_ADSK_Name(el.Owner) not in New_Name:
+                            New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+
 
     if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
         insType = doc.GetElement(element.GetTypeId())
