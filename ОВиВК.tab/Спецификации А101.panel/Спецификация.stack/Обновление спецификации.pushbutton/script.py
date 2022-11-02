@@ -5,29 +5,21 @@ __title__ = 'Обновление спецификации'
 __doc__ = "Обновляет число подсчетных элементов"
 
 import os.path as op
-
 import clr
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
-
-
-
 import dosymep
-
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
-
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 import sys
 import paraSpec
-
 from Autodesk.Revit.DB import *
 from System import Guid
 from itertools import groupby
-
 from pyrevit import revit
 from pyrevit.script import output
 
@@ -402,7 +394,8 @@ def getConnectors(element):
                 connectors.append(a.Current)
     return connectors
 
-#этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять милимметры для длины и м2 для площади) и для расстановки позиции
+#этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны
+# стоять милимметры для длины и м2 для площади) и для расстановки позиции
 def getCapacityParam(element, position):
     fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
 
@@ -656,15 +649,20 @@ def regroop(element):
         element.LookupParameter('ФОП_ВИС_Группирование').Set(
             FOP_Group + " " + FOP_Name + " " + FOP_Mark)
 
-
 def make_new_mark(element):
     mark = get_ADSK_Mark(element)
     if mark == 'None':
         mark = ''
     element.LookupParameter('ФОП_ВИС_Марка').Set(mark)
 
-
 def script_execute():
+    # Переменные для расчета
+    length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
+        'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+    isol_reserve = 1 + (
+                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+    sort_dependent_by_equipment = True  # включаем или выключаем сортировку вложенных семейств по их родителям
+
     report_rows = set()
     for collection in collections:
         for element in collection:
@@ -703,17 +701,6 @@ def script_execute():
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
         print "\r\n".join(report_rows)
 
-status = paraSpec.check_parameters()
-
-#if status:
-    #sys.exit()
-
-# Переменные для расчета
-length_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас воздуховодов/труб').AsDouble()/100) #запас длин
-isol_reserve = 1 + (doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble()/100)#запас площадей
-sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
-
-
 colFittings = make_col(BuiltInCategory.OST_DuctFitting)
 colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
 colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
@@ -729,8 +716,11 @@ colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
 colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 
-collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
+collections = make_collections([colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
+               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers])
+
+status = paraSpec.check_parameters()
+
 
 
 if not status:
