@@ -298,7 +298,9 @@ def make_new_name(element):
                 if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                     insType = doc.GetElement(el.Owner.GetTypeId())
                     if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                        New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                        if get_ADSK_Name(el.Owner) not in New_Name:
+                            New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+
 
 
     if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
@@ -667,6 +669,7 @@ def script_execute():
             if edited_by and edited_by != __revit__.Application.Username:
                 report_rows.add(edited_by)
                 continue
+
             if element.LookupParameter('ФОП_Экономическая функция'):
                 if element.LookupParameter('ФОП_Экономическая функция').AsString() == None:
                     element.LookupParameter('ФОП_Экономическая функция').Set('None')
@@ -692,6 +695,7 @@ def script_execute():
     if report_rows:
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
         print "\r\n".join(report_rows)
+
 
 status = paraSpec.check_parameters()
 
