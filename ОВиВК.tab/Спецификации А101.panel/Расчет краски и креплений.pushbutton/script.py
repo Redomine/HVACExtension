@@ -15,6 +15,7 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 import sys
 import System
 import dosymep
+import paraSpec
 
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
@@ -54,36 +55,13 @@ colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 colModel = make_col(BuiltInCategory.OST_GenericModel)
 colSystems = make_col(BuiltInCategory.OST_DuctSystem)
+colInsul = make_col(BuiltInCategory.OST_DuctInsulations)
 # create a filtered element collector set to Category OST_Mass and Class FamilySymbol
 collector = FilteredElementCollector(doc)
 collector.OfCategory(BuiltInCategory.OST_GenericModel)
 collector.OfClass(FamilySymbol)
 famtypeitr = collector.GetElementIdIterator()
 famtypeitr.Reset()
-
-
-
-
-
-is_temporary_in = False
-
-for element in famtypeitr:
-    famtypeID = element
-    famsymb = doc.GetElement(famtypeID)
-
-    if famsymb.Family.Name == '_Якорный элемен(металл и краска)':
-        temporary = famsymb
-        is_temporary_in = True
-
-if is_temporary_in == False:
-    print 'Не обнаружен якорный элемен(металл и краска). Проверьте наличие семейства или восстановите исходное имя.'
-    sys.exit()
-
-paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения' ,'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
-             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число', 'ФОП_ВИС_Узел', 'ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка',
-             'ФОП_ВИС_Запас изоляции', 'ФОП_ВИС_Запас воздуховодов/труб', 'ФОП_ТИП_Назначение', 'ФОП_ТИП_Число', 'ФОП_ТИП_Единица измерения',
-             'ФОП_ТИП_Код', 'ФОП_ТИП_Наименование работы', 'ФОП_ВИС_Имя трубы из сегмента', 'ФОП_ВИС_Позиция', 'ФОП_ВИС_Площади воздуховодов в примечания',
-             'ФОП_ВИС_Нумерация позиций', 'ФОП_ВИС_Расчет комплектов заделки', 'ФОП_ВИС_Расчет краски и грунтовки', 'ФОП_ВИС_Расчет металла для креплений']
 
 
 def setElement(element, name, setting):
@@ -105,6 +83,44 @@ def setElement(element, name, setting):
     except Exception:
         pass
 
+def get_ADSK_Name(element):
+    if element.LookupParameter('ADSK_Наименование'):
+        ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
+        if ADSK_Name == None or ADSK_Name == "":
+            ADSK_Name = "None"
+    else:
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+
+        if ElemType.LookupParameter('ADSK_Наименование') == None\
+                or ElemType.LookupParameter('ADSK_Наименование').AsString() == None \
+                or ElemType.LookupParameter('ADSK_Наименование').AsString() == "":
+            ADSK_Name = "None"
+        else:
+            ADSK_Name = ElemType.LookupParameter('ADSK_Наименование').AsString()
+
+    if str(element.Category.Name) == 'Трубы':
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента'):
+            if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента').AsInteger() == 1:
+                ADSK_Name = element.LookupParameter('Описание сегмента').AsString()
+
+
+
+    return ADSK_Name
+
+
+def get_number(element, name):
+    if name == "Металлические крепления для трубопроводов" and element in colPipes:
+        Number = pipe_material(element)
+    if name == "Металлические крепления для воздуховодов" and element in colCurves:
+        Number = duct_material(element)
+
+    if element in colInsul:
+        Number = insul_stock(element)
+
+    return Number
 
 def duct_material(element):
     area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
@@ -124,6 +140,8 @@ def duct_material(element):
         kg = area * 225
 
     return kg
+
+
 
 def pipe_material(element):
     lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))/1000
@@ -150,26 +168,24 @@ def pipe_material(element):
         kg = 0.96 * lenght
     return kg
 
-def pipe_grunt(element):
-    lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)) / 1000
-    D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
-    S = (D * 3.14 * lenght)/1000
-    kg = 0.2 * S
-    return kg
 
-def pipe_color(element):
-    lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)) / 1000
-    D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
-    S = (D * 3.14 * lenght)/1000
-    kg = 0.1 * S
-    return kg
+def insul_stock(element):
+    area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+    if area == None:
+        area = 0
+    area = area * 0.092903 * 0.03
+    return area
 
 
-def line_elements(collection, name):
-    metal = []
+def line_elements(collection, name, izm):
+
+    elements_to_gen = []
+
     line_dict = {}
 
     for element in collection:
+        status = False
+
         Class = ''
         Work = ''
         Group = '8. Расчетные элементы'
@@ -177,54 +193,66 @@ def line_elements(collection, name):
         Mark = ''
         Art = ''
         Maker = ''
-        Izm = 'кг.'
+        Izm = izm
         Mass = ''
         Comment = ''
 
         elemType = doc.GetElement(element.GetTypeId())
-        if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1\
-                or elemType.LookupParameter('ФОП_ВИС_Расчет краски и грунтовки').AsInteger() == 1:
+
+
+        if element in colCurves:
+                if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1:
+                    status = True
+
+
+        if element in colPipes:
+            if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1 \
+                    or elemType.LookupParameter('ФОП_ВИС_Расчет краски и грунтовки').AsInteger() == 1:
+                status = True
+
+        if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+            status = True
+
+        if status:
             EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
             System = str(element.LookupParameter('ADSK_Имя системы').AsString())
-            Key = EF + " " + System
-            if len(Key.split()) == 1:
-                Key = "None None"
+            Key = EF + "_" + System
+            if len(Key.split('_')) == 1:
+                Key = "None_None"
 
-            if name == "Металлические крепления для трубопроводов"\
-                or name == "Металлические крепления для воздуховодов":
-                if collection == colCurves:
-                    Number = duct_material(element)
-                if collection == colPipes:
-                    Number = pipe_material(element)
-            else:
-                if name == "Краска антикоррозионная за два раза":
-                    Number = pipe_color(element)
-                if name == "Грунт ГФ-031":
-                    Number = pipe_grunt(element)
-
+            Number = get_number(element, name)
 
             if Key not in line_dict:
                 line_dict[Key] = Number
             else:
                 line_dict[Key] = line_dict[Key] + Number
 
+        if element in colInsul:
+            name = 'Изоляция ' + get_ADSK_Name(element) + ' фланцев и стыков'
+
+
+
+
     for line in line_dict:
-        key = str(line).split()
+        key = str(line).split('_')
+
         EF = key[0]
-
-        metal.append([key[1], Class, Work, Group, Name, Mark, Art, Maker, Izm, line_dict[line], Mass, Comment, EF])
-
-    return metal
+        elements_to_gen.append([key[1], Class, Work, Group, Name, Mark, Art, Maker, Izm, line_dict[line], Mass, Comment, EF])
+    return elements_to_gen
 
 def new_position(calculation_elements):
-    # создаем заглушки по элементов собранных из таблицы
+    #ищем стадию спеки для присвоения
+    for phase in doc.Phases:
+        if phase.Name == 'Спецификация':
+            phaseid = phase.Id
 
+
+    # создаем заглушки по элементов собранных из таблицы
     loc = XYZ(0, 0, 0)
 
     temporary.Activate()
     for element in calculation_elements:
         familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
-
     # собираем список из созданных заглушек
     colModel = make_col(BuiltInCategory.OST_GenericModel)
     Models = []
@@ -235,9 +263,7 @@ def new_position(calculation_elements):
             except Exception:
                 print
                 'Не удалось присвоить стадию спецификация, проверьте список стадий'
-
             Models.append(element)
-
 
     # для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
     for element in calculation_elements:
@@ -258,60 +284,43 @@ def new_position(calculation_elements):
         setElement(dummy, 'ФОП_Экономическая функция', element[12])
         Models.pop(0)
 
-
-
-
-#проверка на наличие нужных параметров
-map = doc.ParameterBindings
-it = map.ForwardIterator()
-while it.MoveNext():
-    newProjectParameterData = it.Key.Name
-    if str(newProjectParameterData) in paraNames:
-        paraNames.remove(str(newProjectParameterData))
-if len(paraNames) > 0:
-    try:
-        print 'Были добавлен параметры, перезапустите скрипт'
-        import paraSpec
-
-    except Exception:
-        print 'Не удалось добавить параметры'
-
-else:
+def remove_models(colModel):
     for element in colModel:
         edited_by = element.LookupParameter('Редактирует').AsString()
         if edited_by and edited_by != __revit__.Application.Username:
-            print "Якорные элементы не были обработаны, так как были заняты пользователями:"
-            print edited_by
+            print
+            "Якорные элементы не были обработаны, так как были заняты пользователями:"
+            print
+            edited_by
             sys.exit()
 
-    with revit.Transaction("Добавление расчетных элементов"):
-        #при каждом повторе расчета удаляем старые версии
-        for element in colModel:
-            if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
-                doc.Delete(element.Id)
 
+    for element in colModel:
+        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
+            doc.Delete(element.Id)
+
+
+def script_execute():
+    with revit.Transaction("Добавление расчетных элементов"):
+        # при каждом повторе расчета удаляем старые версии
+        remove_models(colModel)
+
+        #список элементов которые будут сгенерированы
         calculation_elements = []
 
-        for phase in doc.Phases:
-            if phase.Name == 'Спецификация':
-                phaseid = phase.Id
 
-
-        duct_metal = line_elements(colCurves, "Металлические крепления для воздуховодов")
-
+        duct_metal = line_elements(colCurves, "Металлические крепления для воздуховодов", 'кг.')
         if len(duct_metal) > 0:
             calculation_elements = calculation_elements + duct_metal
 
-        pipe_metal = line_elements(colPipes, "Металлические крепления для трубопроводов")
-        pipe_paint_1 = line_elements(colPipes, "Краска антикоррозионная за два раза")
-        pipe_paint_2 = line_elements(colPipes, "Грунт ГФ-031")
 
+        pipe_metal = line_elements(colPipes, "Металлические крепления для трубопроводов", 'кг')
         if len(pipe_metal) > 0:
             calculation_elements = calculation_elements + pipe_metal
-        if len(pipe_paint_1) > 0:
-            calculation_elements = calculation_elements + pipe_paint_1
-        if len(pipe_paint_2) > 0:
-            calculation_elements = calculation_elements + pipe_paint_2
+
+        duct_insul_stock = line_elements(colInsul, "Изоляция для фланцев и стыков", 'м²')
+        if len(duct_insul_stock) > 0:
+            calculation_elements = calculation_elements + duct_insul_stock
 
         if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Расчет комплектов заделки').AsInteger() == 1:
             Class = ''
@@ -346,9 +355,23 @@ else:
 
 
 
+is_temporary_in = False
+
+for element in famtypeitr:
+    famtypeID = element
+    famsymb = doc.GetElement(famtypeID)
+
+    if famsymb.Family.Name == '_Якорный элемен(металл и краска)':
+        temporary = famsymb
+        is_temporary_in = True
+
+if is_temporary_in == False:
+    print 'Не обнаружен якорный элемен(металл и краска). Проверьте наличие семейства или восстановите исходное имя.'
+    sys.exit()
 
 
 
-
-
+status = paraSpec.check_parameters()
+if not status:
+    script_execute()
 
