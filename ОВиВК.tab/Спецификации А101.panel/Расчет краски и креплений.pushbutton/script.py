@@ -216,28 +216,31 @@ def line_elements(collection, name, izm):
         if status:
             EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
             System = str(element.LookupParameter('ADSK_Имя системы').AsString())
-            Key = EF + "_" + System
+
+            if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
+            Key = EF + "_" + System + "_" + name
             if len(Key.split('_')) == 1:
-                Key = "None_None"
+                Key = "None_None_" + name
 
             Number = get_number(element, name)
 
             if Key not in line_dict:
+                #if element in colInsul:
+                    #print Key
+
                 line_dict[Key] = Number
             else:
                 line_dict[Key] = line_dict[Key] + Number
-
-        if element in colInsul:
-            name = 'Изоляция ' + get_ADSK_Name(element) + ' фланцев и стыков'
-
 
 
 
     for line in line_dict:
         key = str(line).split('_')
+        #print key[2]
 
         EF = key[0]
-        elements_to_gen.append([key[1], Class, Work, Group, Name, Mark, Art, Maker, Izm, line_dict[line], Mass, Comment, EF])
+        elements_to_gen.append([key[1], Class, Work, Group, key[2], Mark, Art, Maker, Izm, line_dict[line], Mass, Comment, EF])
     return elements_to_gen
 
 def new_position(calculation_elements):
