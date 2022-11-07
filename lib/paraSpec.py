@@ -136,10 +136,8 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Позиция', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Марка', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
-
         shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet),
-        shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet),
-        shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet),
+
 
         shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet),
         shared_parameter('ФОП_ВИС_Ду', visDefinitions, pipeCatSet, istype=True),
@@ -147,12 +145,14 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Днар х Стенка', visDefinitions, pipeCatSet, istype=True),
         shared_parameter('ФОП_ВИС_Имя трубы из сегмента', visDefinitions, pipeCatSet, istype=True),
         shared_parameter('ФОП_ВИС_Расчет краски и грунтовки', visDefinitions, pipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Комплекты заделки', visDefinitions, ductandpipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True),
 
         shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet),
         shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet),
         shared_parameter('ФОП_ВИС_Нумерация позиций', visDefinitions, projectCatSet),
         shared_parameter('ФОП_ВИС_Площади воздуховодов в примечания', visDefinitions, projectCatSet),
-        shared_parameter('ФОП_ВИС_Расчет комплектов заделки', visDefinitions, projectCatSet)
 
     if parameters_added:
         print 'Были добавлены параметры, перезапустите скрипт'

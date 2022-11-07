@@ -64,6 +64,19 @@ famtypeitr = collector.GetElementIdIterator()
 famtypeitr.Reset()
 
 
+generation_list = [
+    # для добавления элементов внести в список на генерацию по форме ниже
+    # Если число формируется по отдельному алгоритму - добавляем формулу в функцию, иначе выпадет 1
+    # [Группирование, Имя, Единица измерения, ФОП_Имя параметра, Коллекция, Один элемент на систему?]
+    ['8. Расчетные элементы', "Металлические крепления для воздуховодов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colCurves, False],
+    ['8. Расчетные элементы', "Металлические крепления для трубопроводов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colPipes, False],
+    ['8. Расчетные элементы', "Изоляция для фланцев и стыков", 'м².', 'ФОП_ВИС_Совместно с воздуховодом', colInsul, False],
+    ['8. Расчетные элементы', "Краска антикоррозионная за два раза БТ-177", 'кг.', 'ФОП_ВИС_Расчет краски и грунтовки', colPipes, False],
+    ['8. Расчетные элементы', "Грунт ГФ-031", 'кг.', 'ФОП_ВИС_Расчет краски и грунтовки', colPipes, False],
+    ['8. Расчетные элементы', 'Комплект заделки отверстий с восстановлением предела огнестойкости', 'компл.', 'ФОП_ВИС_Комплекты заделки', colCurves, True],
+    ['8. Расчетные элементы', 'Комплект заделки отверстий с восстановлением предела огнестойкости', 'компл.', 'ФОП_ВИС_Комплекты заделки', colPipes, True]
+]
+
 def setElement(element, name, setting):
     if name == "ФОП_ВИС_Масса":
         element.LookupParameter(name).Set(str(setting))
@@ -110,18 +123,6 @@ def get_ADSK_Name(element):
 
     return ADSK_Name
 
-
-def get_number(element, name):
-    if name == "Металлические крепления для трубопроводов" and element in colPipes:
-        Number = pipe_material(element)
-    if name == "Металлические крепления для воздуховодов" and element in colCurves:
-        Number = duct_material(element)
-
-    if element in colInsul:
-        Number = insul_stock(element)
-
-    return Number
-
 def duct_material(element):
     area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
     if element.GetParamValue(BuiltInParameter.RBS_EQ_DIAMETER_PARAM) == element.GetParamValue(BuiltInParameter.RBS_HYDRAULIC_DIAMETER_PARAM):
@@ -140,8 +141,6 @@ def duct_material(element):
         kg = area * 225
 
     return kg
-
-
 
 def pipe_material(element):
     lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))/1000
@@ -168,7 +167,6 @@ def pipe_material(element):
         kg = 0.96 * lenght
     return kg
 
-
 def insul_stock(element):
     area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
     if area == None:
@@ -176,79 +174,78 @@ def insul_stock(element):
     area = area * 0.092903 * 0.03
     return area
 
+def grunt(element):
+    area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
+    number = area / 10
+    return number
 
-def line_elements(collection, name, izm):
+def colorBT(element):
+    area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
+    number = area * 0.2 * 2
+    return number
 
-    elements_to_gen = []
+class calculation_element:
+    def get_number(self, element, name):
+        Number = 1
+        if name == "Металлические крепления для трубопроводов" and element in colPipes:
+            Number = pipe_material(element)
+        if name == "Металлические крепления для воздуховодов" and element in colCurves:
+            Number = duct_material(element)
+        if name == "Изоляция для фланцев и стыков" and element in colInsul:
+            Number = insul_stock(element)
+        if name == "Краска антикоррозионная за два раза БТ-177" and element in colPipes:
+            Number = colorBT(element)
+        if name == "Грунт ГФ-031" and element in colPipes:
+            Number = grunt(element)
 
-    line_dict = {}
 
-    for element in collection:
-        status = False
 
-        Class = ''
-        Work = ''
-        Group = '8. Расчетные элементы'
-        Name = name
-        Mark = ''
-        Art = ''
-        Maker = ''
-        Izm = izm
-        Mass = ''
-        Comment = ''
+
+        return Number
+
+    def __init__(self, element, collection, parameter, Name):
+        self.System = 'None'
+        self.Class = 'None'
+        self.Work = 'None'
+        self.Group = '8. Расчетные элементы'
+        self.Name = Name
+        self.Mark = ''
+        self.Art = ''
+        self.Maker = ''
+        self.Izm = 'None'
+        self.Number = 0
+        self.Mass = ''
+        self.Comment = ''
+        self.EF = 'None'
+
+        for generation in generation_list:
+            if collection in generation and parameter in generation:
+                self.Izm = generation[2]
+                isType = generation[5]
+
+        self.EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
+        self.System = str(element.LookupParameter('ADSK_Имя системы').AsString())
+        if parameter == 'ФОП_ВИС_Совместно с воздуховодом':
+            pass
+
+        self.Number = self.get_number(element, Name)
 
         elemType = doc.GetElement(element.GetTypeId())
-
-
-        if element in colCurves:
-                if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1:
-                    status = True
-
-
-        if element in colPipes:
-            if elemType.LookupParameter('ФОП_ВИС_Расчет металла для креплений').AsInteger() == 1 \
-                    or elemType.LookupParameter('ФОП_ВИС_Расчет краски и грунтовки').AsInteger() == 1:
-                status = True
-
         if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-            status = True
+            self.Name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
 
-        if status:
-            EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
-            System = str(element.LookupParameter('ADSK_Имя системы').AsString())
-
-            if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
-            Key = EF + "_" + System + "_" + name
-            if len(Key.split('_')) == 1:
-                Key = "None_None_" + name
-
-            Number = get_number(element, name)
-
-            if Key not in line_dict:
-                #if element in colInsul:
-                    #print Key
-
-                line_dict[Key] = Number
-            else:
-                line_dict[Key] = line_dict[Key] + Number
-
-
-
-    for line in line_dict:
-        key = str(line).split('_')
-        #print key[2]
-
-        EF = key[0]
-        elements_to_gen.append([key[1], Class, Work, Group, key[2], Mark, Art, Maker, Izm, line_dict[line], Mass, Comment, EF])
-    return elements_to_gen
 
 def new_position(calculation_elements):
     #ищем стадию спеки для присвоения
+    phaseOk = False
     for phase in doc.Phases:
         if phase.Name == 'Спецификация':
             phaseid = phase.Id
+            phaseOk = True
 
+    if not phaseOk:
+        print 'Не удалось присвоить стадию спецификация, проверьте список стадий'
+        sys.exit()
 
     # создаем заглушки по элементов собранных из таблицы
     loc = XYZ(0, 0, 0)
@@ -261,11 +258,9 @@ def new_position(calculation_elements):
     Models = []
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
-            try:
-                element.CreatedPhaseId = phaseid
-            except Exception:
-                print
-                'Не удалось присвоить стадию спецификация, проверьте список стадий'
+            element.CreatedPhaseId = phaseid
+
+
             Models.append(element)
 
     # для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
@@ -288,19 +283,63 @@ def new_position(calculation_elements):
         Models.pop(0)
 
 def remove_models(colModel):
-    for element in colModel:
-        edited_by = element.LookupParameter('Редактирует').AsString()
-        if edited_by and edited_by != __revit__.Application.Username:
-            print
-            "Якорные элементы не были обработаны, так как были заняты пользователями:"
-            print
-            edited_by
-            sys.exit()
+    try:
+        for element in colModel:
+            edited_by = element.LookupParameter('Редактирует').AsString()
+            if edited_by and edited_by != __revit__.Application.Username:
+                print "Якорные элементы не были обработаны, так как были заняты пользователями:"
+                print edited_by
+                sys.exit()
+    except Exception:
+        pass
 
 
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
             doc.Delete(element.Id)
+def is_object_to_generate(element, genCol, collection, parameter, generation_list = generation_list):
+    if element in genCol:
+        for generation in generation_list:
+            if collection in generation and parameter in generation:
+                try:
+                    elemType = doc.GetElement(element.GetTypeId())
+                    if elemType.LookupParameter(parameter).AsInteger() == 1:
+                        return True
+                except Exception:
+                    if element.LookupParameter(parameter).AsInteger() == 1:
+                        return True
+
+def collapse_list(lists):
+    singles = []
+    for gen in generation_list:
+        name = gen[1]
+        isSingle = gen[5]
+        if isSingle:
+            singles.append(name)
+
+
+    dict = {}
+
+    for list in lists:
+        system = list[0]
+        EF = list[12]
+        name = list[4]
+        number = list[9]
+        if name in singles:
+            number = 1
+        Key = EF + "_" + system + "_" + name
+
+        if Key not in dict:
+            dict[Key] = list
+        else:
+            dict[Key][9] = dict[Key][9] + number
+            if name in singles:
+                dict[Key][9] = 1
+
+    collapsed_list = []
+    for x in dict:
+        collapsed_list.append(dict[x])
+    return collapsed_list
 
 
 def script_execute():
@@ -311,52 +350,29 @@ def script_execute():
         #список элементов которые будут сгенерированы
         calculation_elements = []
 
+        collections = [colInsul, colPipes, colCurves]
 
-        duct_metal = line_elements(colCurves, "Металлические крепления для воздуховодов", 'кг.')
-        if len(duct_metal) > 0:
-            calculation_elements = calculation_elements + duct_metal
+        #тут мы перебираем элементы из коллекций по дурацкому алгоритму соответствия списку параметризации
+        for collection in collections:
+            for element in collection:
+                elemType = doc.GetElement(element.GetTypeId())
+                for generation in generation_list:
+                    name = generation[1]
+                    parameter = generation[3]
+                    genCol = generation[4]
 
+                    if is_object_to_generate(element, genCol, collection, parameter):
 
-        pipe_metal = line_elements(colPipes, "Металлические крепления для трубопроводов", 'кг')
-        if len(pipe_metal) > 0:
-            calculation_elements = calculation_elements + pipe_metal
+                        definition = calculation_element(element, collection, parameter, name)
+                        definitionList = [definition.System, definition.Class, definition.Work,
+                                          definition.Group, definition.Name, definition.Mark,
+                                          definition.Art, definition.Maker, definition.Izm, definition.Number,
+                                          definition.Mass, definition.Comment, definition.EF]
 
-        duct_insul_stock = line_elements(colInsul, "Изоляция для фланцев и стыков", 'м²')
-        if len(duct_insul_stock) > 0:
-            calculation_elements = calculation_elements + duct_insul_stock
+                        calculation_elements.append(definitionList)
 
-        if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Расчет комплектов заделки').AsInteger() == 1:
-            Class = ''
-            Work = ''
-            Group = '8. Расчетные элементы'
-            Name = "Комплект заделки отверстий с восстановлением предела огнестойкости"
-            Mark = ''
-            Art = ''
-            Maker = ''
-            Izm = 'компл.'
-            Mass = ''
-            Comment = ''
-
-            EF_dict = {}
-            system_list = []
-            for element in colCurves:
-                EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
-                System = str(element.LookupParameter('ADSK_Имя системы').AsString())
-
-                if System not in EF_dict:
-                    EF_dict[System] = EF
-
-            for system in EF_dict:
-                system_list.append(
-                    [system, Class, Work, Group, Name, Mark, Art, Maker, Izm, 1, Mass, Comment, EF_dict[system]])
-
-            # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
-            #new_position(system_list)
-            calculation_elements = calculation_elements + system_list
-
+        calculation_elements = collapse_list(calculation_elements)
         new_position(calculation_elements)
-
-
 
 is_temporary_in = False
 
@@ -371,7 +387,6 @@ for element in famtypeitr:
 if is_temporary_in == False:
     print 'Не обнаружен якорный элемен(металл и краска). Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
-
 
 
 status = paraSpec.check_parameters()
