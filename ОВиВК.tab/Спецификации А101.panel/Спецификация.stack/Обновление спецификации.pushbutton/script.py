@@ -293,7 +293,6 @@ def make_new_name(element):
                             if insName not in New_Name:
                                 New_Name = New_Name + " в изоляции " + insName
 
-
         if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
             ADSK_Izm = get_ADSK_Izm(element)
             if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
@@ -319,7 +318,6 @@ def make_new_name(element):
                 except Exception:
                     pass
 
-
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             thickness = duct_thickness(element)
             try:
@@ -336,8 +334,6 @@ def make_new_name(element):
             except Exception:
                 pass
 
-
-
             New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
 
             cons = getConnectors(element)
@@ -352,7 +348,6 @@ def make_new_name(element):
                         except Exception:
                             print insType.Id
 
-
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
             insType = doc.GetElement(element.GetTypeId())
             try:
@@ -360,17 +355,7 @@ def make_new_name(element):
                     New_Name = '!Не учитывать'
             except Exception:
                 print insType.Id
-
-
         Spec_Name.Set(str(New_Name))
-
-def make_new_mark(element):
-    FOP_mark = element.LookupParameter('ФОП_ВИС_Марка')
-    if not FOP_mark.IsReadOnly:
-        mark = get_ADSK_Mark(element)
-        if mark == 'None':
-            mark = ''
-        FOP_mark.Set(mark)
 
 def getDuct(connector):
     mainCon = []
@@ -400,6 +385,205 @@ def getConnectors(element):
             while a.MoveNext():
                 connectors.append(a.Current)
     return connectors
+
+
+
+def getDependent(collection):
+
+    d = {}
+    for element in collection:
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        chain = ElemType.get_Parameter(Guid('c39ded76-eb20-4a21-abf3-6db36aca369b')).AsValueString()
+
+        if chain == "Нет":
+            pass
+        else:
+            ADSK_Mark = get_ADSK_Mark(element)
+            new_group =  element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString() + " " + ADSK_Mark
+            Pos = element.LookupParameter('ФОП_ВИС_Группирование')
+            Pos.Set(new_group + " 0")
+
+            dependent = element.GetSubComponentIds()
+            numbering = []
+            for x in dependent:
+                #перебираем вложенные семейства, но вложены могут быть даже обобщенные модели, которые спекой не обрабатываем
+                #пока что если выпадает ошибка в считывании наименования просто пропуск, если что будет видно по пустым
+                #строкам в спеке
+                try:
+                    numbering.append(doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString())
+                except Exception:
+                    pass
+            numbering.sort()
+            numbering = [el for el, _ in groupby(numbering)]
+            numbering_d = {}
+
+            number = 1
+            for name in numbering:
+                if name not in numbering_d:
+                    numbering_d[name] = number
+                    number = number + 1
+
+            for x in dependent:
+                #то же что и выше
+                try:
+                    name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+                    new_name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное')
+                    new_name.Set(str(numbering_d[name]) +'. ' + name)
+
+                    Pos = doc.GetElement(x).LookupParameter('ФОП_ВИС_Группирование')
+                    Pos.Set(new_group + " " + str(numbering_d[name]))
+                except Exception:
+                    pass
+
+def update_element(element):
+    if element in colEquipment: getNumericalParam(element, '1. Оборудование')
+    if element in colPlumbingFixtures:  getNumericalParam(element, '1. Оборудование')
+    if element in colSprinklers: getNumericalParam(element, '1. Оборудование')
+    if element in colAccessory: getNumericalParam(element, '2. Арматура')
+    if element in colTerminals: getNumericalParam(element, '3. Воздухораспределители')
+    if element in colPipeAccessory: getNumericalParam(element, '2. Трубопроводная арматура')
+    if element in colPipeFittings: getNumericalParam(element, '5. Фасонные детали трубопроводов')
+    if element in colFittings: getNumericalParam(element, '5. Фасонные детали воздуховодов')
+    if element in colCurves: getCapacityParam(element, '4. Воздуховоды')
+    if element in colFlexCurves: getCapacityParam(element, '4. Гибкие воздуховоды')
+    if element in colPipeCurves: getCapacityParam(element, '4. Трубопроводы')
+    if element in colFlexPipeCurves: getCapacityParam(element, '4. Гибкие трубопроводы')
+    if element in colPipeInsulations: getCapacityParam(element, '6. Материалы трубопроводной изоляции')
+    if element in colInsulations: getCapacityParam(element, '6. Материалы изоляции воздуховодов')
+
+#Обновляем параметры для ВОР и перебиваем единицы измерения
+
+def regroop(element):
+    FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка').AsString()
+    ADSK_Name = get_ADSK_Name(element)
+    FOP_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+    FOP_Group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
+
+    if FOP_Mark == None:
+        FOP_Mark = 'None'
+
+    if FOP_Group == None:
+        FOP_Group = 'None'
+
+    if FOP_Name == None:
+        FOP_Name = 'None'
+
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        element.LookupParameter('ФОП_ВИС_Группирование').Set(
+            FOP_Group + " " + FOP_Name)
+    else:
+        element.LookupParameter('ФОП_ВИС_Группирование').Set(
+            FOP_Group + " " + FOP_Name + " " + FOP_Mark)
+
+def script_execute():
+
+    report_rows = set()
+    for collection in collections:
+        for element in collection:
+            try:
+                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+            except Exception:
+                print element.Id
+
+            if edited_by and edited_by != __revit__.Application.Username:
+                report_rows.add(edited_by)
+                continue
+
+            data = shedule_position(element)
+
+            if element.LookupParameter('ФОП_Экономическая функция'):
+                if element.LookupParameter('ФОП_Экономическая функция').AsString() == None:
+                    element.LookupParameter('ФОП_Экономическая функция').Set('None')
+
+            make_new_mark(element)
+            update_element(element)
+            make_new_name(element)
+            #update_boq(element)
+
+    for collection in collections:
+        for element in collection:
+            if edited_by and edited_by != __revit__.Application.Username:
+                continue
+            regroop(element)
+
+    if sort_dependent_by_equipment == True:
+        getDependent(colEquipment)
+        getDependent(colPlumbingFixtures)
+        getDependent(colPipeAccessory)
+        getDependent(colAccessory)
+        getDependent(colTerminals)
+
+    if report_rows:
+        print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
+        print "\r\n".join(report_rows)
+
+colFittings = make_col(BuiltInCategory.OST_DuctFitting)
+colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
+colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
+colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
+colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
+colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
+colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
+colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
+colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
+colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
+colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
+
+collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
+               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
+
+status = paraSpec.check_parameters()
+
+#Коллекция, Категория первичной группы, Единичный элемент?
+parametric = [
+[colEquipment, '1. Оборудование', True],
+[colPlumbingFixtures, '1. Оборудование', True],
+[colSprinklers, '1. Оборудование', True],
+[colAccessory, '2. Арматура', True],
+[colTerminals, '3. Воздухораспределители', True],
+[colPipeAccessory, '2. Трубопроводная арматура', True],
+[colPipeFittings, '5. Фасонные детали трубопроводов', True],
+[colFittings, '5. Фасонные детали воздуховодов', True],
+[colCurves, '4. Воздуховоды', False],
+[colFlexCurves, '4. Гибкие воздуховоды', False],
+[colPipeCurves, '4. Трубопроводы', False],
+[colFlexPipeCurves, '4. Гибкие трубопроводы', False],
+[colPipeInsulations, '6. Материалы трубопроводной изоляции', False],
+[colInsulations, '6. Материалы изоляции воздуховодов', False]
+]
+
+def get_fitting_area(element):
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        options = Options()
+        geoms = element.get_Geometry(options)
+
+        for g in geoms:
+            solids = g.GetInstanceGeometry()
+        area = 0
+
+        for solid in solids:
+            if isinstance(solid, Line) or isinstance(solid, Arc):
+                continue
+            for face in solid.Faces:
+                area = area + face.Area
+
+        connectors = getConnectors(element)
+
+        for connector in connectors:
+            try:
+                H = connector.Height
+                B = connector.Width
+                S = H * B
+                area = area - S
+            except Exception:
+                R = connector.Radius
+                S = 3.14 * R * R
+                area = (area - S) * 0.092903
+    return area
 
 #этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны
 # стоять милимметры для длины и м2 для площади) и для расстановки позиции
@@ -478,270 +662,206 @@ def getNumericalParam(element, position):
     fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
     fop_izm.Set('шт.')
 
-    try:
-        if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-            options = Options()
-            geoms = element.get_Geometry(options)
 
-            for g in geoms:
-                solids = g.GetInstanceGeometry()
-            area = 0
-
-            for solid in solids:
-                if isinstance(solid, Line) or isinstance(solid, Arc):
-                    continue
-                for face in solid.Faces:
-                    area = area + face.Area
-
-            connectors = getConnectors(element)
-
-            for connector in connectors:
-                try:
-                    H = connector.Height
-                    B = connector.Width
-                    S = H * B
-                    area = area - S
-                except Exception:
-                    R = connector.Radius
-                    S = 3.14 * R * R
-                    area = area - S
-
-            Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
-
-            Spec_Length.Set(area * 0.092903)
-
-    except Exception:
-        Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
-        Spec_Length.Set(0)
-
-def getDependent(collection):
-
-    d = {}
-    for element in collection:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-        chain = ElemType.get_Parameter(Guid('c39ded76-eb20-4a21-abf3-6db36aca369b')).AsValueString()
-
-        if chain == "Нет":
-            pass
-        else:
-            ADSK_Mark = get_ADSK_Mark(element)
-            new_group =  element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString() + " " + ADSK_Mark
-            Pos = element.LookupParameter('ФОП_ВИС_Группирование')
-            Pos.Set(new_group + " 0")
-
-            dependent = element.GetSubComponentIds()
-            numbering = []
-            for x in dependent:
-                #перебираем вложенные семейства, но вложены могут быть даже обобщенные модели, которые спекой не обрабатываем
-                #пока что если выпадает ошибка в считывании наименования просто пропуск, если что будет видно по пустым
-                #строкам в спеке
-                try:
-                    numbering.append(doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString())
-                except Exception:
-                    pass
-            numbering.sort()
-            numbering = [el for el, _ in groupby(numbering)]
-            numbering_d = {}
-
-            number = 1
-            for name in numbering:
-                if name not in numbering_d:
-                    numbering_d[name] = number
-                    number = number + 1
-
-            for x in dependent:
-                #то же что и выше
-                try:
-                    name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
-                    new_name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное')
-                    new_name.Set(str(numbering_d[name]) +'. ' + name)
-
-                    Pos = doc.GetElement(x).LookupParameter('ФОП_ВИС_Группирование')
-                    Pos.Set(new_group + " " + str(numbering_d[name]))
-                except Exception:
-                    pass
-
-def update_element(element):
-    if element in colEquipment: getNumericalParam(element, '1. Оборудование')
-    if element in colPlumbingFixtures:  getNumericalParam(element, '1. Оборудование')
-    if element in colSprinklers: getNumericalParam(element, '1. Оборудование')
-    if element in colAccessory: getNumericalParam(element, '2. Арматура')
-    if element in colTerminals: getNumericalParam(element, '3. Воздухораспределители')
-    if element in colPipeAccessory: getNumericalParam(element, '2. Трубопроводная арматура')
-    if element in colPipeFittings: getNumericalParam(element, '5. Фасонные детали трубопроводов')
-    if element in colFittings: getNumericalParam(element, '5. Фасонные детали воздуховодов')
-    if element in colCurves: getCapacityParam(element, '4. Воздуховоды')
-    if element in colFlexCurves: getCapacityParam(element, '4. Гибкие воздуховоды')
-    if element in colPipeCurves: getCapacityParam(element, '4. Трубопроводы')
-    if element in colFlexPipeCurves: getCapacityParam(element, '4. Гибкие трубопроводы')
-    if element in colPipeInsulations: getCapacityParam(element, '6. Материалы трубопроводной изоляции')
-    if element in colInsulations: getCapacityParam(element, '6. Материалы изоляции воздуховодов')
-
-#Обновляем параметры для ВОР и перебиваем единицы измерения
-def update_boq(element):
-
-    fop_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
-
-    adsk_mark = get_ADSK_Mark(element)
-
-    boq_name = element.LookupParameter('ФОП_ТИП_Назначение')
-    if adsk_mark == "None":
-        boq_name.Set(fop_name)
-    else:
-        boq_name.Set(fop_name + ' ' + adsk_mark)
-
-    boq_izm = element.LookupParameter('ФОП_ТИП_Единица измерения')
-    fop_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
-
-
-    adsk_izm = get_ADSK_Izm(element)
-
-    if adsk_izm == None:
-        adsk_izm = "None"
-
-
-    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-        fop_izm.Set("м²")
-        boq_izm.Set("м²")
-    elif element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        boq_izm.Set("м²")
-    else:
-        boq_izm.Set(fop_izm.AsString())
-
-
-    fop_number = element.LookupParameter('ФОП_ВИС_Число').AsDouble()
-
-    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        fop_number = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) * length_reserve
-        fop_number = round(fop_number, 2)
-
-    boq_number = element.LookupParameter('ФОП_ТИП_Число')
-    boq_number.Set(fop_number)
-
-    ElemTypeId = element.GetTypeId()
-    ElemType = doc.GetElement(ElemTypeId)
-
-    fop_number = round(fop_number, 2)
-    code = str(ElemType.GetParamValue(BuiltInParameter.UNIFORMAT_CODE))
-    if code == None:
-        code = ""
-    boq_code = element.LookupParameter('ФОП_ТИП_Код')
-    boq_code.Set(code)
-
-    work_name = ElemType.GetParamValue(BuiltInParameter.UNIFORMAT_DESCRIPTION)
-    if work_name == None:
-        work_name = ""
-    boq_work = element.LookupParameter('ФОП_ТИП_Наименование работы')
-    boq_work.Set(work_name)
-
-
-
-def regroop(element):
-    FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка').AsString()
-    ADSK_Name = get_ADSK_Name(element)
-    FOP_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
-    FOP_Group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
-
-    if FOP_Mark == None:
-        FOP_Mark = 'None'
-
-    if FOP_Group == None:
-        FOP_Group = 'None'
-
-    if FOP_Name == None:
-        FOP_Name = 'None'
-
-    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-        element.LookupParameter('ФОП_ВИС_Группирование').Set(
-            FOP_Group + " " + FOP_Name)
-    else:
-        element.LookupParameter('ФОП_ВИС_Группирование').Set(
-            FOP_Group + " " + FOP_Name + " " + FOP_Mark)
-
-def script_execute():
-
-    report_rows = set()
-    for collection in collections:
-        for element in collection:
-            try:
-                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-            except Exception:
-                print element.Id
-
-            if edited_by and edited_by != __revit__.Application.Username:
-                report_rows.add(edited_by)
-                continue
-
-            if element.LookupParameter('ФОП_Экономическая функция'):
-                if element.LookupParameter('ФОП_Экономическая функция').AsString() == None:
-                    element.LookupParameter('ФОП_Экономическая функция').Set('None')
-
-            make_new_mark(element)
-            update_element(element)
-            make_new_name(element)
-            #update_boq(element)
-
-    for collection in collections:
-        for element in collection:
-            if edited_by and edited_by != __revit__.Application.Username:
-                continue
-            regroop(element)
-
-    if sort_dependent_by_equipment == True:
-        getDependent(colEquipment)
-        getDependent(colPlumbingFixtures)
-        getDependent(colPipeAccessory)
-        getDependent(colAccessory)
-        getDependent(colTerminals)
-
-    if report_rows:
-        print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
-        print "\r\n".join(report_rows)
-
-colFittings = make_col(BuiltInCategory.OST_DuctFitting)
-colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
-colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
-colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
-colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
-colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
-colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
-colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
-colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
-colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
-colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
-colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
-colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
-
-collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
-
-status = paraSpec.check_parameters()
+    Spec_Length = element.LookupParameter('ФОП_ВИС_Число')
+    Spec_Length.Set(0)
 
 class shedule_position:
-    def __init__(self, element):
-        pass
-    def shedGroup(self):
-        pass
 
-    def shedPos(self):
-        pass
+    def shedName(self, element):
+        if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+            external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
+            internal_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_INNER_DIAM_PARAM) * 304.8
+            pipe_thickness = (external_size - internal_size) / 2
 
-    def shedName(self):
-        pass
+            Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
 
-    def shedMark(self):
-        pass
+            if Dy[-2:] == '.0':
+                Dy = Dy[:-2]
 
-    def shedIzm(self):
-        pass
+            external_size = str(external_size)
+            if external_size[-2:] == '.0':
+                external_size = external_size[:-2]
 
-    def shedNumber(self):
-        pass
+            d_type = get_D_type(element)
 
-    def shedRegroop(self):
-        pass
+            if d_type == "Ду":
+                New_Name = ADSK_Name + ' ' + 'DN' + Dy
+            elif d_type == "Ду х Стенка":
+                New_Name = ADSK_Name + ' ' + 'DN' + Dy + 'x' + str(pipe_thickness)
+            else:
+                New_Name = ADSK_Name + ' ' + '⌀' + external_size + 'x' + str(pipe_thickness)
+
+        if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+            thickness = duct_thickness(element)
+            try:
+                New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(
+                    BuiltInParameter.RBS_CALCULATED_SIZE)
+            except Exception:
+                New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(
+                    BuiltInParameter.RBS_REFERENCE_FREESIZE)
+
+            cons = getConnectors(element)
+            for con in cons:
+                for el in con.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                        insType = doc.GetElement(el.Owner.GetTypeId())
+                        if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                            insName = get_ADSK_Name(el.Owner)
+                            if insName == 'None':
+                                insName = 'None_Изоляция'
+                            if insName not in New_Name:
+                                New_Name = New_Name + " в изоляции " + insName
+
+        if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+            ADSK_Izm = get_ADSK_Izm(element)
+            if ADSK_Izm == 'м.п.' or ADSK_Izm == 'м.' or ADSK_Izm == 'мп' or ADSK_Izm == 'м' or ADSK_Izm == 'м.п':
+                lenght = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
+                if lenght == None:
+                    lenght = 0
+                area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+                if area == None:
+                    area = 0
+                L = lenght * 304.8
+                S = area * 0.092903
+
+                pipe = doc.GetElement(element.HostElementId)
+
+                # это на случай если(каким-то образом) изоляция трубы висит без трубы
+                try:
+                    if pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) != None:
+                        d = pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
+                        d = str(d)
+                        if d[-2:] == '.0':
+                            d = d[:-2]
+                        New_Name = ADSK_Name + ' внутренним диаметром Ø' + d
+                except Exception:
+                    pass
+
+        if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+            thickness = duct_thickness(element)
+            try:
+                connectors = getConnectors(element)
+                for connector in connectors:
+                    for el in connector.AllRefs:
+                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                            ductType = doc.GetElement(el.Owner.GetTypeId())
+                            if ductType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
+                                min_thickness = ductType.LookupParameter(
+                                    'ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
+                                if float(min_thickness) > float(thickness):
+                                    thickness = min_thickness
+
+            except Exception:
+                pass
+
+            New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
+
+            cons = getConnectors(element)
+            for con in cons:
+                for el in con.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                        insType = doc.GetElement(el.Owner.GetTypeId())
+                        try:
+                            if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                                if get_ADSK_Name(el.Owner) not in New_Name:
+                                    New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                        except Exception:
+                            print
+                            insType.Id
+
+        if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+            insType = doc.GetElement(element.GetTypeId())
+            try:
+                if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                    New_Name = '!Не учитывать'
+            except Exception:
+                print
+                insType.Id
+
+        return New_Name
+
+    def shedMark(self, element):
+        mark = self.ADSK_mark
+        if self.ADSK_mark == 'None':
+            mark = ''
+        if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+            mark = ''
+        return mark
+
+    def shedIzm(self, element, isSingle):
+        if isSingle:
+            if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                return 'м²'
+            return 'шт.'
+        else:
+            if self.ADSK_izm == 'шт' or self.ADSK_izm == 'шт.' or self.ADSK_izm == 'Шт.' or self.ADSK_izm == 'Шт':
+                return 'шт.'
+            if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                if self.ADSK_Izm == 'м.п.' or self.ADSK_Izm == 'м.' or self.ADSK_Izm == 'мп' \
+                        or self.ADSK_Izm == 'м' or self.ADSK_Izm == 'м.п':
+                    return 'м.п.'
+                return 'м²'
+            if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+                if self.ADSK_Izm == 'м2' or self.ADSK_Izm == 'м²':
+                    return 'м²'
+                return 'м.п.'
+            return 'м.п.'
+
+    def shedNumber(self, element):
+        if self.FOP_izm == 'шт.':
+            return 1
+        if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+            return get_fitting_area(element)
+        if self.FOP_izm == 'м.п.':
+            length = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
+            if length == None:
+                length = 0
+            else:
+                length = length * 0.092903
+            if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) or element.Category.IsId(
+                    BuiltInCategory.OST_DuctInsulations):
+                length = round((length * isol_reserve), 2)
+            else:
+                length = round((length * length_reserve), 2)
+            return length
+        if self.FOP_izm == 'м²':
+            area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+            if area == None:
+                area = 0
+            else:
+                area = area * 0.092903
+
+            if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) or element.Category.IsId(
+                    BuiltInCategory.OST_DuctInsulations):
+                area = round((area * isol_reserve), 2)
+            else:
+                area = round((area * length_reserve), 2)
+            return area
+    def __init__(self, element, collection, parametric = parametric):
+        for params in parametric:
+            if collection in params:
+                paraCol = collection
+                paraGroup = params[1]
+                isSingle = params[2]
+
+        self.FOP_group = element.LookupParameter('ФОП_ВИС_Группирование')
+        self.FOP_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
+        self.FOP_number = element.LookupParameter('ФОП_ВИС_Число')
+        self.FOP_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
+        self.FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка')
+
+        self.ADSK_name = get_ADSK_Name(element)
+        self.ADSK_mark = get_ADSK_Mark(element)
+        self.ADSK_izm = get_ADSK_Izm(element)
+
+        self.FOP_group.Set(paraGroup)
+        self.FOP_izm.Set(self.shedIzm(element))
+        self.pos = ''
+        self.FOP_name.Set(self.shedName(element))
+        self.FOP_Mark.Set(self.shedMark(element))
+        self.FOP_number.Set(self.shedNumber(element))
+
 
 if not status:
     with revit.Transaction("Обновление общей спеки"):
