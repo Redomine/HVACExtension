@@ -154,6 +154,7 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Нумерация позиций', visDefinitions, projectCatSet),
         shared_parameter('ФОП_ВИС_Площади воздуховодов в примечания', visDefinitions, projectCatSet),
 
+
     if parameters_added:
         print 'Были добавлены параметры, перезапустите скрипт'
 

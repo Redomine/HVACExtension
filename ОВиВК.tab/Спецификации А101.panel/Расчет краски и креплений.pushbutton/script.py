@@ -64,6 +64,20 @@ famtypeitr = collector.GetElementIdIterator()
 famtypeitr.Reset()
 
 
+class settings:
+    def __init__(self,
+                 group,
+                 name,
+                 unit,
+                 param_name,
+                 collection,
+                 is_type
+    ):
+        pass
+
+
+#settings('8. Расчетные элементы', "Металлические крепления для воздуховодов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colCurves, False)
+
 generation_list = [
     # для добавления элементов внести в список на генерацию по форме ниже
     # Если число формируется по отдельному алгоритму - добавляем формулу в функцию, иначе выпадет 1
@@ -197,9 +211,6 @@ class calculation_element:
             Number = colorBT(element)
         if name == "Грунт ГФ-031" and element in colPipes:
             Number = grunt(element)
-
-
-
 
         return Number
 
