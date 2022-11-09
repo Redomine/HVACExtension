@@ -303,18 +303,19 @@ def get_fitting_area(element):
             for face in solid.Faces:
                 area = area + face.Area
 
+        area = area * 0.092903
         connectors = getConnectors(element)
 
         for connector in connectors:
             try:
                 H = connector.Height
                 B = connector.Width
-                S = H * B
+                S = (H * B) * 0.092903
                 area = area - S
             except Exception:
                 R = connector.Radius
-                S = 3.14 * R * R
-                area = (area - S) * 0.092903
+                S = (3.14 * R * R) * 0.092903
+                area = (area - S)
     return area
 
 
@@ -363,7 +364,7 @@ class vkheat_collector_part:
         self.FOP_group = self.element.LookupParameter('ФОП_ВИС_Группирование')
         new_group = self.parent_group + self.group
         if (str(number) + '. ') not in self.FOP_name.AsString():
-            new_name = str(number) + '. ' + self.FOP_name.AsString()
+            new_name = "‎    " + str(number) + '. ' + self.FOP_name.AsString()
             self.FOP_name.Set(new_name)
         self.FOP_group.Set(new_group)
 
@@ -546,14 +547,20 @@ class shedule_position:
         new_group = self.paraGroup + "_" + self.FOP_name.AsString() + "_" + self.FOP_Mark.AsString()
         return new_group
     def insert(self):
-        self.FOP_izm.Set(self.shedIzm(self.element, self.ADSK_izm, self.isSingle))
-        self.FOP_name.Set(self.shedName(self.element))
-        self.FOP_Mark.Set(self.shedMark(self.element))
-
+        if not self.FOP_izm.IsReadOnly:
+            self.FOP_izm.Set(self.shedIzm(self.element, self.ADSK_izm, self.isSingle))
+        if not self.FOP_name.IsReadOnly:
+            self.FOP_name.Set(self.shedName(self.element))
+        if not self.FOP_Mark.IsReadOnly:
+            self.FOP_Mark.Set(self.shedMark(self.element))
+        if not self.FOP_pos.IsReadOnly:
+            self.FOP_pos.Set('')
         self.FOP_number.Set(self.shedNumber(self.element))
         if self.FOP_EF.AsString() == None:
-            self.FOP_EF.Set('None')
-        self.FOP_group.Set(self.regroop(self.element))
+            if not self.FOP_EF.IsReadOnly:
+                self.FOP_EF.Set('None')
+        if not self.FOP_group.IsReadOnly:
+            self.FOP_group.Set(self.regroop(self.element))
 
     def __init__(self, element, collection, parametric):
         for params in parametric:
@@ -569,6 +576,7 @@ class shedule_position:
         self.FOP_number = element.LookupParameter('ФОП_ВИС_Число')
         self.FOP_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
         self.FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка')
+        self.FOP_pos = element.LookupParameter('ФОП_ВИС_Позиция')
 
         self.ADSK_maker = get_ADSK_Maker(element)
         self.ADSK_name = get_ADSK_Name(element)
@@ -621,12 +629,6 @@ parametric = [
 
 status = paraSpec.check_parameters()
 
-
-
-
-
-
-
 def script_execute():
     report_rows = set()
     for collection in collections:
@@ -643,10 +645,18 @@ def script_execute():
             data = shedule_position(element, collection, parametric)
             data.insert()
 
+
         for element in vis_collectors:
+            try:
+                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+            except Exception:
+                print element.Id
+
+            if edited_by and edited_by != __revit__.Application.Username:
+                report_rows.add(edited_by)
+                continue
+
             get_depend(element)
-
-
 
     if report_rows:
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
