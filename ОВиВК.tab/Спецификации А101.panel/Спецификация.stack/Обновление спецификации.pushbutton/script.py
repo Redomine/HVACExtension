@@ -75,6 +75,23 @@ def get_ADSK_Name(element):
 
     return ADSK_Name
 
+def get_ADSK_Maker(element):
+    if element.LookupParameter('ADSK_Завод-изготовитель'):
+        ADSK_Maker = element.LookupParameter('ADSK_Завод-изготовитель').AsString()
+        if ADSK_Maker == None or ADSK_Maker == "":
+            ADSK_Maker = "None"
+    else:
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+
+        if ElemType.LookupParameter('ADSK_Завод-изготовитель') == None\
+                or ElemType.LookupParameter('ADSK_Завод-изготовитель').AsString() == None \
+                or ElemType.LookupParameter('ADSK_Завод-изготовитель').AsString() == "":
+            ADSK_Maker = "None"
+        else:
+            ADSK_Maker = ElemType.LookupParameter('ADSK_Завод-изготовитель').AsString()
+    return ADSK_Maker
+
 def get_ADSK_Mark(element):
     if element.LookupParameter('ADSK_Марка'):
         ADSK_Mark = element.LookupParameter('ADSK_Марка').AsString()
@@ -300,77 +317,26 @@ def get_fitting_area(element):
                 area = (area - S) * 0.092903
     return area
 
-def getDependent(collection):
 
-    d = {}
-    for element in collection:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-        chain = ElemType.get_Parameter(Guid('c39ded76-eb20-4a21-abf3-6db36aca369b')).AsValueString()
+def get_depend(element):
+    parent = element.get_Parameter(BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM).AsValueString()
+    parent_group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
+    subIds = element.GetSubComponentIds()
+    vkheat_collector = []
+    for subId in subIds:
+        subElement = doc.GetElement(subId)
+        part = vkheat_collector_part(element = subElement, ADSK_name= get_ADSK_Name(subElement), ADSK_mark= get_ADSK_Mark(subElement), ADSK_maker = get_ADSK_Maker(subElement), parent = parent, parent_group = parent_group)
+        vkheat_collector.append(part)
+    vkheat_collector.sort(key=lambda x: x.group)
 
-        if chain == "Нет":
-            pass
-        else:
-            ADSK_Mark = get_ADSK_Mark(element)
-            new_group =  element.LookupParameter('ФОП_ВИС_Группирование').AsString() + " " + element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString() + " " + ADSK_Mark
-            Pos = element.LookupParameter('ФОП_ВИС_Группирование')
-            Pos.Set(new_group + " 0")
+    number = 0
+    old_group = ''
 
-            dependent = element.GetSubComponentIds()
-            numbering = []
-            for x in dependent:
-                #перебираем вложенные семейства, но вложены могут быть даже обобщенные модели, которые спекой не обрабатываем
-                #пока что если выпадает ошибка в считывании наименования просто пропуск, если что будет видно по пустым
-                #строкам в спеке
-                try:
-                    numbering.append(doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString())
-                except Exception:
-                    pass
-            numbering.sort()
-            numbering = [el for el, _ in groupby(numbering)]
-            numbering_d = {}
-
-            number = 1
-            for name in numbering:
-                if name not in numbering_d:
-                    numbering_d[name] = number
-                    number = number + 1
-
-            for x in dependent:
-                #то же что и выше
-                try:
-                    name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
-                    new_name = doc.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное')
-                    new_name.Set(str(numbering_d[name]) +'. ' + name)
-
-                    Pos = doc.GetElement(x).LookupParameter('ФОП_ВИС_Группирование')
-                    Pos.Set(new_group + " " + str(numbering_d[name]))
-                except Exception:
-                    pass
-
-#Обновляем параметры для ВОР и перебиваем единицы измерения
-
-def regroop(element):
-    FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка').AsString()
-    ADSK_Name = get_ADSK_Name(element)
-    FOP_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
-    FOP_Group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
-
-    if FOP_Mark == None:
-        FOP_Mark = 'None'
-
-    if FOP_Group == None:
-        FOP_Group = 'None'
-
-    if FOP_Name == None:
-        FOP_Name = 'None'
-
-    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-        element.LookupParameter('ФОП_ВИС_Группирование').Set(
-            FOP_Group + " " + FOP_Name)
-    else:
-        element.LookupParameter('ФОП_ВИС_Группирование').Set(
-            FOP_Group + " " + FOP_Name + " " + FOP_Mark)
+    for part in vkheat_collector:
+        if old_group != part.group:
+            number += 1
+            old_group = part.group
+        part.reinsert(number)
 
 class settings:
     def __init__(self,
@@ -381,8 +347,28 @@ class settings:
         self.Group = Group
         self.isSingle = isSingle
 
-class shedule_position:
 
+class vkheat_collector_part:
+    def __init__(self, element, ADSK_name, ADSK_mark, ADSK_maker, parent, parent_group):
+        self.parent_group = parent_group
+        self.element = element
+        self.ADSK_maker = ADSK_maker
+        self.ADSK_name = ADSK_name
+        self.ADSK_mark = ADSK_mark
+        self.parent = parent
+        self.group = '_Узел_'+self.parent+self.ADSK_name+self.ADSK_mark+self.ADSK_maker
+
+    def reinsert(self, number):
+        self.FOP_name = self.element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
+        self.FOP_group = self.element.LookupParameter('ФОП_ВИС_Группирование')
+        new_group = self.parent_group + self.group
+        if (str(number) + '. ') not in self.FOP_name.AsString():
+            new_name = str(number) + '. ' + self.FOP_name.AsString()
+            self.FOP_name.Set(new_name)
+        self.FOP_group.Set(new_group)
+
+
+class shedule_position:
     def shedName(self, element):
         ADSK_Name = self.ADSK_name
         New_Name = ADSK_Name
@@ -556,14 +542,10 @@ class shedule_position:
             return area
         print FOP_izm
 
-    def get_depend(self, element):
-        pass
     def regroop(self, element):
-
         new_group = self.paraGroup + "_" + self.FOP_name.AsString() + "_" + self.FOP_Mark.AsString()
         return new_group
     def insert(self):
-
         self.FOP_izm.Set(self.shedIzm(self.element, self.ADSK_izm, self.isSingle))
         self.FOP_name.Set(self.shedName(self.element))
         self.FOP_Mark.Set(self.shedMark(self.element))
@@ -588,9 +570,18 @@ class shedule_position:
         self.FOP_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
         self.FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка')
 
+        self.ADSK_maker = get_ADSK_Maker(element)
         self.ADSK_name = get_ADSK_Name(element)
         self.ADSK_mark = get_ADSK_Mark(element)
         self.ADSK_izm = get_ADSK_Izm(element)
+
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+
+        if ElemType.LookupParameter('ФОП_ВИС_Узел'):
+            if ElemType.LookupParameter('ФОП_ВИС_Узел').AsInteger() == 1:
+                vis_collectors.append(element)
+
 
 colFittings = make_col(BuiltInCategory.OST_DuctFitting)
 colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
@@ -607,8 +598,8 @@ colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
 colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 
-collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures, colSprinklers]
+collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves,  colInsulations, colPipeInsulations, colPipeCurves, colSprinklers, colAccessory,
+               colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
 
 #Коллекция, Категория первичной группы, Единичный элемент?
 parametric = [
@@ -630,6 +621,12 @@ parametric = [
 
 status = paraSpec.check_parameters()
 
+
+
+
+
+
+
 def script_execute():
     report_rows = set()
     for collection in collections:
@@ -645,7 +642,10 @@ def script_execute():
 
             data = shedule_position(element, collection, parametric)
             data.insert()
-            data.get_depend(data.element)
+
+        for element in vis_collectors:
+            get_depend(element)
+
 
 
     if report_rows:
@@ -655,6 +655,8 @@ def script_execute():
 
 if not status:
     with revit.Transaction("Обновление общей спеки"):
+        #список элементов для перебора в вид узлов:
+        vis_collectors = []
         # Переменные для расчета
         length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
             'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
