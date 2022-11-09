@@ -556,7 +556,7 @@ class shedule_position:
         if not self.FOP_pos.IsReadOnly:
             self.FOP_pos.Set('')
         self.FOP_number.Set(self.shedNumber(self.element))
-        if self.FOP_EF.AsString() == None:
+        if self.FOP_EF == None:
             if not self.FOP_EF.IsReadOnly:
                 self.FOP_EF.Set('None')
         if not self.FOP_group.IsReadOnly:
