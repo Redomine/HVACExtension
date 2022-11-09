@@ -98,11 +98,10 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
         try:
             edited_by = element.LookupParameter('Редактирует').AsString()
         except Exception:
-            print element.Id
-        if edited_by and edited_by != __revit__.Application.Username:
+            edited_by = __revit__.Application.Username
+        if edited_by != __revit__.Application.Username:
             report_rows.add(edited_by)
             continue
-
     if report_rows:
         print "Нумерация/заполнение примечаний не были выполнены, так как часть элементов спецификации занята пользователями:"
         print "\r\n".join(report_rows)
@@ -133,7 +132,7 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
                 ADSK_Pos = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
                 ADSK_Pos.Set(str(element.Id.IntegerValue))
 
-        startIndex = 0 #Стартовый значение для номера
+        newIndex = 0 #Стартовый значение для номера
         with revit.Transaction("Запись номера"):
             #получаем по каким столбикам мы сортируем
             sortGroupInd = getSortGroupInd()[0] #список параметров с сортировкой
@@ -149,17 +148,23 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
                 #получаем элемент по записанному айди
                 elId = vs.GetCellText(SectionType.Body, row, FOP_pos_ind)
 
+                group = vs.GetCellText(SectionType.Body, row, sortGroupInd[1])
+
                 if newSheduleString != oldSheduleString:
                     if elId:
                         try:
-                            if int(elId):
-                                startIndex += 1
+                            if int(elId) and '_Узел_' not in group:
+                                newIndex += 1
+                                oldIndex = startIndex
                         except Exception: #если вместо айди прилетает текст, пропускаем
                             pass
 
                 try:
                     pos = doc.GetElement(ElementId(int(elId)))
-                    pos.LookupParameter('ФОП_ВИС_Позиция').Set(str(startIndex))
+                    if '_Узел_' not in group:
+                        pos.LookupParameter('ФОП_ВИС_Позиция').Set(str(newIndex))
+                    else:
+                        pos.LookupParameter('ФОП_ВИС_Позиция').Set('')
                 except Exception:
                     pass
 
