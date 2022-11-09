@@ -373,7 +373,24 @@ class shedule_position:
     def shedName(self, element):
         ADSK_Name = self.ADSK_name
         New_Name = ADSK_Name
+
+        try:
+            if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
+                cons = getConnectors(element)
+                for con in cons:
+
+                        for el in con.AllRefs:
+                            if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
+                                ElemTypeId = el.Owner.GetTypeId()
+                                ElemType = doc.GetElement(ElemTypeId)
+                                if ElemType.LookupParameter('ФОП_ВИС_Учитывать фитинги').AsInteger() != 1:
+                                    New_Name = '!Не учитывать'
+        except Exception:
+            pass
+
+
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+
             external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
             internal_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_INNER_DIAM_PARAM) * 304.8
             pipe_thickness = (external_size - internal_size) / 2
