@@ -129,6 +129,7 @@ def script_execute():
     visDefinitions = check_spfile()
 
     with revit.Transaction("Добавление параметров"):
+        #shared_parameter('ФОП_Экономическая функция', visDefinitions, defaultCatSet),
         shared_parameter('ФОП_ВИС_Группирование', visDefinitions, defaultCatSet),
         shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet),
         shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet),
