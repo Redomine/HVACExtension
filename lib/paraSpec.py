@@ -76,7 +76,7 @@ def get_cats(list_of_cats):
         set.Insert(cat)
     return set
 
-def check_spfile():
+def check_spfile(group):
     spFile = doc.Application.OpenSharedParameterFile()
     # проверяем тот ли файл общих параметров подгружен
     spFileName = str(doc.Application.SharedParametersFilename)
@@ -93,8 +93,7 @@ def check_spfile():
             sys.exit()
 
     for dG in spFile.Groups:
-        vis_group = "03_ВИС"
-        if str(dG.Name) == vis_group:
+        if str(dG.Name) == group:
             visDefinitions = dG.Definitions
             return visDefinitions
 
@@ -126,10 +125,13 @@ def script_execute():
     ductandpipeCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves])
 
     #получаем группу из которой выбираем параметры
-    visDefinitions = check_spfile()
+    visDefinitions = check_spfile("03_ВИС")
+    genDefinitions  = check_spfile("00_Общие")
 
     with revit.Transaction("Добавление параметров"):
-        #shared_parameter('ФОП_Экономическая функция', visDefinitions, defaultCatSet),
+
+        shared_parameter('ФОП_Экономическая функция', genDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, defaultCatSet),
         shared_parameter('ФОП_ВИС_Группирование', visDefinitions, defaultCatSet),
         shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet),
         shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet),
@@ -149,6 +151,7 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Комплекты заделки', visDefinitions, ductandpipeCatSet, istype=True),
         shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet, istype=True),
         shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Учитывать фитинги', visDefinitions, pipeCatSet, istype=True),
 
         shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet),
         shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet),

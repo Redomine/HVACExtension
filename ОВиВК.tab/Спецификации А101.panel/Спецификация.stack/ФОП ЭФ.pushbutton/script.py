@@ -12,6 +12,7 @@ clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 
 import sys
+import paraSpec
 from Autodesk.Revit.DB import *
 from System import Guid
 from pyrevit import revit
@@ -122,17 +123,11 @@ def getSystemDict(collection):
 
 
 paraNames = ['ФОП_Экономическая функция', 'ФОП_ВИС_Экономическая функция']
-#проверка на наличие нужных параметров
-map = doc.ParameterBindings
-it = map.ForwardIterator()
-while it.MoveNext():
-    newProjectParameterData = it.Key.Name
-    if str(newProjectParameterData) in paraNames:
-        paraNames.remove(str(newProjectParameterData))
-if len(paraNames) > 0:
-    import paraEF
-    print 'Были добавлен параметры, перезапустите скрипт'
-else:
+
+
+status = paraSpec.check_parameters()
+
+if not status:
     try:
         if doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString() == None:
             print 'ФОП_Экономическая функция не заполнен в сведениях о проекте'
