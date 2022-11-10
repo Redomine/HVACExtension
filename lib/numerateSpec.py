@@ -96,7 +96,9 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
 
     for element in elements:
         try:
-            edited_by = element.LookupParameter('Редактирует').AsString()
+            edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+            if edited_by == None:
+                edited_by = __revit__.Application.Username
         except Exception:
             edited_by = __revit__.Application.Username
         if edited_by != __revit__.Application.Username:

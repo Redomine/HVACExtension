@@ -17,6 +17,7 @@ import System
 import dosymep
 import paraSpec
 
+
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
@@ -25,6 +26,7 @@ from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
+
 from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 from System import Guid
@@ -106,7 +108,6 @@ def setElement(element, name, setting):
                 element.LookupParameter('ФОП_ТИП_Число').Set(str(setting))
             if name == 'ФОП_ВИС_Наименование комбинированное':
                 element.LookupParameter('ФОП_ТИП_Назначение').Set(setting)
-
     except Exception:
         pass
 
@@ -228,6 +229,7 @@ class calculation_element:
         self.Mass = ''
         self.Comment = ''
         self.EF = 'None'
+        self.parentId = element.Id.IntegerValue
 
         for generation in generation_list:
             if collection in generation and parameter in generation:
@@ -291,6 +293,11 @@ def new_position(calculation_elements):
         setElement(dummy, 'ФОП_ВИС_Масса', element[10])
         setElement(dummy, 'ADSK_Примечание', element[11])
         setElement(dummy, 'ФОП_Экономическая функция', element[12])
+        try:
+            setElement(dummy, 'ID Родительских элементов', element[13])
+        except:
+            pass
+
         Models.pop(0)
 
 def remove_models(colModel):
@@ -328,12 +335,12 @@ def collapse_list(lists):
         if isSingle:
             singles.append(name)
 
-
     dict = {}
 
     for list in lists:
         system = list[0]
         EF = list[12]
+        parentId = list[13]
         name = list[4]
         number = list[9]
         if name in singles:
@@ -346,6 +353,7 @@ def collapse_list(lists):
             dict[Key][9] = dict[Key][9] + number
             if name in singles:
                 dict[Key][9] = 1
+            dict[Key][13] = str(dict[Key][13]) + ';' + str(parentId)
 
     collapsed_list = []
     for x in dict:
@@ -378,7 +386,7 @@ def script_execute():
                         definitionList = [definition.System, definition.Class, definition.Work,
                                           definition.Group, definition.Name, definition.Mark,
                                           definition.Art, definition.Maker, definition.Izm, definition.Number,
-                                          definition.Mass, definition.Comment, definition.EF]
+                                          definition.Mass, definition.Comment, definition.EF, definition.parentId]
 
                         calculation_elements.append(definitionList)
 
@@ -391,9 +399,12 @@ for element in famtypeitr:
     famtypeID = element
     famsymb = doc.GetElement(famtypeID)
 
+
     if famsymb.Family.Name == '_Якорный элемен(металл и краска)':
         temporary = famsymb
         is_temporary_in = True
+        print element
+
 
 if is_temporary_in == False:
     print 'Не обнаружен якорный элемен(металл и краска). Проверьте наличие семейства или восстановите исходное имя.'

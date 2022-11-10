@@ -18,6 +18,7 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 import sys
 import paraSpec
 from Autodesk.Revit.DB import *
+from Redomine import *
 from System import Guid
 from itertools import groupby
 from pyrevit import revit
@@ -25,87 +26,6 @@ from pyrevit.script import output
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 view = doc.ActiveView
-
-
-def make_col(category):
-    col = FilteredElementCollector(doc) \
-        .OfCategory(category) \
-        .WhereElementIsNotElementType() \
-        .ToElements()
-    return col
-
-def get_ADSK_Izm(element):
-    try:
-        ADSK_Izm = element.LookupParameter('ADSK_Единица измерения').AsString()
-    except Exception:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-
-        if ElemType.LookupParameter('ADSK_Единица измерения') == None:
-            ADSK_Izm = "None"
-        else:
-            ADSK_Izm = ElemType.LookupParameter('ADSK_Единица измерения').AsString()
-
-    return ADSK_Izm
-
-def get_ADSK_Name(element):
-    if element.LookupParameter('ADSK_Наименование'):
-        ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
-        if ADSK_Name == None or ADSK_Name == "":
-            ADSK_Name = "None"
-    else:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-
-        if ElemType.LookupParameter('ADSK_Наименование') == None\
-                or ElemType.LookupParameter('ADSK_Наименование').AsString() == None \
-                or ElemType.LookupParameter('ADSK_Наименование').AsString() == "":
-            ADSK_Name = "None"
-        else:
-            ADSK_Name = ElemType.LookupParameter('ADSK_Наименование').AsString()
-
-    if str(element.Category.Name) == 'Трубы':
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента'):
-            if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента').AsInteger() == 1:
-                ADSK_Name = element.LookupParameter('Описание сегмента').AsString()
-
-
-
-    return ADSK_Name
-
-def get_ADSK_Maker(element):
-    if element.LookupParameter('ADSK_Завод-изготовитель'):
-        ADSK_Maker = element.LookupParameter('ADSK_Завод-изготовитель').AsString()
-        if ADSK_Maker == None or ADSK_Maker == "":
-            ADSK_Maker = "None"
-    else:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-
-        if ElemType.LookupParameter('ADSK_Завод-изготовитель') == None\
-                or ElemType.LookupParameter('ADSK_Завод-изготовитель').AsString() == None \
-                or ElemType.LookupParameter('ADSK_Завод-изготовитель').AsString() == "":
-            ADSK_Maker = "None"
-        else:
-            ADSK_Maker = ElemType.LookupParameter('ADSK_Завод-изготовитель').AsString()
-    return ADSK_Maker
-
-def get_ADSK_Mark(element):
-    if element.LookupParameter('ADSK_Марка'):
-        ADSK_Mark = element.LookupParameter('ADSK_Марка').AsString()
-    else:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-
-        if ElemType.LookupParameter('ADSK_Марка') == None \
-                or ElemType.LookupParameter('ADSK_Марка').AsString() == None \
-                or ElemType.LookupParameter('ADSK_Марка').AsString() == "":
-            ADSK_Mark = "None"
-        else:
-            ADSK_Mark = ElemType.LookupParameter('ADSK_Марка').AsString()
-    return ADSK_Mark
 
 def get_D_type(element):
     ElemTypeId = element.GetTypeId()
@@ -334,10 +254,13 @@ def get_depend(element):
     old_group = ''
 
     for part in vkheat_collector:
-        if old_group != part.group:
-            number += 1
-            old_group = part.group
-        part.reinsert(number)
+        if part.isKit:
+            if old_group != part.group:
+                number += 1
+                old_group = part.group
+
+
+            part.reinsert(number)
 
 class settings:
     def __init__(self,
@@ -358,14 +281,22 @@ class vkheat_collector_part:
         self.ADSK_mark = ADSK_mark
         self.parent = parent
         self.group = '_Узел_'+self.parent+self.ADSK_name+self.ADSK_mark+self.ADSK_maker
+        self.isKit = True
 
+        ElemTypeId = self.element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        if ElemType.LookupParameter('ФОП_ВИС_Поставляется отдельно от узла'):
+            self.isKit = False
     def reinsert(self, number):
         self.FOP_name = self.element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
         self.FOP_group = self.element.LookupParameter('ФОП_ВИС_Группирование')
         new_group = self.parent_group + self.group
+
         if (str(number) + '. ') not in self.FOP_name.AsString():
             new_name = "‎    " + str(number) + '. ' + self.FOP_name.AsString()
             self.FOP_name.Set(new_name)
+
+
         self.FOP_group.Set(new_group)
 
 
@@ -579,6 +510,10 @@ class shedule_position:
                 self.FOP_EF.Set('None')
         if not self.FOP_group.IsReadOnly:
             self.FOP_group.Set(self.regroop(self.element))
+        if not self.FOP_maker.IsReadOnly:
+            self.FOP_maker.Set(self.ADSK_maker)
+        if not self.FOP_code.IsReadOnly:
+            self.FOP_code.Set(self.ADSK_code)
 
     def __init__(self, element, collection, parametric):
         for params in parametric:
@@ -595,11 +530,15 @@ class shedule_position:
         self.FOP_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
         self.FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка')
         self.FOP_pos = element.LookupParameter('ФОП_ВИС_Позиция')
+        self.FOP_code = element.LookupParameter('ФОП_ВИС_Код изделия')
+        self.FOP_maker = element.LookupParameter('ФОП_ВИС_Завод-изготовитель')
+
 
         self.ADSK_maker = get_ADSK_Maker(element)
         self.ADSK_name = get_ADSK_Name(element)
         self.ADSK_mark = get_ADSK_Mark(element)
         self.ADSK_izm = get_ADSK_Izm(element)
+        self.ADSK_code = get_ADSK_Code(element)
 
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
@@ -645,7 +584,8 @@ parametric = [
     settings(colInsulations, '6. Материалы изоляции воздуховодов', False)
 ]
 
-status = paraSpec.check_parameters()
+
+
 
 def script_execute():
     report_rows = set()
@@ -680,17 +620,20 @@ def script_execute():
         print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
         print "\r\n".join(report_rows)
 
+parametersAdded = paraSpec.check_parameters()
 
-if not status:
-    with revit.Transaction("Обновление общей спеки"):
-        #список элементов для перебора в вид узлов:
-        vis_collectors = []
-        # Переменные для расчета
-        length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
-            'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
-        isol_reserve = 1 + (
-                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
-        script_execute()
+if not parametersAdded:
+    isReplacementOkey = replacement_status()
+    if isReplacementOkey:
+        with revit.Transaction("Обновление общей спеки"):
+            #список элементов для перебора в вид узлов:
+            vis_collectors = []
+            # Переменные для расчета
+            length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
+                'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+            isol_reserve = 1 + (
+                    doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+            script_execute()
 
-    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
-        import numerateSpec
+        if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
+            import numerateSpec
