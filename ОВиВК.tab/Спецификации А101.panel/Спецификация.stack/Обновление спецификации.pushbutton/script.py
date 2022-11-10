@@ -435,7 +435,8 @@ class shedule_position:
                                 New_Name = New_Name + " в изоляции " + insName
 
         if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
-            if self.FOP_izm == 'м.п.':
+
+            if self.FOP_izm.AsString() == 'м.п.':
                 lenght = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
                 if lenght == None:
                     lenght = 0
