@@ -131,32 +131,40 @@ def script_execute():
     with revit.Transaction("Добавление параметров"):
 
         shared_parameter('ФОП_Экономическая функция', genDefinitions, defaultCatSet)
-        shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, defaultCatSet),
-        shared_parameter('ФОП_ВИС_Группирование', visDefinitions, defaultCatSet),
-        shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet),
-        shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet),
-        shared_parameter('ФОП_ВИС_Наименование комбинированное', visDefinitions, defaultCatSet),
+        shared_parameter('ФОП_ВИС_Код изделия', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Завод-изготовитель', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Группирование', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Наименование комбинированное', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Позиция', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Марка', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
-        shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet),
+        shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet)
 
+        shared_parameter('ФОП_ВИС_Примечание', visDefinitions, defaultCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Ду', visDefinitions, pipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Ду х Стенка', visDefinitions, pipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Днар х Стенка', visDefinitions, pipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Имя трубы из сегмента', visDefinitions, pipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Расчет краски и грунтовки', visDefinitions, pipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Комплекты заделки', visDefinitions, ductandpipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Учитывать фитинги', visDefinitions, pipeCatSet, istype=True)
 
-        shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Ду', visDefinitions, pipeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Ду х Стенка', visDefinitions, pipeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Днар х Стенка', visDefinitions, pipeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Имя трубы из сегмента', visDefinitions, pipeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Расчет краски и грунтовки', visDefinitions, pipeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Комплекты заделки', visDefinitions, ductandpipeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True),
-        shared_parameter('ФОП_ВИС_Учитывать фитинги', visDefinitions, pipeCatSet, istype=True),
+        shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Нумерация позиций', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Площади воздуховодов в примечания', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Замена параметра_Единица измерения', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Замена параметра_Завод-изготовитель', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Замена параметра_Код изделия', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Замена параметра_Марка', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Замена параметра_Наименование', visDefinitions, projectCatSet)
 
-        shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet),
-        shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet),
-        shared_parameter('ФОП_ВИС_Нумерация позиций', visDefinitions, projectCatSet),
-        shared_parameter('ФОП_ВИС_Площади воздуховодов в примечания', visDefinitions, projectCatSet),
 
 
     if parameters_added:
