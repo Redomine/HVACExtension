@@ -22,12 +22,14 @@ from System import Guid
 from itertools import groupby
 from pyrevit import revit
 from pyrevit.script import output
+from pyrevit import script
 
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 import os.path as op
 import clr
 
+output = script.get_output()
 
 def getSharedParameter (element, paraName, replaceName):
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
@@ -57,7 +59,6 @@ def getSharedParameter (element, paraName, replaceName):
         else:
             parameter = ElemType.LookupParameter(name).AsString()
 
-
     nullParas = ['ADSK_Завод-изготовитель', 'ADSK_Марка', 'ADSK_Код изделия']
     if parameter == 'None' or parameter == None:
         if paraName in nullParas:
@@ -66,6 +67,8 @@ def getSharedParameter (element, paraName, replaceName):
         #    print 'Невозможно получить параметр ' + report
         #    sys.exit()
     return parameter
+
+
 def make_col(category):
     col = FilteredElementCollector(doc) \
         .OfCategory(category) \
@@ -85,9 +88,13 @@ def isReplasing(replaceName ):
         return replaceDefiniton
 
 def replaceIsValid (element, paraName, replaceName):
-    if not element.LookupParameter(replaceName):
-        print 'Назначеного параметра замены ' + replaceName + ' нет у одной из категорий, назначенных для исходного параметр ' + paraName
-        sys.exit()
+    if not element.LookupParameter(paraName):
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        if ElemType.LookupParameter(paraName):
+            print output.linkify(elementId)
+            print 'Назначеного параметра замены ' + replaceName + ' нет у одной из категорий, назначенных для исходного параметр ' + paraName
+            sys.exit()
     else:
         return paraName
 
