@@ -623,17 +623,15 @@ def script_execute():
 parametersAdded = paraSpec.check_parameters()
 
 if not parametersAdded:
-    isReplacementOkey = replacement_status()
-    if isReplacementOkey:
-        with revit.Transaction("Обновление общей спеки"):
-            #список элементов для перебора в вид узлов:
-            vis_collectors = []
-            # Переменные для расчета
-            length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
-                'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
-            isol_reserve = 1 + (
-                    doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
-            script_execute()
+    with revit.Transaction("Обновление общей спеки"):
+        #список элементов для перебора в вид узлов:
+        vis_collectors = []
+        # Переменные для расчета
+        length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
+            'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+        isol_reserve = 1 + (
+                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+        script_execute()
 
-        if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
-            import numerateSpec
+    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
+        import numerateSpec
