@@ -92,7 +92,7 @@ def replaceIsValid (element, paraName, replaceName):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
         if ElemType.LookupParameter(paraName):
-            print output.linkify(elementId)
+            print output.linkify(element.Id)
             print 'Назначеного параметра замены ' + replaceName + ' нет у одной из категорий, назначенных для исходного параметр ' + paraName
             sys.exit()
     else:
