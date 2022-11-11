@@ -51,6 +51,7 @@ def getSharedParameter (element, paraName, replaceName):
             parameter = 'None'
     except Exception:
         #try:
+
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
@@ -66,6 +67,7 @@ def getSharedParameter (element, paraName, replaceName):
         #except Exception:
         #    print 'Невозможно получить параметр ' + report
         #    sys.exit()
+    parameter = str(parameter)
     return parameter
 
 
@@ -88,15 +90,16 @@ def isReplasing(replaceName ):
         return replaceDefiniton
 
 def replaceIsValid (element, paraName, replaceName):
-    if not element.LookupParameter(paraName):
+    replaceparameter = doc.ProjectInformation.LookupParameter(replaceName).AsString()
+    if not element.LookupParameter(replaceparameter):
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.LookupParameter(paraName):
+        if not ElemType.LookupParameter(replaceparameter):
             print output.linkify(element.Id)
-            print 'Назначеного параметра замены ' + replaceName + ' нет у одной из категорий, назначенных для исходного параметр ' + paraName
+            print 'Назначеного параметра замены ' + replaceparameter + ' нет у одной из категорий, назначенных для исходного параметр ' + paraName
             sys.exit()
-    else:
-        return paraName
+
+    return replaceparameter
 
 def get_ADSK_Izm(element):
     paraName = 'ADSK_Единица измерения'
@@ -127,4 +130,3 @@ def get_ADSK_Code(element):
     replaceName = 'ФОП_ВИС_Замена параметра_Код изделия'
     ADSK_Code = getSharedParameter(element, paraName, replaceName)
     return ADSK_Code
-
