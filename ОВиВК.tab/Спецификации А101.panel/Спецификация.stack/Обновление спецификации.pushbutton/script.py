@@ -347,6 +347,7 @@ class shedule_position:
             New_Name = ADSK_Name  + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
 
 
+
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
             thickness = duct_thickness(element)
             try:
@@ -369,28 +370,17 @@ class shedule_position:
                                 New_Name = New_Name + " в изоляции " + insName
 
         if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+            New_Name = ADSK_Name
+            connectors = getConnectors(element)
+            for connector in connectors:
+                for el in connector.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting):
+                        New_Name = '!Не учитывать'
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
+                        New_Name = ADSK_Name + ' (' + el.Owner.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString() + ')'
 
-            if self.FOP_izm.AsString() == 'м.п.':
-                lenght = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
-                if lenght == None:
-                    lenght = 0
-                area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
-                if area == None:
-                    area = 0
-                L = lenght * 304.8
-                S = area * 0.092903
 
-                pipe = doc.GetElement(element.HostElementId)
-                # это на случай если(каким-то образом) изоляция трубы висит без трубы
-                try:
-                    if pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) != None:
-                        d = pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
-                        d = str(d)
-                        if d[-2:] == '.0':
-                            d = d[:-2]
-                        New_Name = ADSK_Name + ' внутренним диаметром Ø' + d
-                except Exception:
-                    pass
+
 
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             thickness = duct_thickness(element)
@@ -508,9 +498,11 @@ class shedule_position:
         if not self.FOP_pos.IsReadOnly:
             self.FOP_pos.Set('')
         self.FOP_number.Set(self.shedNumber(self.element))
+
         if self.FOP_EF == None:
             if not self.FOP_EF.IsReadOnly:
                 self.FOP_EF.Set('None')
+
         if not self.FOP_group.IsReadOnly:
             self.FOP_group.Set(self.regroop(self.element))
         if not self.FOP_maker.IsReadOnly:
