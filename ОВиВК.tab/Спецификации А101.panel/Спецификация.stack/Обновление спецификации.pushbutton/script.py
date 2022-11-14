@@ -321,7 +321,6 @@ class shedule_position:
 
 
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-
             external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
             internal_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_INNER_DIAM_PARAM) * 304.8
             pipe_thickness = (external_size - internal_size) / 2
@@ -343,6 +342,10 @@ class shedule_position:
                 New_Name = ADSK_Name + ' ' + 'DN' + Dy + 'x' + str(pipe_thickness)
             else:
                 New_Name = ADSK_Name + ' ' + '⌀' + external_size + 'x' + str(pipe_thickness)
+
+        if element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
+            New_Name = ADSK_Name  + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
+
 
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
             thickness = duct_thickness(element)
