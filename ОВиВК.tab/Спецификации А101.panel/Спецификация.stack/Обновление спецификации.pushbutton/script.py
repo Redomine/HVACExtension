@@ -299,6 +299,21 @@ class vkheat_collector_part:
 
         self.FOP_group.Set(new_group)
 
+def pipe_optimization(size):
+    size = str(size)
+
+    old_char = ''
+    ind = 0
+    for char in size:
+        if char == '0' and old_char == '0':
+            size = size[:(ind-1)]
+            if size[-1] == '.':
+                size = size[:-1]
+            return size
+        old_char = char
+        ind += 1
+    return size
+
 
 class shedule_position:
     def shedName(self, element):
@@ -337,14 +352,15 @@ class shedule_position:
             d_type = get_D_type(element)
 
             if d_type == "Ду":
-                New_Name = ADSK_Name + ' ' + 'DN' + Dy
+                New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy)
             elif d_type == "Ду х Стенка":
-                New_Name = ADSK_Name + ' ' + 'DN' + Dy + 'x' + str(pipe_thickness)
+                New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy) + 'x' + pipe_optimization(str(pipe_thickness))
             else:
-                New_Name = ADSK_Name + ' ' + '⌀' + external_size + 'x' + str(pipe_thickness)
+                New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(external_size) + 'x' + pipe_optimization(str(pipe_thickness))
 
         if element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
             New_Name = ADSK_Name  + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
+
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
@@ -369,28 +385,21 @@ class shedule_position:
                                 New_Name = New_Name + " в изоляции " + insName
 
         if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+            New_Name = ADSK_Name
+            connectors = getConnectors(element)
+            for connector in connectors:
+                for el in connector.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting):
+                        New_Name = '!Не учитывать'
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
+                        pipe_name = el.Owner.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+                        if pipe_name[-1] == '.':
+                            pipe_name = pipe_name[:-1]
 
-            if self.FOP_izm.AsString() == 'м.п.':
-                lenght = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
-                if lenght == None:
-                    lenght = 0
-                area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
-                if area == None:
-                    area = 0
-                L = lenght * 304.8
-                S = area * 0.092903
+                        New_Name = ADSK_Name + ' (' + pipe_name + ')'
 
-                pipe = doc.GetElement(element.HostElementId)
-                # это на случай если(каким-то образом) изоляция трубы висит без трубы
-                try:
-                    if pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) != None:
-                        d = pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
-                        d = str(d)
-                        if d[-2:] == '.0':
-                            d = d[:-2]
-                        New_Name = ADSK_Name + ' внутренним диаметром Ø' + d
-                except Exception:
-                    pass
+
+
 
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             thickness = duct_thickness(element)
@@ -473,12 +482,13 @@ class shedule_position:
             if length == None:
                 length = 0
             else:
-                length = length * 0.092903
+                length = (length * 304.8)/1000
             if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) or element.Category.IsId(
                     BuiltInCategory.OST_DuctInsulations):
                 length = round((length * isol_reserve), 2)
             else:
                 length = round((length * length_reserve), 2)
+
             return length
         if FOP_izm == 'м²':
             area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
@@ -508,9 +518,11 @@ class shedule_position:
         if not self.FOP_pos.IsReadOnly:
             self.FOP_pos.Set('')
         self.FOP_number.Set(self.shedNumber(self.element))
+
         if self.FOP_EF == None:
             if not self.FOP_EF.IsReadOnly:
                 self.FOP_EF.Set('None')
+
         if not self.FOP_group.IsReadOnly:
             self.FOP_group.Set(self.regroop(self.element))
         if not self.FOP_maker.IsReadOnly:

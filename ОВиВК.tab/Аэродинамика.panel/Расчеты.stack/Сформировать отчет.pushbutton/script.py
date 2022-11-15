@@ -73,6 +73,7 @@ summ_pressure = 0
 system_name = system.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
 
 def getConnectors(element):
+
     connectors = []
     try:
         a = element.ConnectorManager.Connectors.ForwardIterator()
@@ -90,90 +91,94 @@ def getConnectors(element):
     return connectors
 
 def getDpTapAdjustable(element):
-    conSet = getConnectors(element)
-
     try:
-        Fo = conSet[0].Height*0.3048*conSet[0].Width*0.3048
-        form = "Прямоугольный отвод"
-    except:
-        Fo = 3.14*0.3048*0.3048*conSet[0].Radius**2
-        form = "Круглый отвод"
+        conSet = getConnectors(element)
 
-    mainCon = []
-    #if element.Id.IntegerValue == 2752996:
-    #    for con in conSet:
-    #        print con.AllRefs.ForwardIterator().Current
-            #.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
-
-
-    old_flow = 0
-    for con in conSet:
-        connectorSet = con.AllRefs.ForwardIterator()
-        while connectorSet.MoveNext():
-            try:
-                flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
-            except Exception:
-                flow = 0
-            if flow > old_flow:
-                mainCon = []
-                mainCon.append(connectorSet.Current)
-                old_flow = flow
-
-
-
-    duct = mainCon[0].Owner
-
-
-    ductCons = getConnectors(duct)
-    Flow = []
-
-
-    for ductCon in ductCons:
-        Flow.append(ductCon.Flow*101.94)
         try:
-            Fc = ductCon.Height * 0.3048 * ductCon.Width * 0.3048
-            Fp = Fc
+            Fo = conSet[0].Height*0.3048*conSet[0].Width*0.3048
+            form = "Прямоугольный отвод"
         except:
-            Fc = 3.14 * 0.3048 * 0.3048 * ductCon.Radius ** 2
-            Fp = Fc
+            Fo = 3.14*0.3048*0.3048*conSet[0].Radius**2
+            form = "Круглый отвод"
 
-    Lc = max(Flow)
-    Lo = conSet[0].Flow*101.94
-
-
-
-    f0 = Fo / Fc
-    l0 = Lo / Lc
-    fp = Fp / Fc
+        mainCon = []
+        #if element.Id.IntegerValue == 2752996:
+        #    for con in conSet:
+        #        print con.AllRefs.ForwardIterator().Current
+                #.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
 
 
-    if str(conSet[0].DuctSystemType) == "ExhaustAir" or str(conSet[0].DuctSystemType) == "ReturnAir":
-        if form == "Круглый отвод":
-            if Lc > Lo:
-                K = ((1-fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)*(fp/(1-l0))**2
+        old_flow = 0
+        for con in conSet:
+            connectorSet = con.AllRefs.ForwardIterator()
+            while connectorSet.MoveNext():
+                try:
+                    flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
+                except Exception:
+                    flow = 0
+                if flow > old_flow:
+                    mainCon = []
+                    mainCon.append(connectorSet.Current)
+                    old_flow = flow
+
+
+
+        duct = mainCon[0].Owner
+
+
+        ductCons = getConnectors(duct)
+        Flow = []
+
+        for ductCon in ductCons:
+                Flow.append(ductCon.Flow*101.94)
+                try:
+                    Fc = ductCon.Height * 0.3048 * ductCon.Width * 0.3048
+                    Fp = Fc
+                except:
+                    Fc = 3.14 * 0.3048 * 0.3048 * ductCon.Radius ** 2
+                    Fp = Fc
+
+
+
+        Lc = max(Flow)
+        Lo = conSet[0].Flow*101.94
+
+
+
+        f0 = Fo / Fc
+        l0 = Lo / Lc
+        fp = Fp / Fc
+
+
+        if str(conSet[0].DuctSystemType) == "ExhaustAir" or str(conSet[0].DuctSystemType) == "ReturnAir":
+            if form == "Круглый отвод":
+                if Lc > Lo:
+                    K = ((1-fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)*(fp/(1-l0))**2
+                else:
+                    K = (-0.7-6.05*(1-fp)**3)*(f0/l0)**2+(1.32+3.23*(1-fp)**2)*f0/l0+(0.5+0.42*fp)-0.167*l0/f0
             else:
-                K = (-0.7-6.05*(1-fp)**3)*(f0/l0)**2+(1.32+3.23*(1-fp)**2)*f0/l0+(0.5+0.42*fp)-0.167*l0/f0
-        else:
-            if Lc > Lo:
-                K = (fp/(1-l0))**2*((1-fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)
+                if Lc > Lo:
+                    K = (fp/(1-l0))**2*((1-fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)
+                else:
+                    K = (f0/l0)**2*(4.1*(fp/f0)**1.25*l0**1.5*(fp+f0)**(0.3*(f0/fp)**0.5/l0-2)-0.5*fp/f0)
+
+
+
+        if str(conSet[0].DuctSystemType) == "SupplyAir":
+            if form == "Круглый отвод":
+                if Lc > Lo:
+                    K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
+                else:
+                    K = (f0/l0)**2-0.58*f0/l0+0.54+0.025*l0/f0
             else:
-                K = (f0/l0)**2*(4.1*(fp/f0)**1.25*l0**1.5*(fp+f0)**(0.3*(f0/fp)**0.5/l0-2)-0.5*fp/f0)
+                if Lc > Lo:
+                    K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
+                else:
+                    K = (f0/l0)**2-0.42*f0/l0+0.81-0.06*l0/f0
 
-
-
-    if str(conSet[0].DuctSystemType) == "SupplyAir":
-        if form == "Круглый отвод":
-            if Lc > Lo:
-                K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
-            else:
-                K = (f0/l0)**2-0.58*f0/l0+0.54+0.025*l0/f0
-        else:
-            if Lc > Lo:
-                K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
-            else:
-                K = (f0/l0)**2-0.42*f0/l0+0.81-0.06*l0/f0
-
-    return K
+        return K
+    except:
+        return 0
 
 path_numbers = system.GetCriticalPathSectionNumbers()
 path = []
@@ -264,8 +269,10 @@ for number in path:
                     Pd = (1.21 * velocity * velocity)/2 #Динамическое давление
 
                     K = getDpTapAdjustable(element) #КМС
-
-                    K = float('{:.2f}'.format(K))
+                    try:
+                        K = float('{:.2f}'.format(K))
+                    except:
+                        k = 0
                     Z = Pd * K
                     coef = K
                     pressure_drop = Z
