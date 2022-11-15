@@ -359,7 +359,7 @@ class shedule_position:
                 New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(external_size) + 'x' + pipe_optimization(str(pipe_thickness))
 
         if element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
-            New_Name = ADSK_Name  + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
+            New_Name = ADSK_Name  + ' ' + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
 
 
 
@@ -586,17 +586,19 @@ parametric = [
     settings(colEquipment, '1. Оборудование', True),
     settings(colPlumbingFixtures, '1. Оборудование', True),
     settings(colSprinklers, '1. Оборудование', True),
-    settings(colAccessory, '2. Арматура', True),
+
+    settings(colAccessory, '2. Арматура воздуховодов', True),
     settings(colTerminals, '3. Воздухораспределители', True),
-    settings(colPipeAccessory, '2. Трубопроводная арматура', True),
-    settings(colPipeFittings, '5. Фасонные детали трубопроводов', True),
-    settings(colFittings, '5. Фасонные детали воздуховодов', True),
     settings(colCurves, '4. Воздуховоды', False),
     settings(colFlexCurves, '4. Гибкие воздуховоды', False),
-    settings(colPipeCurves, '4. Трубопроводы', False),
-    settings(colFlexPipeCurves, '4. Гибкие трубопроводы', False),
-    settings(colPipeInsulations, '6. Материалы трубопроводной изоляции', False),
-    settings(colInsulations, '6. Материалы изоляции воздуховодов', False)
+    settings(colFittings, '5. Фасонные детали воздуховодов', True),
+    settings(colInsulations, '6. Материалы изоляции воздуховодов', False),
+
+    settings(colPipeCurves, '7. Трубопроводы', False),
+    settings(colFlexPipeCurves, '8. Гибкие трубопроводы', False),
+    settings(colPipeAccessory, '9. Трубопроводная арматура', True),
+    settings(colPipeFittings, '10. Фасонные детали трубопроводов', True),
+    settings(colPipeInsulations, '11. Материалы трубопроводной изоляции', False)
 ]
 
 
