@@ -95,8 +95,6 @@ generation_list = [
 
 def setElement(element, name, setting):
 
-    if name == 'Экономическая функция':
-        print setting
 
     if setting == 'ФОП_ВИС_Масса':
         if setting == 'None':
