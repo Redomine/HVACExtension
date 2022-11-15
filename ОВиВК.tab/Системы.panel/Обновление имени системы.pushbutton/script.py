@@ -18,6 +18,7 @@ from pyrevit.script import output
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from System import Guid
+import paraSpec
 
 document = __revit__.ActiveUIDocument.Document
 sub_element_ids = []
@@ -165,7 +166,7 @@ def update_system_name(element):
 			system_name = document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов')
 
 	element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
-
+	element.LookupParameter('ФОП_ВИС_Имя системы').Set(str(system_name))
 
 
 
@@ -214,5 +215,6 @@ def script_execute():
 
 		transaction.Commit()
 
-
-script_execute()
+status = paraSpec.check_parameters()
+if not status:
+    script_execute()

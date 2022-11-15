@@ -55,19 +55,17 @@ famtypeitr.Reset()
 
 
 def setElement(element, name, setting):
+
+    if setting == 'None':
+        setting = ''
+
+    if setting == None:
+        setting = ''
+
     try:
-        if setting == None:
-            pass
-        if setting == 'None':
-            setting = ''
-
-        if setting == None:
-            setting = ''
-
+        element.LookupParameter(name).Set(str(setting))
+    except:
         element.LookupParameter(name).Set(setting)
-
-    except Exception:
-        pass
 
 
 def new_position(calculation_elements, phaseid):
@@ -92,22 +90,24 @@ def new_position(calculation_elements, phaseid):
             Models.append(element)
 
     #для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
-    for element in calculation_elements:
-        group = str(element[3]) + str(element[4]) + str(element[5])
+    for position in calculation_elements:
+        group = position.group + position.name + position.mark
         dummy = Models[0]
-        setElement(dummy, 'ADSK_Имя системы', element[0])
-        #setElement(dummy, 'ФОП_ТИП_Код', element[1])
-        #setElement(dummy, 'ФОП_ТИП_Наименование работы', element[2])
+        setElement(dummy, 'ФОП_Номер корпуса', position.corp)
+        setElement(dummy, 'ФОП_Номер секции', position.sec)
+        setElement(dummy, 'ФОП_Этаж', position.floor)
+        setElement(dummy, 'ФОП_ВИС_Имя системы', position.system)
         setElement(dummy, 'ФОП_ВИС_Группирование', group)
-        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element[4])
-        setElement(dummy, 'ФОП_ВИС_Марка', element[5])
-        setElement(dummy, 'ФОП_ВИС_Код изделия', element[6])
-        setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', element[7])
-        setElement(dummy, 'ФОП_ВИС_Единица измерения', element[8])
-        setElement(dummy, 'ФОП_ВИС_Число', element[9])
-        setElement(dummy, 'ФОП_ВИС_Масса', element[10])
-        setElement(dummy, 'ФОП_ВИС_Примечание', element[11])
-        setElement(dummy, 'ФОП_Экономическая функция', element[12])
+        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', position.name)
+        setElement(dummy, 'ФОП_ВИС_Марка', position.mark)
+        setElement(dummy, 'ФОП_ВИС_Код изделия', position.art)
+        setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', position.maker)
+        setElement(dummy, 'ФОП_ВИС_Единица измерения', position.izm)
+        setElement(dummy, 'ФОП_ВИС_Число', position.number)
+        setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
+        setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
+        setElement(dummy, 'ФОП_Экономическая функция', position.EF)
+
         Models.pop(0)
 
 
@@ -124,6 +124,23 @@ for element in famtypeitr:
 if is_temporary_in == False:
     print 'Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
+
+class shedulePosition:
+    def __init__(self, corp, sec, floor, system, group, name, mark, art, maker, izm, number, mass, comment, EF):
+        self.corp = corp
+        self.sec = sec
+        self.floor = floor
+        self.system = system
+        self.group = group
+        self.name = name
+        self.mark = mark
+        self.art = art
+        self.maker = maker
+        self.izm = izm
+        self.number = number
+        self.mass = mass
+        self.comment = comment
+        self.EF = EF
 
 def script_execute():
     exel = Excel.ApplicationClass()
@@ -147,29 +164,30 @@ def script_execute():
 
     xlrange = worksheet.Range["A1", "AZ500"]
 
-    ADSK_System = 0
-    FOP_class = 1
-    FOP_work = 2
-    FOP_Group = 3
-    FOP_Name = 4
-    ADSK_Mark = 5
-    ADSK_Art = 6
-    ADSK_Maker = 7
-    ADSK_Izm = 8
-    FOP_Number = 9
-    FOP_Mass = 10
-    ADSK_Comment = 11
-    FOP_EF = 12
+    FOP_Corp = 0
+    FOP_Sec = 1
+    FOP_Floor = 2
+    FOP_System = 3
+    FOP_Group = 4
+    FOP_Name = 5
+    FOP_Mark = 6
+    FOP_Art = 7
+    FOP_Maker = 8
+    FOP_Izm = 9
+    FOP_Number = 10
+    FOP_Mass = 11
+    FOP_Comment = 12
+    FOP_EF = 13
 
     report_rows = set()
 
-
     for element in colModel:
-        edited_by = element.LookupParameter('Редактирует').AsString()
-        if edited_by and edited_by != __revit__.Application.Username:
-            print "Якорные элементы не были обработаны, так как были заняты пользователями:"
-            print edited_by
-            sys.exit()
+        if element.LookupParameter('Редактирует'):
+            edited_by = element.LookupParameter('Редактирует').AsString()
+            if edited_by and edited_by != __revit__.Application.Username:
+                print "Якорные элементы не были обработаны, так как были заняты пользователями:"
+                print edited_by
+                sys.exit()
 
     with revit.Transaction("Добавление расчетных элементов"):
 
@@ -183,22 +201,24 @@ def script_execute():
         while True:
             if xlrange.value2[row, FOP_Name] == None:
                 break
-            System = xlrange.value2[row, ADSK_System]
-            Class = xlrange.value2[row, FOP_class]
-            Work = xlrange.value2[row, FOP_work]
-            Group = xlrange.value2[row, FOP_Group]
-            Name = xlrange.value2[row, FOP_Name]
-            Mark = xlrange.value2[row, ADSK_Mark]
-            Art = xlrange.value2[row, ADSK_Art]
-            Maker = xlrange.value2[row, ADSK_Maker]
-            Izm = xlrange.value2[row, ADSK_Izm]
-            Number = xlrange.value2[row, FOP_Number]
-            Mass = xlrange.value2[row, FOP_Mass]
-            Comment = xlrange.value2[row, ADSK_Comment]
-            EF = xlrange.value2[row, FOP_EF]
+            newPos = shedulePosition(corp = xlrange.value2[row, FOP_Corp],
+                            sec = xlrange.value2[row, FOP_Sec],
+                            floor = xlrange.value2[row, FOP_Floor],
+                            system = xlrange.value2[row, FOP_System],
+                            group = xlrange.value2[row, FOP_Group],
+                            name = xlrange.value2[row, FOP_Name],
+                            mark = xlrange.value2[row, FOP_Mark],
+                            art = xlrange.value2[row, FOP_Art],
+                            maker = xlrange.value2[row, FOP_Maker],
+                            izm = xlrange.value2[row, FOP_Izm],
+                            number = xlrange.value2[row, FOP_Number],
+                            mass = xlrange.value2[row, FOP_Mass],
+                            comment = xlrange.value2[row, FOP_Comment],
+                            EF = xlrange.value2[row, FOP_EF])
+
 
             row += 1
-            calculation_elements.append([System, Class, Work, Group, Name, Mark, Art, Maker, Izm, Number, Mass, Comment, EF])
+            calculation_elements.append(newPos)
 
 
 
