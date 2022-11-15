@@ -299,6 +299,21 @@ class vkheat_collector_part:
 
         self.FOP_group.Set(new_group)
 
+def pipe_optimization(size):
+    size = str(size)
+
+    old_char = ''
+    ind = 0
+    for char in size:
+        if char == '0' and old_char == '0':
+            size = size[:(ind-1)]
+            if size[-1] == '.':
+                size = size[:-1]
+            return size
+        old_char = char
+        ind += 1
+    return size
+
 
 class shedule_position:
     def shedName(self, element):
@@ -337,11 +352,11 @@ class shedule_position:
             d_type = get_D_type(element)
 
             if d_type == "Ду":
-                New_Name = ADSK_Name + ' ' + 'DN' + Dy
+                New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy)
             elif d_type == "Ду х Стенка":
-                New_Name = ADSK_Name + ' ' + 'DN' + Dy + 'x' + str(pipe_thickness)
+                New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy) + 'x' + pipe_optimization(str(pipe_thickness))
             else:
-                New_Name = ADSK_Name + ' ' + '⌀' + external_size + 'x' + str(pipe_thickness)
+                New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(external_size) + 'x' + pipe_optimization(str(pipe_thickness))
 
         if element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
             New_Name = ADSK_Name  + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
@@ -377,7 +392,11 @@ class shedule_position:
                     if el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting):
                         New_Name = '!Не учитывать'
                     if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
-                        New_Name = ADSK_Name + ' (' + el.Owner.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString() + ')'
+                        pipe_name = el.Owner.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+                        if pipe_name[-1] == '.':
+                            pipe_name = pipe_name[:-1]
+
+                        New_Name = ADSK_Name + ' (' + pipe_name + ')'
 
 
 
@@ -463,12 +482,13 @@ class shedule_position:
             if length == None:
                 length = 0
             else:
-                length = length * 0.092903
+                length = (length * 304.8)/1000
             if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) or element.Category.IsId(
                     BuiltInCategory.OST_DuctInsulations):
                 length = round((length * isol_reserve), 2)
             else:
                 length = round((length * length_reserve), 2)
+
             return length
         if FOP_izm == 'м²':
             area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
