@@ -236,6 +236,7 @@ def get_fitting_area(element):
                 R = connector.Radius
                 S = (3.14 * R * R) * 0.092903
                 area = (area - S)
+        area = round(area, 2)
     return area
 
 
@@ -503,7 +504,7 @@ class shedule_position:
             else:
                 area = round((area * length_reserve), 2)
             return area
-        print FOP_izm
+
 
     def regroop(self, element):
         new_group = self.paraGroup + "_" + self.FOP_name.AsString() + "_" + self.FOP_Mark.AsString()

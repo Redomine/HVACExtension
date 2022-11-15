@@ -19,6 +19,7 @@ from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 from System import Guid
 from pyrevit import revit
+import paraSpec
 
 from Microsoft.Office.Interop import Excel
 from System.Runtime.InteropServices import Marshal
@@ -54,29 +55,22 @@ famtypeitr.Reset()
 
 
 def setElement(element, name, setting):
-
-
-    if name == "ФОП_ВИС_Масса":
-        element.LookupParameter(name).Set(str(setting))
-
-    if name == 'ADSK_Единица измерения':
-        element.LookupParameter('ФОП_ТИП_Единица измерения').Set(str(setting))
-        element.LookupParameter('ФОП_ВИС_Единица измерения').Set(str(setting))
     try:
         if setting == None:
             pass
-        else:
-            element.LookupParameter(name).Set(setting)
-            if name == 'ФОП_ВИС_Число':
-                element.LookupParameter('ФОП_ТИП_Число').Set(str(setting))
-            if name == 'ФОП_ВИС_Наименование комбинированное':
-                element.LookupParameter('ФОП_ТИП_Назначение').Set(setting)
+        if setting == 'None':
+            setting = ''
+
+        if setting == None:
+            setting = ''
+
+        element.LookupParameter(name).Set(setting)
 
     except Exception:
         pass
 
 
-def new_position(calculation_elements):
+def new_position(calculation_elements, phaseid):
     #создаем заглушки по элементов собранных из таблицы
     loc = XYZ(0, 0, 0)
 
@@ -89,6 +83,7 @@ def new_position(calculation_elements):
     Models = []
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
+            element.CreatedPhaseId = phaseid
             try:
                 element.CreatedPhaseId = phaseid
             except Exception:
@@ -101,17 +96,17 @@ def new_position(calculation_elements):
         group = str(element[3]) + str(element[4]) + str(element[5])
         dummy = Models[0]
         setElement(dummy, 'ADSK_Имя системы', element[0])
-        setElement(dummy, 'ФОП_ТИП_Код', element[1])
-        setElement(dummy, 'ФОП_ТИП_Наименование работы', element[2])
+        #setElement(dummy, 'ФОП_ТИП_Код', element[1])
+        #setElement(dummy, 'ФОП_ТИП_Наименование работы', element[2])
         setElement(dummy, 'ФОП_ВИС_Группирование', group)
         setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element[4])
-        setElement(dummy, 'ADSK_Марка', element[5])
-        setElement(dummy, 'ADSK_Код изделия', element[6])
-        setElement(dummy, 'ADSK_Завод-изготовитель', element[7])
-        setElement(dummy, 'ADSK_Единица измерения', element[8])
+        setElement(dummy, 'ФОП_ВИС_Марка', element[5])
+        setElement(dummy, 'ФОП_ВИС_Код изделия', element[6])
+        setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', element[7])
+        setElement(dummy, 'ФОП_ВИС_Единица измерения', element[8])
         setElement(dummy, 'ФОП_ВИС_Число', element[9])
         setElement(dummy, 'ФОП_ВИС_Масса', element[10])
-        setElement(dummy, 'ADSK_Примечание', element[11])
+        setElement(dummy, 'ФОП_ВИС_Примечание', element[11])
         setElement(dummy, 'ФОП_Экономическая функция', element[12])
         Models.pop(0)
 
@@ -212,7 +207,7 @@ def script_execute():
                 phaseid = phase.Id
 
         # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
-        new_position(calculation_elements)
+        new_position(calculation_elements, phaseid)
 
 
     exel.ActiveWorkbook.Close(True)
