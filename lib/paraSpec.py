@@ -114,6 +114,17 @@ def script_execute():
          BuiltInCategory.OST_PipeInsulations,
          BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers])
 
+    EFCatSet = get_cats(
+        [BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeCurves,
+         BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_FlexDuctCurves,
+         BuiltInCategory.OST_FlexPipeCurves,
+         BuiltInCategory.OST_DuctTerminal, BuiltInCategory.OST_DuctAccessory,
+         BuiltInCategory.OST_PipeAccessory,
+         BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctInsulations,
+         BuiltInCategory.OST_PipeInsulations,
+         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers, BuiltInCategory.OST_ProjectInformation])
+
+
     # нестандартные сеты категорий
     ductCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctInsulations])
     ductInsCatSet = get_cats([BuiltInCategory.OST_DuctInsulations])
@@ -130,7 +141,12 @@ def script_execute():
 
     with revit.Transaction("Добавление параметров"):
 
-        shared_parameter('ФОП_Экономическая функция', genDefinitions, defaultCatSet)
+        shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
+        shared_parameter('ФОП_Номер корпуса', genDefinitions, defaultCatSet)
+        shared_parameter('ФОП_Номер секции', genDefinitions, defaultCatSet)
+        shared_parameter('ФОП_Этаж', genDefinitions, defaultCatSet)
+
+        shared_parameter('ФОП_ВИС_Имя системы', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Код изделия', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Завод-изготовитель', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, defaultCatSet)
@@ -141,8 +157,8 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Позиция', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Марка', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
-        shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet)
 
+        shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Примечание', visDefinitions, defaultCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Ду', visDefinitions, pipeCatSet, istype=True)

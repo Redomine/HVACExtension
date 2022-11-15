@@ -94,22 +94,23 @@ generation_list = [
 ]
 
 def setElement(element, name, setting):
-    if name == "ФОП_ВИС_Масса":
-        element.LookupParameter(name).Set(str(setting))
-    if name == 'ADSK_Единица измерения':
-        element.LookupParameter('ФОП_ТИП_Единица измерения').Set(str(setting))
-        element.LookupParameter('ФОП_ВИС_Единица измерения').Set(str(setting))
-    try:
+
+    if name == 'Экономическая функция':
+        print setting
+
+    if setting == 'ФОП_ВИС_Масса':
+        if setting == 'None':
+            setting = ''
+
         if setting == None:
-            pass
-        else:
+            setting = ''
+    if name == 'ФОП_ВИС_Число' or name == 'ФОП_ВИС_Масса':
+        element.LookupParameter(name).Set(setting)
+    else:
+        try:
+            element.LookupParameter(name).Set(str(setting))
+        except:
             element.LookupParameter(name).Set(setting)
-            if name == 'ФОП_ВИС_Число':
-                element.LookupParameter('ФОП_ТИП_Число').Set(str(setting))
-            if name == 'ФОП_ВИС_Наименование комбинированное':
-                element.LookupParameter('ФОП_ТИП_Назначение').Set(setting)
-    except Exception:
-        pass
 
 def get_ADSK_Name(element):
     if element.LookupParameter('ADSK_Наименование'):
@@ -199,6 +200,23 @@ def colorBT(element):
     number = area * 0.2 * 2
     return number
 
+class collapsedElements:
+    def __init__(self, corp, sec, floor, system, group, name, mark, art, maker, izm, number, mass, comment, EF):
+        self.corp = corp
+        self.sec = sec
+        self.floor = floor
+        self.system = system
+        self.group = group
+        self.name = name
+        self.mark = mark
+        self.art = art
+        self.maker = maker
+        self.izm = izm
+        self.number = number
+        self.mass = mass
+        self.comment = comment
+        self.EF = EF
+
 class calculation_element:
     def get_number(self, element, name):
         Number = 1
@@ -213,39 +231,45 @@ class calculation_element:
         if name == "Грунт ГФ-031" and element in colPipes:
             Number = grunt(element)
 
+
         return Number
 
     def __init__(self, element, collection, parameter, Name):
-        self.System = 'None'
-        self.Class = 'None'
-        self.Work = 'None'
-        self.Group = '8. Расчетные элементы'
-        self.Name = Name
-        self.Mark = ''
-        self.Art = ''
-        self.Maker = ''
-        self.Izm = 'None'
-        self.Number = 0
-        self.Mass = ''
-        self.Comment = ''
-        self.EF = 'None'
+
+        self.corp = ''
+        self.sec = ''
+        self.floor = ''
+        self.system = str(element.LookupParameter('ADSK_Имя системы').AsString())
+        self.group ='12. Расчетные элементы'
+        self.name = Name
+        self.mark = ''
+        self.art = ''
+        self.maker = ''
+        self.izm = 'None'
+        self.number = self.get_number(element, self.name)
+        self.mass = ''
+        self.comment = ''
+        self.EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
         self.parentId = element.Id.IntegerValue
+
 
         for generation in generation_list:
             if collection in generation and parameter in generation:
-                self.Izm = generation[2]
+                self.izm = generation[2]
                 isType = generation[5]
 
-        self.EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
-        self.System = str(element.LookupParameter('ADSK_Имя системы').AsString())
+
+        self.corp = str(element.LookupParameter('ФОП_Номер корпуса').AsString())
+        self.sec = str(element.LookupParameter('ФОП_Номер секции').AsString())
+        self.floor = str(element.LookupParameter('ФОП_Этаж').AsString())
         if parameter == 'ФОП_ВИС_Совместно с воздуховодом':
             pass
 
-        self.Number = self.get_number(element, Name)
+        #self.number = self.get_number(element, self.name)
 
         elemType = doc.GetElement(element.GetTypeId())
         if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-            self.Name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
+            self.name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
 
 
 def new_position(calculation_elements):
@@ -272,31 +296,33 @@ def new_position(calculation_elements):
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
             element.CreatedPhaseId = phaseid
-
-
             Models.append(element)
 
     # для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
-    for element in calculation_elements:
-        group = str(element[3]) + str(element[4]) + str(element[5])
+    for position in calculation_elements:
+        group = position.group + position.name + position.mark
         dummy = Models[0]
-        setElement(dummy, 'ADSK_Имя системы', element[0])
-        setElement(dummy, 'ФОП_ТИП_Код', element[1])
-        setElement(dummy, 'ФОП_ТИП_Наименование работы', element[2])
-        setElement(dummy, 'ФОП_ВИС_Группирование', group)
-        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element[4])
-        setElement(dummy, 'ADSK_Марка', element[5])
-        setElement(dummy, 'ADSK_Код изделия', element[6])
-        setElement(dummy, 'ADSK_Завод-изготовитель', element[7])
-        setElement(dummy, 'ADSK_Единица измерения', element[8])
-        setElement(dummy, 'ФОП_ВИС_Число', element[9])
-        setElement(dummy, 'ФОП_ВИС_Масса', element[10])
-        setElement(dummy, 'ADSK_Примечание', element[11])
-        setElement(dummy, 'ФОП_Экономическая функция', element[12])
+        setElement(dummy, 'ФОП_Номер корпуса', position.corp)
+        setElement(dummy, 'ФОП_Номер секции', position.sec)
+        setElement(dummy, 'ФОП_Этаж', position.floor)
         try:
-            setElement(dummy, 'ID Родительских элементов', element[13])
+            setElement(dummy, 'ADSK_Имя системы', position.system)
         except:
             pass
+
+        setElement(dummy, 'ФОП_ВИС_Имя системы', position.system)
+        setElement(dummy, 'ФОП_ВИС_Группирование', group)
+        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', position.name)
+        setElement(dummy, 'ФОП_ВИС_Марка', position.mark)
+        setElement(dummy, 'ФОП_ВИС_Код изделия', position.art)
+        setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', position.maker)
+        setElement(dummy, 'ФОП_ВИС_Единица измерения', position.izm)
+        setElement(dummy, 'ФОП_ВИС_Число', position.number)
+        setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
+        setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
+        setElement(dummy, 'ФОП_Экономическая функция', position.EF)
+
+
 
         Models.pop(0)
 
@@ -338,11 +364,11 @@ def collapse_list(lists):
     dict = {}
 
     for list in lists:
-        system = list[0]
-        EF = list[12]
-        parentId = list[13]
-        name = list[4]
-        number = list[9]
+        system = list[3]
+
+        EF = list[13]
+        name = list[5]
+        number = list[10]
         if name in singles:
             number = 1
         Key = EF + "_" + system + "_" + name
@@ -350,10 +376,10 @@ def collapse_list(lists):
         if Key not in dict:
             dict[Key] = list
         else:
-            dict[Key][9] = dict[Key][9] + number
+            dict[Key][10] = dict[Key][10] + number
             if name in singles:
-                dict[Key][9] = 1
-            dict[Key][13] = str(dict[Key][13]) + ';' + str(parentId)
+                dict[Key][10] = 1
+
 
     collapsed_list = []
     for x in dict:
@@ -383,15 +409,35 @@ def script_execute():
                     if is_object_to_generate(element, genCol, collection, parameter):
 
                         definition = calculation_element(element, collection, parameter, name)
-                        definitionList = [definition.System, definition.Class, definition.Work,
-                                          definition.Group, definition.Name, definition.Mark,
-                                          definition.Art, definition.Maker, definition.Izm, definition.Number,
-                                          definition.Mass, definition.Comment, definition.EF, definition.parentId]
+                        definitionList = [definition.corp, definition.sec, definition.floor, definition.system,
+                                          definition.group, definition.name, definition.mark, definition.art,
+                                          definition.maker, definition.izm, definition.number, definition.mass,
+                                          definition.comment, definition.EF]
 
                         calculation_elements.append(definitionList)
 
+
         calculation_elements = collapse_list(calculation_elements)
-        new_position(calculation_elements)
+
+        newPos = []
+        for element in calculation_elements:
+            newPos.append(collapsedElements(corp=element[0],
+                                     sec=element[1],
+                                     floor=element[2],
+                                     system=element[3],
+                                     group=element[4],
+                                     name=element[5],
+                                     mark=element[6],
+                                     art= element[7],
+                                     maker=element[8],
+                                     izm=element[9],
+                                     number=element[10],
+                                     mass=element[11],
+                                     comment=element[12],
+                                     EF=element[13]))
+
+
+        new_position(newPos)
 
 is_temporary_in = False
 
@@ -403,7 +449,7 @@ for element in famtypeitr:
     if famsymb.Family.Name == '_Якорный элемен(металл и краска)':
         temporary = famsymb
         is_temporary_in = True
-        print element
+
 
 
 if is_temporary_in == False:
