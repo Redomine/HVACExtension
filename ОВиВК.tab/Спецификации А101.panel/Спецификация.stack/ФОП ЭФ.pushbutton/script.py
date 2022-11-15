@@ -114,11 +114,11 @@ def getSystemDict(collection):
                 if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != None:
                     if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != "":
                         EF = ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString()
-
+                        Dict[system.Name] = EF
             if system.LookupParameter('ФОП_Экономическая функция').AsString() != None:
                 if system.LookupParameter('ФОП_Экономическая функция').AsString() != "":
                     EF = system.LookupParameter('ФОП_Экономическая функция').AsString()
-            Dict[system.Name] = EF
+                    Dict[system.Name] = EF
     return Dict
 
 
