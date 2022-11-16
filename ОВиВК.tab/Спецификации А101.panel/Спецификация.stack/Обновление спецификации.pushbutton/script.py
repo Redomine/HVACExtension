@@ -595,9 +595,9 @@ parametric = [
     settings(colFittings, '5. Фасонные детали воздуховодов', True),
     settings(colInsulations, '6. Материалы изоляции воздуховодов', False),
 
-    settings(colPipeCurves, '7. Трубопроводы', False),
-    settings(colFlexPipeCurves, '8. Гибкие трубопроводы', False),
-    settings(colPipeAccessory, '9. Трубопроводная арматура', True),
+    settings(colPipeAccessory, '7. Трубопроводная арматура', True),
+    settings(colPipeCurves, '8. Трубопроводы', False),
+    settings(colFlexPipeCurves, '0. Гибкие трубопроводы', False),
     settings(colPipeFittings, '10. Фасонные детали трубопроводов', True),
     settings(colPipeInsulations, '11. Материалы трубопроводной изоляции', False)
 ]
