@@ -187,6 +187,8 @@ def update_element(elements):
 
 		try:
 			rename_sub(element)
+			name = element.LookupParameter('ADSK_Имя системы').AsString()
+			element.LookupParameter('ФОП_ВИС_Имя системы').Set(name)
 		except Exception:
 			print element.Id
 
