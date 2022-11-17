@@ -55,20 +55,21 @@ famtypeitr.Reset()
 
 
 def setElement(element, name, setting):
-
-    if setting == 'None':
-        setting = ''
-
-    if setting == None:
-        setting = ''
-
-    try:
+    if name == 'ФОП_ВИС_Число':
+        try:
+            element.LookupParameter(name).Set(setting)
+        except:
+            element.LookupParameter(name).Set(0)
+    if name == 'ФОП_ВИС_Масса':
+        pass
+    else:
+        if setting == None or setting == 'None':
+            setting = ''
         element.LookupParameter(name).Set(str(setting))
-    except:
-        element.LookupParameter(name).Set(setting)
 
 
 def new_position(calculation_elements, phaseid):
+
     #создаем заглушки по элементов собранных из таблицы
     loc = XYZ(0, 0, 0)
 
@@ -91,7 +92,17 @@ def new_position(calculation_elements, phaseid):
 
     #для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
     for position in calculation_elements:
-        group = position.group + position.name + position.mark
+        posGroup = position.group
+        if position.group == None:
+            posGroup = 'None'
+        posName = position.name
+        if position.name == None:
+            posName = 'None'
+        posMark = position.mark
+        if position.mark == None:
+            posMark = 'None'
+
+        group = posGroup + posName + posMark
         dummy = Models[0]
         setElement(dummy, 'ФОП_Номер корпуса', position.corp)
         setElement(dummy, 'ФОП_Номер секции', position.sec)
@@ -143,6 +154,7 @@ class shedulePosition:
         self.EF = EF
 
 def script_execute():
+
     exel = Excel.ApplicationClass()
     filepath = select_file()
 
@@ -153,6 +165,7 @@ def script_execute():
     try:
         workbook = exel.Workbooks.Open(filepath)
     except Exception:
+        print 'Ошибка открытия таблицы, проверьте ее целостность'
         sys.exit()
     sheet_name = 'Импорт'
 
@@ -218,6 +231,7 @@ def script_execute():
 
 
             row += 1
+
             calculation_elements.append(newPos)
 
 
