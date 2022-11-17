@@ -121,10 +121,7 @@ def getDpTapAdjustable(element):
                     mainCon.append(connectorSet.Current)
                     old_flow = flow
 
-
-
         duct = mainCon[0].Owner
-
 
         ductCons = getConnectors(duct)
         Flow = []
@@ -152,12 +149,12 @@ def getDpTapAdjustable(element):
 
         if str(conSet[0].DuctSystemType) == "ExhaustAir" or str(conSet[0].DuctSystemType) == "ReturnAir":
             if form == "Круглый отвод":
-                if Lc > Lo:
+                if Lc > Lo * 2:
                     K = ((1-fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)*(fp/(1-l0))**2
                 else:
                     K = (-0.7-6.05*(1-fp)**3)*(f0/l0)**2+(1.32+3.23*(1-fp)**2)*f0/l0+(0.5+0.42*fp)-0.167*l0/f0
             else:
-                if Lc > Lo:
+                if Lc > Lo * 2:
                     K = (fp/(1-l0))**2*((1-fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)
                 else:
                     K = (f0/l0)**2*(4.1*(fp/f0)**1.25*l0**1.5*(fp+f0)**(0.3*(f0/fp)**0.5/l0-2)-0.5*fp/f0)
@@ -166,12 +163,12 @@ def getDpTapAdjustable(element):
 
         if str(conSet[0].DuctSystemType) == "SupplyAir":
             if form == "Круглый отвод":
-                if Lc > Lo:
+                if Lc > Lo * 2:
                     K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
                 else:
                     K = (f0/l0)**2-0.58*f0/l0+0.54+0.025*l0/f0
             else:
-                if Lc > Lo:
+                if Lc > Lo * 2:
                     K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
                 else:
                     K = (f0/l0)**2-0.42*f0/l0+0.81-0.06*l0/f0
@@ -191,7 +188,6 @@ passed_taps = []
 output = script.get_output()
 old_flow = 0
 for number in path:
-
     section = system.GetSectionByNumber(number)
     elementsIds = section.GetElementIds()
     for elementId in elementsIds:
@@ -213,7 +209,6 @@ for number in path:
                 name = 'Тройник'
             if str(element.MEPModel.PartType) == 'TapAdjustable':
                 name = 'Врезка'
-
         else:
             name = 'Арматура'
 
@@ -222,6 +217,7 @@ for number in path:
             size = element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
         except Exception:
             pass
+
 
         lenght = '-'
         try:
