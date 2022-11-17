@@ -81,35 +81,32 @@ def script_execute():
 
                 FOP_Level = element.LookupParameter('ФОП_Этаж')
 
-
+                level = 'None'
                 if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) \
                         or element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                     connectors = getConnectors(element)
                     for connector in connectors:
                         for el in connector.AllRefs:
-                            if  element.Id.IntegerValue == 1538393:
-                                print el.Owner.LookupParameter('Базовый уровень').AsValueString()
-                            try:
-                                try:
-                                    level = el.Owner.LookupParameter('Уровень').AsValueString()
-                                except:
-                                    level = el.Owner.LookupParameter('Базовый уровень').AsValueString()
-                            except:
-                                pass
+                            if el.Owner.LookupParameter('Уровень'):
+                                level = el.Owner.LookupParameter('Уровень').AsValueString()
+                            if el.Owner.LookupParameter('Базовый уровень'):
+                                level = el.Owner.LookupParameter('Базовый уровень').AsValueString()
                 else:
-                    try:
-                        try:
-                            level = element.LookupParameter('Уровень').AsValueString()
-                        except:
-                            level = element.LookupParameter('Базовый уровень').AsValueString()
-                    except:
-                        print element.Id
-                        sys.exit()
+                    if element.LookupParameter('Уровень'):
+                        level = element.LookupParameter('Уровень').AsValueString()
+                    if element.LookupParameter('Базовый уровень'):
+                        level = element.LookupParameter('Базовый уровень').AsValueString()
 
 
 
-                FOP_Level.Set(level)
+                try:
 
+                    FOP_Level.Set(level)
+                except:
+                    print element.Id
+                    print level
+                    print element.LookupParameter('Базовый уровень').AsValueString()
+                    sys.Exit()
         if report_rows:
             print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
             print "\r\n".join(report_rows)
