@@ -385,6 +385,8 @@ class shedule_position:
                             if insName not in New_Name:
                                 New_Name = New_Name + " в изоляции " + insName
 
+
+
         if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
             New_Name = ADSK_Name
             connectors = getConnectors(element)
@@ -400,8 +402,6 @@ class shedule_position:
                             pipe_name = pipe_name[:-1]
 
                         New_Name = ADSK_Name + ' (' + pipe_name + ')'
-
-
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
@@ -437,6 +437,7 @@ class shedule_position:
                             insType.Id
 
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+
             insType = doc.GetElement(element.GetTypeId())
             try:
                 if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
@@ -505,6 +506,13 @@ class shedule_position:
                 area = round((area * isol_reserve), 2)
             else:
                 area = round((area * length_reserve), 2)
+
+            if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                connectors = getConnectors(element)
+                for connector in connectors:
+                    for el in connector.AllRefs:
+                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                            return get_fitting_area(el.Owner)
             return area
 
 
