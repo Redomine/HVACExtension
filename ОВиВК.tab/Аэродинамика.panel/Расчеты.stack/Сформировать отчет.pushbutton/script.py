@@ -90,92 +90,6 @@ def getConnectors(element):
                 connectors.append(a.Current)
     return connectors
 
-def getDpTapAdjustable(element):
-    try:
-        conSet = getConnectors(element)
-
-        try:
-            Fo = conSet[0].Height*0.3048*conSet[0].Width*0.3048
-            form = "Прямоугольный отвод"
-        except:
-            Fo = 3.14*0.3048*0.3048*conSet[0].Radius**2
-            form = "Круглый отвод"
-
-        mainCon = []
-        #if element.Id.IntegerValue == 2752996:
-        #    for con in conSet:
-        #        print con.AllRefs.ForwardIterator().Current
-                #.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
-
-
-        old_flow = 0
-        for con in conSet:
-            connectorSet = con.AllRefs.ForwardIterator()
-            while connectorSet.MoveNext():
-                try:
-                    flow = connectorSet.Current.Owner.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
-                except Exception:
-                    flow = 0
-                if flow > old_flow:
-                    mainCon = []
-                    mainCon.append(connectorSet.Current)
-                    old_flow = flow
-
-        duct = mainCon[0].Owner
-
-        ductCons = getConnectors(duct)
-        Flow = []
-
-        for ductCon in ductCons:
-                Flow.append(ductCon.Flow*101.94)
-                try:
-                    Fc = ductCon.Height * 0.3048 * ductCon.Width * 0.3048
-                    Fp = Fc
-                except:
-                    Fc = 3.14 * 0.3048 * 0.3048 * ductCon.Radius ** 2
-                    Fp = Fc
-
-
-
-        Lc = max(Flow)
-        Lo = conSet[0].Flow*101.94
-
-
-
-        f0 = Fo / Fc
-        l0 = Lo / Lc
-        fp = Fp / Fc
-
-
-        if str(conSet[0].DuctSystemType) == "ExhaustAir" or str(conSet[0].DuctSystemType) == "ReturnAir":
-            if form == "Круглый отвод":
-                if Lc > Lo * 2:
-                    K = ((1-fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)*(fp/(1-l0))**2
-                else:
-                    K = (-0.7-6.05*(1-fp)**3)*(f0/l0)**2+(1.32+3.23*(1-fp)**2)*f0/l0+(0.5+0.42*fp)-0.167*l0/f0
-            else:
-                if Lc > Lo * 2:
-                    K = (fp/(1-l0))**2*((1-fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)
-                else:
-                    K = (f0/l0)**2*(4.1*(fp/f0)**1.25*l0**1.5*(fp+f0)**(0.3*(f0/fp)**0.5/l0-2)-0.5*fp/f0)
-
-
-
-        if str(conSet[0].DuctSystemType) == "SupplyAir":
-            if form == "Круглый отвод":
-                if Lc > Lo * 2:
-                    K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
-                else:
-                    K = (f0/l0)**2-0.58*f0/l0+0.54+0.025*l0/f0
-            else:
-                if Lc > Lo * 2:
-                    K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
-                else:
-                    K = (f0/l0)**2-0.42*f0/l0+0.81-0.06*l0/f0
-
-        return K
-    except:
-        return 0
 
 path_numbers = system.GetCriticalPathSectionNumbers()
 path = []
@@ -187,11 +101,46 @@ if str(system.SystemType) == "SupplyAir":
 passed_taps = []
 output = script.get_output()
 old_flow = 0
+
+def getServerById(serverGUID, serviceId):
+    service = ExternalServiceRegistry.GetService(serviceId)
+    if service != "null" and serverGUID != "null":
+        server = service.GetServer(serverGUID)
+        if server != "null":
+            return server
+    return None
+
+def getLossMethods(serviceId):
+    lc=[]
+    service = ExternalServiceRegistry.GetService(serviceId)
+    serverIds = service.GetRegisteredServerIds()
+    list=List[ElementId]()
+    for serverId in serverIds:
+        server = getServerById(serverId, serviceId)
+        id=serverId
+        name=server.GetName()
+        lc.append(id)
+        lc.append(name)
+        lc.append(server)
+    return lc
+
+def getKofTap(element):
+        fitting = element
+        param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
+        lc = getLossMethods(ExternalServices.BuiltInExternalServices.DuctFittingAndAccessoryPressureDropService)
+        schema = lc[8].GetDataSchema()
+        field = schema.GetField("Coefficient")
+        entity = fitting.GetEntity(schema)
+        K = entity.Get[field.ValueType](field)
+        return K
+
+
 for number in path:
     section = system.GetSectionByNumber(number)
     elementsIds = section.GetElementIds()
     for elementId in elementsIds:
         element = doc.GetElement(elementId)
+
         name = ''
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
             name = 'Воздуховод'
@@ -263,12 +212,8 @@ for number in path:
             if str(element.MEPModel.PartType) == 'TapAdjustable':
                 if element.Id not in passed_taps:
                     Pd = (1.21 * velocity * velocity)/2 #Динамическое давление
-
-                    K = getDpTapAdjustable(element) #КМС
-                    try:
-                        K = float('{:.2f}'.format(K))
-                    except:
-                        k = 0
+                    K = getKofTap(element) #КМС
+                    K = float(K)
                     Z = Pd * K
                     coef = K
                     pressure_drop = Z
@@ -282,6 +227,10 @@ for number in path:
             continue
         else:
             data.append([count, name, lenght, size, flow, velocity, coef, pressure_drop, summ_pressure, output.linkify(elementId)])
+
+
+
+
 
 
 output.print_table(table_data=data,
