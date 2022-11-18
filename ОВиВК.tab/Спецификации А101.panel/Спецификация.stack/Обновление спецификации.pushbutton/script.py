@@ -394,6 +394,8 @@ class shedule_position:
                         New_Name = '!Не учитывать'
                     if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
                         pipe_name = el.Owner.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+                        if pipe_name == None:
+                            continue
                         if pipe_name[-1] == '.':
                             pipe_name = pipe_name[:-1]
 
