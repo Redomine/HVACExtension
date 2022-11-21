@@ -363,13 +363,16 @@ def collapse_list(lists):
 
     for list in lists:
         system = list[3]
-
+        corp = list[0]
+        sec = list[1]
+        floor = list[2]
         EF = list[13]
         name = list[5]
         number = list[10]
+
         if name in singles:
             number = 1
-        Key = EF + "_" + system + "_" + name
+        Key = str(corp) + "_" + str(sec) + "_" + str(floor) + "_" + str(EF) + "_" + str(system) + "_" + str(name)
 
         if Key not in dict:
             dict[Key] = list
