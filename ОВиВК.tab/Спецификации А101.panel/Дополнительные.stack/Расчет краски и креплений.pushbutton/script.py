@@ -237,7 +237,13 @@ class calculation_element:
         self.corp = ''
         self.sec = ''
         self.floor = ''
-        self.system = str(element.LookupParameter('ADSK_Имя системы').AsString())
+        if element.LookupParameter('ФОП_ВИС_Имя системы'):
+            self.system = str(element.LookupParameter('ФОП_ВИС_Имя системы').AsString())
+        else:
+            try:
+                self.system = str(element.LookupParameter('ADSK_Имя системы').AsString())
+            except:
+                self.system = 'None'
         self.group ='12. Расчетные элементы'
         self.name = Name
         self.mark = ''

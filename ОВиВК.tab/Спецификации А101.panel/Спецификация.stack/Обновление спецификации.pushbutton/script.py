@@ -533,6 +533,8 @@ class shedule_position:
         if self.FOP_EF == None:
             if not self.FOP_EF.IsReadOnly:
                 self.FOP_EF.Set('None')
+        else:
+            self.FOP_EF.Set('None')
 
         if not self.FOP_group.IsReadOnly:
             self.FOP_group.Set(self.regroop(self.element))
@@ -540,6 +542,12 @@ class shedule_position:
             self.FOP_maker.Set(self.ADSK_maker)
         if not self.FOP_code.IsReadOnly:
             self.FOP_code.Set(self.ADSK_code)
+        if not self.FOP_System.IsReadOnly:
+            if self.FOP_System.AsString() == None or self.FOP_System.AsString() == '':
+                self.FOP_System.Set('None')
+
+
+
 
     def __init__(self, element, collection, parametric):
         for params in parametric:
@@ -549,6 +557,7 @@ class shedule_position:
                 self.isSingle = params.isSingle
 
         self.element = element
+        self.FOP_System = element.LookupParameter('ФОП_ВИС_Имя системы')
         self.FOP_EF = element.LookupParameter('ФОП_Экономическая функция')
         self.FOP_group = element.LookupParameter('ФОП_ВИС_Группирование')
         self.FOP_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
