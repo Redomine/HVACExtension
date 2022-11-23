@@ -199,7 +199,7 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
                         duct_dict[index] = duct_dict[index] + get_duct_area(element)
 
                 for element in colCurves:
-                    note = element.LookupParameter('ADSK_Примечание')
+                    note = element.LookupParameter('ФОП_ВИС_Примечание')
                     index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
                     note.Set(str(duct_dict[index])+' м²')
 

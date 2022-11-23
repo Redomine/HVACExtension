@@ -157,9 +157,9 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Позиция', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Марка', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Примечание', visDefinitions, defaultCatSet)
 
         shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet, istype=True)
-        shared_parameter('ФОП_ВИС_Примечание', visDefinitions, defaultCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Ду', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Ду х Стенка', visDefinitions, pipeCatSet, istype=True)
