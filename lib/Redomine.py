@@ -37,6 +37,7 @@ def getSharedParameter (element, paraName, replaceName):
             ElemTypeId = element.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
             if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента').AsInteger() == 1:
+
                 parameter = element.LookupParameter('Описание сегмента').AsString()
                 return parameter
 

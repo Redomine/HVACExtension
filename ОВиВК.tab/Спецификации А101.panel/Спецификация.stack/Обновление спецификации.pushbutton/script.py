@@ -473,6 +473,10 @@ class shedule_position:
                 if ADSK_Izm == 'м2' or ADSK_Izm == 'м²':
                     return 'м²'
                 return 'м.п.'
+            if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                if ADSK_Izm == 'м2' or ADSK_Izm == 'м²':
+                    return 'м²'
+                return 'м.п.'
             return 'м.п.'
 
     def shedNumber(self, element):
@@ -545,9 +549,6 @@ class shedule_position:
         if not self.FOP_System.IsReadOnly:
             if self.FOP_System.AsString() == None or self.FOP_System.AsString() == '':
                 self.FOP_System.Set('None')
-
-
-
 
     def __init__(self, element, collection, parametric):
         for params in parametric:
@@ -660,7 +661,7 @@ def script_execute():
 parametersAdded = paraSpec.check_parameters()
 
 if not parametersAdded:
-    with revit.Transaction("Обновление общей спеки"):
+    with revit.Transaction("Обновление девятиграфной формы"):
         #список элементов для перебора в вид узлов:
         vis_collectors = []
         # Переменные для расчета
