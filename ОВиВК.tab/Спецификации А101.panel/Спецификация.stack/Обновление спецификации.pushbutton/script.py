@@ -158,7 +158,9 @@ def get_depend(element):
     vkheat_collector = []
     for subId in subIds:
         subElement = doc.GetElement(subId)
-        part = vkheat_collector_part(element = subElement, ADSK_name= get_ADSK_Name(subElement), ADSK_mark= get_ADSK_Mark(subElement), ADSK_maker = get_ADSK_Maker(subElement), parent = parent, parent_group = parent_group)
+        part = vkheat_collector_part(element = subElement, ADSK_name= get_ADSK_Name(subElement),
+                                     ADSK_mark= get_ADSK_Mark(subElement), ADSK_maker = get_ADSK_Maker(subElement),
+                                     parent = parent, parent_group = parent_group)
         vkheat_collector.append(part)
     vkheat_collector.sort(key=lambda x: x.group)
 
