@@ -62,13 +62,18 @@ def getSharedParameter (element, paraName, replaceName):
             parameter = ElemType.LookupParameter(name).AsString()
 
     nullParas = ['ADSK_Завод-изготовитель', 'ADSK_Марка', 'ADSK_Код изделия']
+
+    if not parameter:
+        parameter = 'None'
+
     if parameter == 'None' or parameter == None:
         if paraName in nullParas:
             parameter = ''
-        #except Exception:
-        #    print 'Невозможно получить параметр ' + report
-        #    sys.exit()
+        else:
+            parameter = 'None'
+
     parameter = str(parameter)
+
     return parameter
 
 

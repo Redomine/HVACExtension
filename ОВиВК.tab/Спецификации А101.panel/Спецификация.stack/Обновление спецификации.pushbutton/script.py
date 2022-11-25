@@ -392,8 +392,6 @@ class shedule_position:
             connectors = getConnectors(element)
             for connector in connectors:
                 for el in connector.AllRefs:
-                    if el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting):
-                        New_Name = '!Не учитывать'
                     if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
                         pipe_name = el.Owner.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
                         if pipe_name == None:
@@ -402,6 +400,9 @@ class shedule_position:
                             pipe_name = pipe_name[:-1]
 
                         New_Name = ADSK_Name + ' (' + pipe_name + ')'
+                    else:
+                        New_Name = '!Не учитывать'
+
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
@@ -572,6 +573,7 @@ class shedule_position:
 
         self.ADSK_maker = get_ADSK_Maker(element)
         self.ADSK_name = get_ADSK_Name(element)
+
         self.ADSK_mark = get_ADSK_Mark(element)
         self.ADSK_izm = get_ADSK_Izm(element)
         self.ADSK_code = get_ADSK_Code(element)
