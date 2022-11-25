@@ -76,6 +76,17 @@ def getSharedParameter (element, paraName, replaceName):
 
     return parameter
 
+def fromRevitToMeters(number):
+    meters = (number * 304.8)/1000
+    return meters
+
+def fromRevitToMilimeters(number):
+    mms = number * 304.8
+    return mms
+def fromRevitToSquareMeters(number):
+    square = number * 0.092903
+    return square
+
 
 def make_col(category):
     col = FilteredElementCollector(doc) \
