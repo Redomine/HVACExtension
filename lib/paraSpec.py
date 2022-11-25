@@ -166,7 +166,6 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Днар х Стенка', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Имя трубы из сегмента', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Расчет краски и грунтовки', visDefinitions, pipeCatSet, istype=True)
-        shared_parameter('ФОП_ВИС_Комплекты заделки', visDefinitions, ductandpipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Учитывать фитинги', visDefinitions, pipeCatSet, istype=True)
