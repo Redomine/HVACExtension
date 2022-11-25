@@ -37,134 +37,43 @@ def get_D_type(element):
     return type
 
 def duct_thickness(element):
-    mode = ''
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         a = getConnectors(element)
         try:
-            SizeA = a[0].Width * 304.8
-            SizeB = a[0].Height * 304.8
+            SizeA = fromRevitToMilimeters(a[0].Width)
+            SizeB = fromRevitToMilimeters(a[0].Height)
             Size = max(SizeA, SizeB)
-            mode = 'W'
+
+            if Size < 251:
+                thickness = '0.5'
+            elif Size < 1001:
+                thickness = '0.7'
+            elif Size < 2001:
+                thickness = '0.9'
+            else:
+                thickness = '1.4'
+
         except:
-            Size = a[0].Radius*2 * 304.8
-            mode = 'R'
+            Size = fromRevitToMilimeters(a[0].Radius*2)
 
-    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-        a = getConnectors(element)
-        if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Cap' \
-                or str(element.MEPModel.PartType) == 'TapAdjustable' or str(element.MEPModel.PartType) == 'Union':
-            try:
-                SizeA = a[0].Width * 304.8
-                SizeB = a[0].Height * 304.8
-                Size = max(SizeA, SizeB)
-                mode = 'W'
-            except:
-                Size = a[0].Radius*2 * 304.8
-                mode = 'R'
-
-        if str(element.MEPModel.PartType) == 'Transition':
-            circles = []
-            squares = []
-            try:
-                SizeA = a[0].Height * 304.8
-                SizeA_1 = a[0].Width * 304.8
-                squares.append(SizeA)
-                squares.append(SizeA_1)
-                SizeA = max(SizeA, SizeA_1)
-            except:
-                SizeA = a[0].Radius*2*304.8
-                circles.append(SizeA)
-            try:
-                SizeB = a[1].Height * 304.8
-                SizeB_1 = a[1].Width * 304.8
-                squares.append(SizeB)
-                squares.append(SizeB_1)
-                SizeB = max(SizeB, SizeB_1)
-            except:
-                SizeB = a[1].Radius*2* 304.8
-                circles.append(SizeB)
-
-
-            Size = max(SizeA, SizeB)
-            if Size in squares: mode = 'W'
-            if Size in circles: mode = 'R'
-
-        if str(element.MEPModel.PartType) == 'Tee':
-            try:
-                SizeA = a[0].Width * 304.8
-                SizeA_1 = a[0].Height * 304.8
-                SizeB = a[1].Width * 304.8
-                SizeB_1 = a[1].Height * 304.8
-                SizeC = a[2].Width * 304.8
-                SizeC_1 = a[2].Height * 304.8
-
-                Size = max(SizeA, SizeB)
-                Size = max(Size, SizeC)
-                mode = 'W'
-            except:
-                SizeA = a[0].Radius*2 * 304.8
-                SizeB = a[1].Radius*2 * 304.8
-                SizeC = a[2].Radius*2 * 304.8
-
-                Size = max(SizeA, SizeB)
-                Size = max(Size, SizeC)
-                mode = 'R'
-
-        if str(element.MEPModel.PartType) == 'Cross':
-            try:
-                SizeA = a[0].Width * 304.8
-                SizeA_1 = a[0].Height * 304.8
-                SizeB = a[1].Width * 304.8
-                SizeB_1 = a[1].Height * 304.8
-                SizeC = a[2].Width * 304.8
-                SizeC_1 = a[2].Height * 304.8
-                SizeD = a[3].Width * 304.8
-                SizeD_1 = a[3].Height * 304.8
-
-                Size = max(SizeA, SizeB)
-                Size = max(Size, SizeC)
-                Size = max(Size, SizeD)
-                mode = 'W'
-            except:
-                SizeA = a[0].Radius*2 * 304.8
-                SizeB = a[1].Radius*2 * 304.8
-                SizeC = a[2].Radius*2 * 304.8
-                SizeD = a[3].Radius*2 * 304.8
-
-                Size = max(SizeA, SizeB)
-                Size = max(Size, SizeC)
-                Size = max(Size, SizeD)
-                mode = 'R'
-
-    if mode == 'R':
-        if Size < 201:
-            thickness = '0.5'
-        elif Size < 451:
-            thickness = '0.6'
-        elif Size < 801:
-            thickness = '0.7'
-        elif Size < 1251:
-            thickness = '1.0'
-        elif Size < 1601:
-            thickness = '1.2'
-        else:
-            thickness = '1.4'
-    if mode == 'W':
-        if Size < 251:
-            thickness = '0.5'
-        elif Size < 1001:
-            thickness = '0.7'
-        elif Size < 2001:
-            thickness = '0.9'
-        else:
-            thickness = '1.4'
+            if Size < 201:
+                thickness = '0.5'
+            elif Size < 451:
+                thickness = '0.6'
+            elif Size < 801:
+                thickness = '0.7'
+            elif Size < 1251:
+                thickness = '1.0'
+            elif Size < 1601:
+                thickness = '1.2'
+            else:
+                thickness = '1.4'
 
     dependent = element.GetDependentElements(ElementCategoryFilter(BuiltInCategory.OST_DuctInsulations))
     for elid in dependent:
         el = doc.GetElement(elid)
         ElemTypeId = el.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
-
         if ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
             min_thickness = ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
             if min_thickness == None: min_thickness = 0
@@ -223,18 +132,20 @@ def get_fitting_area(element):
             for face in solid.Faces:
                 area = area + face.Area
 
-        area = area * 0.092903
+        area = fromRevitToSquareMeters(area)
         connectors = getConnectors(element)
 
         for connector in connectors:
             try:
                 H = connector.Height
                 B = connector.Width
-                S = (H * B) * 0.092903
+                S = (H * B)
+                S = fromRevitToSquareMeters(S)
                 area = area - S
             except Exception:
                 R = connector.Radius
-                S = (3.14 * R * R) * 0.092903
+                S = (3.14 * R * R)
+                S = fromRevitToSquareMeters(S)
                 area = (area - S)
         area = round(area, 2)
     return area
@@ -406,27 +317,13 @@ class shedule_position:
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-            thickness = duct_thickness(element)
-            try:
-                connectors = getConnectors(element)
-                for connector in connectors:
-                    for el in connector.AllRefs:
-                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
-                            ductType = doc.GetElement(el.Owner.GetTypeId())
-                            if ductType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
-                                min_thickness = ductType.LookupParameter(
-                                    'ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
-                                if float(min_thickness) > float(thickness):
-                                    thickness = min_thickness
-
-            except Exception:
-                pass
-
-            New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
-
             cons = getConnectors(element)
             for con in cons:
                 for el in con.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                        thickness = duct_thickness(el.Owner)
+                        New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
+
                     if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                         insType = doc.GetElement(el.Owner.GetTypeId())
                         try:
@@ -434,8 +331,7 @@ class shedule_position:
                                 if get_ADSK_Name(el.Owner) not in New_Name:
                                     New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
                         except Exception:
-                            print
-                            insType.Id
+                            pass
 
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
 
@@ -491,7 +387,7 @@ class shedule_position:
             if length == None:
                 length = 0
             else:
-                length = (length * 304.8)/1000
+                length = fromRevitToMeters(length)
             if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) or element.Category.IsId(
                     BuiltInCategory.OST_DuctInsulations):
                 length = round((length * isol_reserve), 2)
@@ -504,7 +400,7 @@ class shedule_position:
             if area == None:
                 area = 0
             else:
-                area = area * 0.092903
+                area = fromRevitToSquareMeters(area)
 
             if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) or element.Category.IsId(
                     BuiltInCategory.OST_DuctInsulations):
