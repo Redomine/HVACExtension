@@ -60,9 +60,8 @@ spFile = doc.Application.OpenSharedParameterFile()
 
 set = doc.FamilyManager.Parameters
 
-paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок',  'ADSK_Номинальная мощность', 'mS_Имя нагрузки', 'ФОП_ВИС_Нагреватель или шкаф',
-             'ФОП_ВИС_Частотный регулятор']
+paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',  'ADSK_Номинальная мощность', 'mS_Имя нагрузки', 'ФОП_ВИС_Нагреватель или шкаф',
+             'ФОП_ВИС_Частотный регулятор', 'mS_Координация оборудования']
 
 for param in set:
     if str(param.Definition.Name) in paraNames:
@@ -107,7 +106,6 @@ with revit.Transaction("Добавление формул"):
         if element.Name == "HVAC": HVAC = element.Id
 
     for param in set:
-        if str(param.Definition.Name) == 'ADSK_Классификация нагрузок': load = param
 
         if str(param.Definition.Name) == "ФОП_ВИС_Частотный регулятор": regulator = param
 
@@ -116,7 +114,6 @@ with revit.Transaction("Добавление формул"):
     typeset = manager.Types
     for famType in typeset:
         manager.CurrentType = famType
-        manager.Set(load, HVAC)
         manager.Set(heater, 0)
         manager.Set(regulator, 0)
 
@@ -151,8 +148,6 @@ with revit.Transaction("Добавление формул"):
             manager.SetFormula(param, "ADSK_Номинальная мощность / ADSK_Коэффициент мощности")
             ADSK_power = param
 
-        if str(param.Definition.Name) == 'mS_Имя нагрузки':
-            manager.SetFormula(param, "ADSK_Наименование")
 
 
 
@@ -167,6 +162,5 @@ with revit.Transaction("Добавление формул"):
                 associate(param, ADSK_power)
             if param.Definition.Name == 'Количество полюсов':
                 associate(param, ADSK_phase)
-            if param.Definition.Name == 'Классификация нагрузок':
-                associate(param, ADSK_Class)
+
 

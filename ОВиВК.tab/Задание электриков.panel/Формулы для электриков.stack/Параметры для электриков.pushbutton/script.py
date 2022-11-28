@@ -56,15 +56,14 @@ set = doc.FamilyManager.Parameters
 
 
 paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок',  'ADSK_Номинальная мощность', 'mS_Имя нагрузки']
+             'ADSK_Номинальная мощность']
 
-paraNames_V1 = ['ФОП_ВИС_Нагреватель или шкаф', 'ФОП_ВИС_Частотный регулятор', 'ФОП_ВИС_Мощность нагревателя', 'ФОП_ВИС_Напряжение нагревателя']
+paraNames_V1 = ['ФОП_ВИС_Нагреватель или шкаф', 'ФОП_ВИС_Частотный регулятор', 'mS_Имя нагрузки', 'mS_Координация оборудования']
 
 notFormula = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз']
 
 
 def update_fop(version):
-
     if version == "ADSK":
         #проверяем тот ли файл общих параметров подгружен
         spFileName = str(doc.Application.SharedParametersFilename)
@@ -103,10 +102,10 @@ except Exception:
 if connectorNum > 1:
     print "Электрических коннекторов больше одного, удалите лишние"
     sys.exit()
+
 if connectorNum == 0:
     print "Не найдено электрических коннекторов, должен быть один"
     sys.exit()
-
 
 
 with revit.Transaction("Добавление параметров"):
@@ -138,34 +137,33 @@ with revit.Transaction("Добавление параметров"):
             manager.MakeInstance(param)
             paraNames_V1.remove(param.Definition.Name)
 
-
-
     #если в списке имен после проверки осталось что-то, добавляем параметры из списка
     if len(paraNames) > 0:
         spFile = update_fop("ADSK")
         for name in paraNames:
             for dG in spFile.Groups:
                 group = "04 Обязательные ИНЖЕНЕРИЯ"
-                if name == 'mS_Имя нагрузки': group = "mySchema"
+
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Классификация нагрузок':
+                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение':
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
                     else:
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
+
 
 with revit.Transaction("Добавление параметров"):
     spFile = update_fop("v1")
     for dG in spFile.Groups:
         for name in paraNames_V1:
-
             group = "03_ВИС"
+            if name == 'mS_Имя нагрузки' or name == 'mS_Координация оборудования': group = "mySchema"
             if str(dG.Name) == group:
                 myDefinitions = dG.Definitions
                 eDef = myDefinitions.get_Item(name)
 
-                if name == 'ФОП_ВИС_Мощность нагревателя' or name == 'ФОП_ВИС_Частотный регулятор':
+                if name == 'ФОП_ВИС_Нагреватель или шкаф' or name == 'ФОП_ВИС_Частотный регулятор':
                     manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
                 else:
                     manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
