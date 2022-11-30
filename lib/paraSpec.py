@@ -137,6 +137,7 @@ def script_execute():
 
     #получаем группу из которой выбираем параметры
     visDefinitions = check_spfile("03_ВИС")
+    arDefinitions = check_spfile("01_АР")
     genDefinitions  = check_spfile("00_Общие")
 
     with revit.Transaction("Добавление параметров"):
@@ -145,6 +146,7 @@ def script_execute():
         shared_parameter('ФОП_Номер корпуса', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Номер секции', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Этаж', genDefinitions, defaultCatSet)
+        shared_parameter('ФОП_Помещение', arDefinitions, defaultCatSet)
 
         shared_parameter('ФОП_ВИС_Имя системы', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Код изделия', visDefinitions, defaultCatSet)
