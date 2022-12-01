@@ -15,6 +15,7 @@ clr.AddReference("RevitAPIUI")
 import dosymep
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
+clr.ImportExtensions(dosymep.Revit.Geometry)
 
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.Templates import ProjectParameters
@@ -64,7 +65,22 @@ roomCols = []
 roomOfThisCol = make_col(BuiltInCategory.OST_Rooms)
 roomCols.append(roomOfThisCol)
 
+levelCol = make_col(BuiltInCategory.OST_Levels)
 linksCol = make_col(BuiltInCategory.OST_RvtLinks)
+
+
+
+colView= FilteredElementCollector(doc)\
+                            .OfCategory(BuiltInCategory.OST_Views).ToElements()
+
+for view in colView:
+    if str(view.ViewType) == 'ThreeD':
+        viewFamilyTypeId = view.GetTypeId()
+        if viewFamilyTypeId.IntegerValue != -1:
+            break
+
+
+
 
 for link in linksCol:
     try:
@@ -86,8 +102,7 @@ class line:
         self.y2 = y2
 
 
-def getElementLevel(element):
-    pass
+
 
 class elementPoint:
     def getElementCenter(self, line):
@@ -98,10 +113,11 @@ class elementPoint:
         self.FOP_room.Set(number)
 
     def __init__(self, element):
+        self.roomNumber = ''
         self.element = element
         self.room = None
         self.FOP_room = element.LookupParameter('ФОП_Помещение')
-        self.pointLevel = getElementLevel(self.element)
+        self.mid = 0
         #try:
         if not 'LocationPoint' in str(element.Location):
             self.elementLines = getTessallatedLine(element.Location.Curve.Tessellate())
@@ -115,7 +131,6 @@ class flatroom:
     def appendLine(self, lines):
         for line in lines:
             self.roomLines.append(line)
-
     def __init__(self, roomNumber, roomName, roomId):
         self.downBorder = 0
         self.topBorder = 0
@@ -145,9 +160,9 @@ def getBorders(element):
 
     box = element.get_BoundingBox(None)
     if element not in roomOfThisCol:
-        transform = element.Document.ActiveProjectLocation.GetTransform()
-
-    box.TransformBoundingBox(transform)
+        if box != None:
+            transform = element.Document.ActiveProjectLocation.GetTransform()
+            box.TransformBoundingBox(transform)
     try:
         z_min = box.Min[2]
         z_max = box.Max[2]
@@ -240,7 +255,17 @@ def isEquipmenInRoom(point, room):
     intersects_v3 = 0
     intersects_v4 = 0
 
+    print 'POINT'
+    print point.x
+    print point.y
+    print 'LINE'
+    print len(room.roomLines)
     for roomLine in room.roomLines:
+        print roomLine.x1
+        print roomLine.y1
+        print roomLine.x2
+        print roomLine.y2
+
 
         p1 = stolPoint(roomLine.x1, roomLine.y1)
         q1 = stolPoint(roomLine.x2, roomLine.y2)
@@ -273,11 +298,65 @@ def isEquipmenInRoom(point, room):
         return True
     return  False
 
+class level:
+    def __init__(self, element, newView):
+        self.name = element.Name
+        print newView
+        box = element.get_BoundingBox(newView)
+
+        try:
+            z_min = box.Min[2]
+            z_max = box.Max[2]
+
+            self.mid = (z_max - z_min)/2 + z_min
+        except:
+            pass
+
+def getConnectors(element):
+    connectors = []
+    try:
+        a = element.ConnectorManager.Connectors.ForwardIterator()
+        while a.MoveNext():
+            connectors.append(a.Current)
+    except:
+        try:
+            a = element.MEPModel.ConnectorManager.Connectors.ForwardIterator()
+            while a.MoveNext():
+                connectors.append(a.Current)
+        except:
+            a = element.MEPSystem.ConnectorManager.Connectors.ForwardIterator()
+            while a.MoveNext():
+                connectors.append(a.Current)
+    return connectors
+
+def getElementLevelName(element):
+    if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) \
+            or element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+        connectors = getConnectors(element)
+        for connector in connectors:
+            for el in connector.AllRefs:
+                if el.Owner.LookupParameter('Уровень'):
+                    level = el.Owner.LookupParameter('Уровень').AsValueString()
+                if el.Owner.LookupParameter('Базовый уровень'):
+                    level = el.Owner.LookupParameter('Базовый уровень').AsValueString()
+    else:
+        if element.LookupParameter('Уровень'):
+            level = element.LookupParameter('Уровень').AsValueString()
+        if element.LookupParameter('Базовый уровень'):
+            level = element.LookupParameter('Базовый уровень').AsValueString()
+
+    return level
 
 def execute():
     with revit.Transaction("Привязка к помещениям"):
-        rooms = []
+        newView = View3D.CreateIsometric(doc, viewFamilyTypeId)
 
+        projectLevels = []
+        for element in levelCol:
+            newLevel = level(element, newView)
+            projectLevels.append(newLevel)
+
+        rooms = []
         for roomCol in roomCols:
             for element in roomCol: # type: Room
                 roomNumber =element.GetParamValue(BuiltInParameter.ROOM_NUMBER)
@@ -287,42 +366,52 @@ def execute():
                 newRoom.downBorder = borders[0]
                 newRoom.topBorder = borders[1]
 
-                if newRoom.roomId.IntegerValue == 2483864:
-                    print newRoom.downBorder
-                    print newRoom.topBorder
-                    print 1
 
-                if newRoom.roomId.IntegerValue == 6175751:
-                    print newRoom.downBorder
-                    print newRoom.topBorder
-                    print 2
+
+
                 segments = element.GetBoundarySegments(SpatialElementBoundaryOptions())
                 for segmentList in segments:
                     for segment in segmentList:
                         coord_list = segment.GetCurve().Tessellate()
                         segmentLines = getTessallatedLine(coord_list)
                         newRoom.appendLine(segmentLines)
+
                 rooms.append(newRoom)
 
 
         equipmentPoints = []
         for collection in collections:
             for element in collection:
+
                 #element.Location.Curve
                 newEquipment = elementPoint(element)
+                elementLevel = getElementLevelName(element)
+                for projectLevel in projectLevels:
+                    if elementLevel == str(projectLevel.name):
+                        newEquipment.mid = projectLevel.mid
                 equipmentPoints.append(newEquipment)
 
-        print len(rooms)
+        for equipmentPoint in equipmentPoints:
+            if equipmentPoint.element.Id.IntegerValue == 2011987 or equipmentPoint.element.Id.IntegerValue == 2484670:
+                for room in rooms:
+                    if room.roomId.IntegerValue == 6175750:
+                        # print equipmentPoint.mid
+                        # print room.downBorder
+                        # print room.topBorder
+                        # print equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder
+                        # print isEquipmenInRoom(equipmentPoint, room)
+                        if isEquipmenInRoom(equipmentPoint, room):
+                            equipmentPoint.roomNumber = room.roomNumber
+                            print room.roomNumber
+                        break
 
-        # for equipmentPoint in equipmentPoints:
-        #     for room in rooms:
-        #
-        #         if isEquipmenInRoom(equipmentPoint, room):
         #             equipmentPoint.insert(room.roomNumber)
         #             index = equipmentPoints.index(equipmentPoint)
         #             break
         #             #equipmentPoints.pop(index)
         #         else:
         #             equipmentPoint.insert('None')
+
+        doc.Delete(newView.Id)
 
 execute()
