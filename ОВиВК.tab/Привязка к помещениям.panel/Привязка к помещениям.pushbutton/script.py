@@ -142,7 +142,7 @@ class elementPoint:
         self.mid = 0
         if not 'LocationPoint' in str(element.Location):
             if element.Id.IntegerValue == 2011929:
-
+                pass
             self.elementLines = getTessallatedLine(element.Location.Curve.Tessellate(), element)
             self.getElementCenter(self.elementLines)
 
@@ -287,8 +287,6 @@ def doIntersect(p1, q1, p2, q2):
 
 
 def isEquipmenInRoom(point, room):
-
-
     for roomLine in room.roomLines:
         print str(roomLine.x1) + "-" + str(roomLine.x2)+ "-" + str(roomLine.y1)+ "-" + str(roomLine.y2)
     print str(point.x) + '-' + str(point.y)
