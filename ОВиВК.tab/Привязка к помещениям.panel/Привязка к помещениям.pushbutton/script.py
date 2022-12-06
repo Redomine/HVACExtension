@@ -80,36 +80,32 @@ for view in colView:
             break
 
 class documentLink:
-    def __init__(self, linkDoc, collection):
+    def __init__(self, linkDoc, collection, transform):
         self.linkDoc = linkDoc
         self.name = self.linkDoc.Title
         self.collection = collection
+        self.transform = transform
 
 
 roomCols = []
 
-roomOfThisCol = documentLink(doc, make_col(BuiltInCategory.OST_Rooms))
+roomOfThisCol = documentLink(doc, make_col(BuiltInCategory.OST_Rooms), None)
 roomCols.append(roomOfThisCol)
 linksCol = make_col(BuiltInCategory.OST_RvtLinks)
 for link in linksCol:
     try:
         linkedDoc = link.GetLinkDocument()
+        linkTransform = link.GetTransform()
         col = FilteredElementCollector(link.GetLinkDocument()) \
             .OfCategory(BuiltInCategory.OST_Rooms) \
             .WhereElementIsNotElementType() \
             .ToElements()
 
-        roomOfLinkCol = documentLink(linkedDoc, col)
+        roomOfLinkCol = documentLink(linkedDoc, col, linkTransform)
 
         roomCols.append(roomOfLinkCol)
     except:
         pass
-
-# for roomCol in roomCols:
-#     for element in roomCol.collection:
-#         if element.Location:
-#             calculator = SpatialElementGeometryCalculator(roomCol.linkDoc)
-#             results = calculator.CalculateSpatialElementGeometry(element)
 
 
 class line:
@@ -146,11 +142,15 @@ class elementPoint:
             self.elementLines = getTessallatedLine(element.Location.Curve.Tessellate(), element)
             self.getElementCenter(self.elementLines)
 
-
         else:
-            self.elementCenter = element.Location.Point
-            self.x = self.elementCenter[0]
-            self.y = self.elementCenter[1]
+            if element.HasSpatialElementCalculationPoint:
+                point = element.GetSpatialElementCalculationPoint()
+                self.x = point[0]
+                self.y = point[1]
+            else:
+                self.elementCenter = element.Location.Point
+                self.x = self.elementCenter[0]
+                self.y = self.elementCenter[1]
 
 class flatroom:
     def appendLine(self, line):
@@ -287,9 +287,6 @@ def doIntersect(p1, q1, p2, q2):
 
 
 def isEquipmenInRoom(point, room):
-    for roomLine in room.roomLines:
-        print str(roomLine.x1) + "-" + str(roomLine.x2)+ "-" + str(roomLine.y1)+ "-" + str(roomLine.y2)
-    print str(point.x) + '-' + str(point.y)
     intersects_v1 = 0
     intersects_v2 = 0
     intersects_v3 = 0
@@ -404,8 +401,8 @@ def execute():
 
                     roomGeom = element.get_Geometry(_options)
 
-                    trasform = roomCol.linkDoc.ActiveProjectLocation.GetTransform()
-                    roomGeom = roomGeom.GetTransformed(trasform)
+                    if roomCol.transform != None:
+                        roomGeom = roomGeom.GetTransformed(roomCol.transform)
                     for geom in roomGeom:
                         if 'Solid' in str(geom):
                             roomSolid = geom
@@ -418,16 +415,14 @@ def execute():
                                 newLines = getTessallatedLine(roomLine.Tessellate(), element)
                                 for newLine in newLines:
                                     if newLine:
-                                        if newRoom.roomNumber == '2125':
-                                            if not str(round(newLine.x1, 3)) == str(round(newLine.x2, 3)) and str(round(newLine.y1, 3)) == str(round(newLine.y2, 3)):
-                                                if newLine.linename_v1 not in newRoom.roomLinesNames and newLine.linename_v2 not in newRoom.roomLinesNames:
-                                                    newRoom.appendLine(newLine)
+                                        if not str(round(newLine.x1, 3)) == str(round(newLine.x2, 3)) and str(round(newLine.y1, 3)) == str(round(newLine.y2, 3)):
+                                            if newLine.linename_v1 not in newRoom.roomLinesNames and newLine.linename_v2 not in newRoom.roomLinesNames:
+                                                newRoom.appendLine(newLine)
 
                     borders = getBorders(element)
                     newRoom.downBorder = borders[0]
                     newRoom.topBorder = borders[1]
                     rooms.append(newRoom)
-
 
         equipmentPoints = []
         for collection in priorityCollections:
@@ -441,22 +436,18 @@ def execute():
                 equipmentPoints.append(newEquipment)
 
         for equipmentPoint in equipmentPoints:
-            if equipmentPoint.element.Id.IntegerValue == 2011929:
-                for room in rooms:
-                    if room.roomNumber == '2125':
-                        if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
-
-                            print isEquipmenInRoom(equipmentPoint, room)
-                            if isEquipmenInRoom(equipmentPoint, room):
-                                equipmentPoint.roomNumber = room.roomNumber
-                                break
-                            else:
-                                equipmentPoint.roomNumber = 'None'
+            for room in rooms:
+                    if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
+                        if isEquipmenInRoom(equipmentPoint, room):
+                            equipmentPoint.roomNumber = room.roomNumber
+                            break
+                        else:
+                            equipmentPoint.roomNumber = 'None'
 
 
-        #for equipmentPoint in equipmentPoints:
-        #    equipmentPoint.insert(equipmentPoint.roomNumber)
+        for equipmentPoint in equipmentPoints:
+            equipmentPoint.insert(equipmentPoint.roomNumber)
 
-        #doc.Delete(newView.Id)
+        doc.Delete(newView.Id)
 
 execute()
