@@ -90,9 +90,11 @@ def new_position(calculation_elements, phaseid):
 
             Models.append(element)
 
+    index = 1
     #для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
     for position in calculation_elements:
-        posGroup = position.group
+        posGroup = str(position.group) + '_' + str(index)
+        index+=1
         if position.group == None:
             posGroup = 'None'
         posName = position.name
