@@ -84,8 +84,6 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
     tsData = tData.GetSectionData(SectionType.Header)
     sectionData = vs.GetTableData().GetSectionData(SectionType.Body)
 
-
-
     sortColumnHeaders = []
     sortGroupNamesInds = []
     headerIndexes = []

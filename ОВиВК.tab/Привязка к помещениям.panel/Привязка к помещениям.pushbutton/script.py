@@ -400,6 +400,18 @@ def isFittingsAround(element):
     else:
         return False
 
+def selectName(element):
+    roomName = 'Не удалось определить имя'
+
+    if element.LookupParameter('ФОП_Помещение'):
+        roomName = element.LookupParameter('ФОП_Помещение').AsString()
+    elif element.LookupParameter('ADSK_Номер квартиры'):
+        roomName = element.LookupParameter('ADSK_Номер квартиры').AsString()
+    else:
+        roomName = element.GetParamValue(BuiltInParameter.ROOM_NAME)
+
+    return roomName
+
 
 def execute():
     with revit.Transaction("Привязка к помещениям"):
@@ -422,16 +434,13 @@ def execute():
 
                     roomNumber =element.GetParamValue(BuiltInParameter.ROOM_NUMBER)
 
-                    if element.LookupParameter('ФОП_Помещение'):
-                        roomName = element.LookupParameter('ФОП_Помещение').AsString()
-                    elif element.LookupParameter('ADSK_Номер квартиры'):
 
-                        roomName = element.LookupParameter('ADSK_Номер квартиры').AsString()
-                    else:
-                        roomName = element.GetParamValue(BuiltInParameter.ROOM_NAME)
+                    newName = selectName(element)
 
 
-                    newRoom = flatroom(roomNumber, roomName, element.Id)
+
+
+                    newRoom = flatroom(roomNumber, newName, element.Id)
 
                     roomGeom = element.get_Geometry(_options)
 
