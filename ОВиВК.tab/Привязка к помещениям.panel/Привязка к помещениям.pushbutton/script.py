@@ -59,8 +59,7 @@ colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 priorityCollections = [colCurves, colFlexCurves, colFlexPipeCurves, colPipeCurves, colSprinklers, colAccessory,
                colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
 
-collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves,  colInsulations, colPipeInsulations, colPipeCurves, colSprinklers, colAccessory,
-               colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
+secondPriority = [colFittings, colPipeFittings,  colInsulations, colPipeInsulations]
 
 levelCol = make_col(BuiltInCategory.OST_Levels)
 
@@ -128,17 +127,16 @@ class elementPoint:
             self.y = (elemLine.y1 + elemLine.y2)/2
 
     def insert(self, number):
-        self.FOP_room.Set(number)
+
+        self.FOP_room.Set(str(number))
 
     def __init__(self, element):
-        self.roomNumber = ''
+        self.roomNumber = 'None'
         self.element = element
         self.room = None
         self.FOP_room = element.LookupParameter('ФОП_Помещение')
         self.mid = 0
         if not 'LocationPoint' in str(element.Location):
-            if element.Id.IntegerValue == 2011929:
-                pass
             self.elementLines = getTessallatedLine(element.Location.Curve.Tessellate(), element)
             self.getElementCenter(self.elementLines)
 
@@ -337,21 +335,24 @@ class level:
             pass
 
 def getConnectors(element):
-    connectors = []
     try:
-        a = element.ConnectorManager.Connectors.ForwardIterator()
-        while a.MoveNext():
-            connectors.append(a.Current)
-    except:
+        connectors = []
         try:
-            a = element.MEPModel.ConnectorManager.Connectors.ForwardIterator()
+            a = element.ConnectorManager.Connectors.ForwardIterator()
             while a.MoveNext():
                 connectors.append(a.Current)
         except:
-            a = element.MEPSystem.ConnectorManager.Connectors.ForwardIterator()
-            while a.MoveNext():
-                connectors.append(a.Current)
-    return connectors
+            try:
+                a = element.MEPModel.ConnectorManager.Connectors.ForwardIterator()
+                while a.MoveNext():
+                    connectors.append(a.Current)
+            except:
+                a = element.MEPSystem.ConnectorManager.Connectors.ForwardIterator()
+                while a.MoveNext():
+                    connectors.append(a.Current)
+        return connectors
+    except:
+        return None
 
 def getElementLevelName(element):
     if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) \
@@ -371,19 +372,48 @@ def getElementLevelName(element):
 
     return level
 
+def isValidSecondary(owner):
+    if owner.Category.IsId(BuiltInCategory.OST_MechanicalEquipment) or owner.Category.IsId(
+        BuiltInCategory.OST_PipeCurves) or owner.Category.IsId(
+        BuiltInCategory.OST_DuctCurves) or owner.Category.IsId(
+        BuiltInCategory.OST_FlexPipeCurves) or owner.Category.IsId(
+        BuiltInCategory.OST_FlexDuctCurves) or owner.Category.IsId(
+        BuiltInCategory.OST_DuctAccessory) or owner.Category.IsId(
+        BuiltInCategory.OST_PipeAccessory):
+        return True
+    else:
+        return False
 
+def isFittingsAround(element):
+    if element.Category.IsId(BuiltInCategory.OST_PipeFitting) or element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        connectors = getConnectors(element)
+        conList = []
 
+        for connector in connectors:
+            for el in connector.AllRefs:
+                if isValidSecondary(el.Owner):
+                    conList.append(True)
+        if len(conList) > 0:
+            return True
+        else:
+            return False
+    else:
+        return False
 
 
 def execute():
     with revit.Transaction("Привязка к помещениям"):
+
+        #Вид нужен потому что у уровней есть боксы только когда они видимы
         newView = View3D.CreateIsometric(doc, viewFamilyTypeId)
+
 
         projectLevels = []
         for element in levelCol:
             newLevel = level(element, newView)
             projectLevels.append(newLevel)
 
+        #Перебираем коллекции комнат и создаем на их базе объекты контуров комнат
         rooms = []
         for roomCol in roomCols:
             for element in roomCol.collection: # type: Room
@@ -391,13 +421,17 @@ def execute():
                 if element.Location:
 
                     roomNumber =element.GetParamValue(BuiltInParameter.ROOM_NUMBER)
-                    roomName = element.GetParamValue(BuiltInParameter.ROOM_NAME)
+
+                    if element.LookupParameter('ФОП_Помещение'):
+                        roomName = element.LookupParameter('ФОП_Помещение').AsString()
+                    elif element.LookupParameter('ADSK_Номер квартиры'):
+
+                        roomName = element.LookupParameter('ADSK_Номер квартиры').AsString()
+                    else:
+                        roomName = element.GetParamValue(BuiltInParameter.ROOM_NAME)
+
+
                     newRoom = flatroom(roomNumber, roomName, element.Id)
-
-                    #results = calculator.CalculateSpatialElementGeometry(element)
-
-
-                    #roomSolid = results.GetGeometry()
 
                     roomGeom = element.get_Geometry(_options)
 
@@ -424,6 +458,8 @@ def execute():
                     newRoom.topBorder = borders[1]
                     rooms.append(newRoom)
 
+
+        #Аналогично проходимся по приоритетным элементам модели и создаем объекты координатных точек
         equipmentPoints = []
         for collection in priorityCollections:
             for element in collection:
@@ -435,19 +471,56 @@ def execute():
                         newEquipment.mid = projectLevel.mid
                 equipmentPoints.append(newEquipment)
 
+        #проверяем во вторичном приоритете элементы без коннекторов, тогда обсчитываем их как обычные
+        for collection in secondPriority:
+            for element in collection:
+                if not getConnectors(element) or isFittingsAround(element):
+                    newEquipment = elementPoint(element)
+                    elementLevel = getElementLevelName(element)
+                    for projectLevel in projectLevels:
+                        if elementLevel == str(projectLevel.name):
+                            newEquipment.mid = projectLevel.mid
+                    equipmentPoints.append(newEquipment)
+
+
+
+
+
+        #перебираем координатные точки и если они попадают в помещение прописываем имя внутри экземпляра
         for equipmentPoint in equipmentPoints:
             for room in rooms:
                     if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
                         if isEquipmenInRoom(equipmentPoint, room):
-                            equipmentPoint.roomNumber = room.roomNumber
+                            equipmentPoint.roomNumber = room.roomName
                             break
                         else:
                             equipmentPoint.roomNumber = 'None'
 
 
+        #вставляем нужное имя в параметр ФОП_Помещение
         for equipmentPoint in equipmentPoints:
             equipmentPoint.insert(equipmentPoint.roomNumber)
 
+
+        #Проходимся по второстепенным элементам модели и присваиваем им помещения приоритетных
+        for collection in secondPriority:
+            for element in collection:
+                if getConnectors(element):
+                    elementRoom = element.LookupParameter("ФОП_Помещение")
+                    #try: #Пробуем перебрать через коннекторы, но их может и не быть
+                    connectors = getConnectors(element)
+
+                    for connector in connectors:
+                            for el in connector.AllRefs:
+                                if isValidSecondary(el.Owner) or el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting) or el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                                    if el.Owner.LookupParameter("ФОП_Помещение"):
+                                        variant = el.Owner.LookupParameter("ФОП_Помещение").AsString()
+                                        elementRoom.Set(variant)
+
+               # except:
+
+
+        #стираем вид
         doc.Delete(newView.Id)
 
 execute()
