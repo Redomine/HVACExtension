@@ -15,6 +15,7 @@ clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from dosymep.Revit.Geometry import *
 import sys
 import paraSpec
 from Autodesk.Revit.DB import *
