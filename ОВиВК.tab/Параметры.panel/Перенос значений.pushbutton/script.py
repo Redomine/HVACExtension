@@ -2,7 +2,7 @@
 
 
 __title__ = '(_в разработке)\nПеренос значений'
-__doc__ = "Переносит между собой параметры в активной спецификации"
+__doc__ = "Переносит между собой значения параметров в активной спецификации"
 import clr
 import sys
 import System
@@ -154,21 +154,28 @@ def execute():
 
 
         row = sectionData.FirstRowNumber
-
+        row+=2
         while row <= sectionData.LastRowNumber:
 
-            elId = vs.GetCellText(SectionType.Body, row, posParaObj.index)
-            startParamValue = vs.GetCellText(SectionType.Body, row, paraObj.index)
-            #print elId
-            try: #могут быть неправильные номера строк, заголовки там и тд - пропускаем их
+            try:  # могут быть неправильные номера строк, заголовки там и тд - пропускаем их
+                elId = vs.GetCellText(SectionType.Body, row, posParaObj.index)
                 sheduleElement = doc.GetElement(ElementId(int(elId)))
+
+                try:
+                    startParamValue = sheduleElement.GetParamValue(startParamName)
+                except:
+                    startParamValue = vs.GetCellText(SectionType.Body, row, paraObj.index)
+
                 targetParam = sheduleElement.LookupParameter(endParamName)
 
                 if str(targetParam.StorageType) == 'Double':
+                    if startParamValue == None: startParamValue = 0
                     targetParam.Set(float(startParamValue))
                 if str(targetParam.StorageType) == 'Integer':
+                    if startParamValue == None: startParamValue = 0
                     targetParam.Set(int(startParamValue))
                 if str(targetParam.StorageType) == 'String':
+                    if startParamValue == None: startParamValue = ''
                     targetParam.Set(str(startParamValue))
 
                 #element.SetParamValue(targetParam, startParamValue)
