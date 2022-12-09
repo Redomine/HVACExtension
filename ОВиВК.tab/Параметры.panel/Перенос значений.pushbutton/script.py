@@ -42,6 +42,21 @@ class paramCell:
         self.name = sortname
 
 
+report_rows = []
+def isElementEditedBy(element):
+    try:
+        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+    except Exception:
+        edited_by = __revit__.Application.Username
+
+    if edited_by and edited_by != __revit__.Application.Username:
+        if edited_by not in report_rows:
+            report_rows.add(edited_by)
+        return True
+    return False
+
+
+
 
 def make_col(category):
     col = FilteredElementCollector(doc) \
@@ -129,8 +144,11 @@ def execute():
         elementsOnView = FilteredElementCollector(doc, doc.ActiveView.Id)
         try:
             for element in elementsOnView:
-                position = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
-                position.Set(str(element.Id.IntegerValue))
+                if not isElementEditedBy(element):
+                    position = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
+                    position.Set(str(element.Id.IntegerValue))
+                else:
+                    pass
         except:
             print 'Не удалось обратотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
 
@@ -154,7 +172,6 @@ def execute():
 
 
         row = sectionData.FirstRowNumber
-        row+=2
         while row <= sectionData.LastRowNumber:
 
             try:  # могут быть неправильные номера строк, заголовки там и тд - пропускаем их
@@ -212,5 +229,8 @@ except:
 
 if vsShedule:
     execute()
+    if len(report_rows) > 0:
+        for report in report_rows:
+            print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
 else:
     print "Применяйте скрипт на активном виде спецификации"
