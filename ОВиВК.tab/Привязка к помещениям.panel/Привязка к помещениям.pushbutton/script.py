@@ -55,6 +55,8 @@ colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
 colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
 
+possibleSubs = [colSprinklers, colAccessory,
+               colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
 
 priorityCollections = [colCurves, colFlexCurves, colFlexPipeCurves, colPipeCurves, colSprinklers, colAccessory,
                colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
@@ -135,9 +137,11 @@ class elementPoint:
         self.element = element
         self.room = None
         self.FOP_room = element.LookupParameter('ФОП_Помещение')
+        self.floorName = ''
         self.mid = 0
         if not 'LocationPoint' in str(element.Location):
             self.elementLines = getTessallatedLine(element.Location.Curve.Tessellate(), element)
+            self.z = element.Location.Curve.Origin[2]
             self.getElementCenter(self.elementLines)
 
         else:
@@ -145,10 +149,12 @@ class elementPoint:
                 point = element.GetSpatialElementCalculationPoint()
                 self.x = point[0]
                 self.y = point[1]
+                self.z = point[2]
             else:
                 self.elementCenter = element.Location.Point
                 self.x = self.elementCenter[0]
                 self.y = self.elementCenter[1]
+                self.z = self.elementCenter[2]
 
 class flatroom:
     def appendLine(self, line):
@@ -326,11 +332,12 @@ class level:
         self.name = element.Name
         box = element.get_BoundingBox(newView)
 
-        try:
-            z_min = box.Min[2]
-            z_max = box.Max[2]
+        self.z_max = 0
+        self.mid = 0
 
-            self.mid = (z_max - z_min)/2 + z_min
+        try:
+            self.z_min = box.Min[2] - 60/304.8
+
         except:
             pass
 
@@ -372,6 +379,9 @@ def getElementLevelName(element):
 
     return level
 
+
+
+
 def isValidSecondary(owner):
     if owner.Category.IsId(BuiltInCategory.OST_MechanicalEquipment) or owner.Category.IsId(
         BuiltInCategory.OST_PipeCurves) or owner.Category.IsId(
@@ -412,6 +422,23 @@ def selectName(element):
 
     return roomName
 
+def rename_sub(element):
+    if hasattr(element, "GetSubComponentIds"):
+        floor = element.LookupParameter('ФОП_Этаж').AsString()
+        room = element.LookupParameter('ФОП_Помещение').AsString()
+        super_component = element.SuperComponent
+
+        if super_component:
+     	    return
+
+        sub_elements = [doc.GetElement(element_id) for element_id in element.GetSubComponentIds()]
+        for sub_element in sub_elements:
+            subFloor = sub_element.LookupParameter('ФОП_Этаж')
+            subRoom = sub_element.LookupParameter('ФОП_Помещение')
+            subFloor.Set(floor)
+            subRoom.Set(room)
+
+
 
 def execute():
     with revit.Transaction("Привязка к помещениям"):
@@ -425,6 +452,19 @@ def execute():
             newLevel = level(element, newView)
             projectLevels.append(newLevel)
 
+        projectLevels.sort(key=lambda x: x.z_min)
+
+        for projectLevel in projectLevels:
+            ind = projectLevels.index(projectLevel)
+            try:
+                projectLevel.z_max = projectLevels[ind + 1].z_min
+            except:
+                projectLevel.z_max = projectLevel.z_min + 100
+
+            projectLevel.mid = (projectLevel.z_max - projectLevel.z_min) / 2 + projectLevel.z_min
+
+
+
         #Перебираем коллекции комнат и создаем на их базе объекты контуров комнат
         rooms = []
         for roomCol in roomCols:
@@ -433,15 +473,8 @@ def execute():
                 if element.Location:
 
                     roomNumber =element.GetParamValue(BuiltInParameter.ROOM_NUMBER)
-
-
                     newName = selectName(element)
-
-
-
-
                     newRoom = flatroom(roomNumber, newName, element.Id)
-
                     roomGeom = element.get_Geometry(_options)
 
                     if roomCol.transform != None:
@@ -463,7 +496,7 @@ def execute():
                                                 newRoom.appendLine(newLine)
 
                     borders = getBorders(element)
-                    newRoom.downBorder = borders[0]
+                    newRoom.downBorder = borders[0] - 60/304.8
                     newRoom.topBorder = borders[1]
                     rooms.append(newRoom)
 
@@ -475,9 +508,13 @@ def execute():
                 #element.Location.Curve
                 newEquipment = elementPoint(element)
                 elementLevel = getElementLevelName(element)
+
+
+
                 for projectLevel in projectLevels:
-                    if elementLevel == str(projectLevel.name):
+                    if newEquipment.z > projectLevel.z_min and newEquipment.z < projectLevel.z_max:
                         newEquipment.mid = projectLevel.mid
+                        newEquipment.floorName = projectLevel.name
                 equipmentPoints.append(newEquipment)
 
         #проверяем во вторичном приоритете элементы без коннекторов, тогда обсчитываем их как обычные
@@ -492,23 +529,26 @@ def execute():
                     equipmentPoints.append(newEquipment)
 
 
-
-
-
         #перебираем координатные точки и если они попадают в помещение прописываем имя внутри экземпляра
         for equipmentPoint in equipmentPoints:
             for room in rooms:
-                    if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
-                        if isEquipmenInRoom(equipmentPoint, room):
-                            equipmentPoint.roomNumber = room.roomName
-                            break
-                        else:
-                            equipmentPoint.roomNumber = 'None'
+                if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
+
+                    if isEquipmenInRoom(equipmentPoint, room):
+                        equipmentPoint.roomNumber = room.roomName
+                        break
+                    else:
+                        equipmentPoint.roomNumber = 'Вне обозначенных помещений'
 
 
         #вставляем нужное имя в параметр ФОП_Помещение
         for equipmentPoint in equipmentPoints:
             equipmentPoint.insert(equipmentPoint.roomNumber)
+
+        for equipmentPoint in equipmentPoints:
+            fopLevel = equipmentPoint.element.LookupParameter('ФОП_Этаж')
+            fopLevel.Set(equipmentPoint.floorName)
+
 
 
         #Проходимся по второстепенным элементам модели и присваиваем им помещения приоритетных
@@ -516,18 +556,26 @@ def execute():
             for element in collection:
                 if getConnectors(element):
                     elementRoom = element.LookupParameter("ФОП_Помещение")
+                    elementFloor = element.LookupParameter("ФОП_Этаж")
                     #try: #Пробуем перебрать через коннекторы, но их может и не быть
                     connectors = getConnectors(element)
 
                     for connector in connectors:
                             for el in connector.AllRefs:
                                 if isValidSecondary(el.Owner) or el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting) or el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                                    if el.Owner.LookupParameter("ФОП_Этаж"):
+                                        variant = el.Owner.LookupParameter("ФОП_Этаж").AsString()
+
+                                        elementFloor.Set(str(variant))
+
                                     if el.Owner.LookupParameter("ФОП_Помещение"):
                                         variant = el.Owner.LookupParameter("ФОП_Помещение").AsString()
                                         elementRoom.Set(variant)
 
-               # except:
-
+        #Ищем суб-элементы и если находим обрабатываем
+        for collection in possibleSubs:
+            for element in collection:
+                rename_sub(element)
 
         #стираем вид
         doc.Delete(newView.Id)
