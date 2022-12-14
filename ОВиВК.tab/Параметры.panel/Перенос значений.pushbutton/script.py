@@ -42,8 +42,12 @@ class paramCell:
         self.sortGroupInd = sortGroupInd
         self.name = sortname
         self.unitType = ''
+        self.displayUnitType = ''
 
-
+class projectParam:
+    def __init__(self, name, unit):
+        self.name = name
+        self.unit = unit
 report_rows = []
 def isElementEditedBy(element):
     try:
@@ -79,15 +83,18 @@ def get_duct_area(element):
 def getParaInd(paraName, definition):
     sortGroupInd = []
     index = 0
+
     for scheduleGroupField in definition.GetFieldOrder():
         scheduleField = definition.GetField(scheduleGroupField)
         if scheduleField.GetName() == paraName:
             paraIndex = index
-            paraFormat = scheduleField.GetFormatOptions()
-            try:
-                paraType = paraFormat.GetUnitTypeId()
-            except:
-                paraType = None
+            paraFormat = scheduleField.GetFormatOptions() # type: FormatOptions
+            paraType = None
+            if not paraFormat.UseDefault:
+                try:
+                    paraType = paraFormat.GetUnitTypeId()
+                except:
+                    paraType = paraFormat.DisplayUnits
         index += 1
 
     index = 0
@@ -97,9 +104,13 @@ def getParaInd(paraName, definition):
                 sortGroupInd = index
         index += 1
 
+    param = paramCell(paraIndex, sortGroupInd, paraName)
+    param.unitType = paraType
+
     try:
         param = paramCell(paraIndex, sortGroupInd, paraName)
         param.unitType = paraType
+
     except:
         print 'Параметр ' + paraName + ' не обнаружен в таблице'
         sys.exit()
@@ -113,8 +124,31 @@ def getParamsInShed(definition):
         paramList.append(scheduleField.GetName())
     return paramList
 
+def isNoneUnitType(element, parameterObj):
+    if parameterObj.unitType == None:
+        targetParam = element.LookupParameter(parameterObj.name)
+        if not targetParam:
+            ElemTypeId = element.GetTypeId()
+            ElemType = doc.GetElement(ElemTypeId)
+            targetParam = ElemType.LookupParameter(parameterObj.name)
+
+        if targetParam:
+            definition = targetParam.Definition
+            if not str(targetParam.StorageType) == 'String':
+                try:
+                    unit = definition.UnitType
+                except:
+                    unit = targetParam.GetUnitTypeId()
+
+                parameterObj.unitType = unit
+
+
+
+
+
 
 errorList = []
+projectParams = []
 def execute():
     uiapp = DocumentManager.Instance.CurrentUIApplication
     # app = uiapp.Application
@@ -174,9 +208,6 @@ def execute():
             definition.GetField(i).IsHidden = False
             i += 1
 
-
-
-
     with revit.Transaction("Перенос параметров"):
         paraObj = getParaInd(startParamName, definition)
         endParaObj = getParaInd(endParamName, definition)
@@ -184,6 +215,7 @@ def execute():
 
         row = sectionData.FirstRowNumber
         while row <= sectionData.LastRowNumber:
+
             try:  # могут быть неправильные номера строк, заголовки там и тд - пропускаем их
                 elId = vs.GetCellText(SectionType.Body, row, posParaObj.index)
                 sheduleElement = doc.GetElement(ElementId(int(elId)))
@@ -191,15 +223,30 @@ def execute():
                 row+=1
                 continue
 
+            isNoneUnitType(sheduleElement, paraObj)
+            isNoneUnitType(sheduleElement, endParaObj)
+
+
             try:
                 startParamValue = sheduleElement.GetParamValue(startParamName)
             except:
                 startParamValue = vs.GetCellText(SectionType.Body, row, paraObj.index)
 
+
+            try:
+                startParamValue = UnitUtils.ConvertFromInternalUnits(startParamValue, paraObj.unitType)
+            except:
+                pass
+
             targetParam = sheduleElement.LookupParameter(endParamName)
             if not targetParam:
+                ElemTypeId = sheduleElement.GetTypeId()
+                ElemType = doc.GetElement(ElemTypeId)
+                targetParam = ElemType.LookupParameter(endParamName)
+            if not targetParam:
                 print 'У элементов спецификации не существует целевого параметра. Возможно вы выбрали расчетное значение.'
-                sys.exit()
+                row+=1
+                continue
 
             if targetParam.IsReadOnly:
                 error = 'Целевой параметр недоступен для редактирования'
@@ -251,10 +298,14 @@ try:
 except:
     vsShedule = False
 
+
+
 if vsShedule:
-    execute()
-    if len(report_rows) > 0:
-        for report in report_rows:
-            print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
+    status = paraSpec.check_parameters()
+    if not status:
+        execute()
+        if len(report_rows) > 0:
+            for report in report_rows:
+                print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
 else:
     print "Применяйте скрипт на активном виде спецификации"
