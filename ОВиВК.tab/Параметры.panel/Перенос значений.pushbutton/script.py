@@ -42,8 +42,12 @@ class paramCell:
         self.sortGroupInd = sortGroupInd
         self.name = sortname
         self.unitType = ''
+        self.displayUnitType = ''
 
-
+class projectParam:
+    def __init__(self, name, unit):
+        self.name = name
+        self.unit = unit
 report_rows = []
 def isElementEditedBy(element):
     try:
@@ -79,15 +83,37 @@ def get_duct_area(element):
 def getParaInd(paraName, definition):
     sortGroupInd = []
     index = 0
+
+    map = doc.ParameterBindings # type: BindingMap
+
+    it = map.ForwardIterator()
+    while it.MoveNext():
+        try:
+            unit = it.Key.UnitType
+        except:
+            unit = it.Key.GetDataType()
+        param = projectParam(it.Key.Name, unit)
+        projectParams.append(param)
+
     for scheduleGroupField in definition.GetFieldOrder():
         scheduleField = definition.GetField(scheduleGroupField)
         if scheduleField.GetName() == paraName:
             paraIndex = index
-            paraFormat = scheduleField.GetFormatOptions()
-            try:
-                paraType = paraFormat.GetUnitTypeId()
-            except:
-                paraType = None
+            paraFormat = scheduleField.GetFormatOptions() # type: FormatOptions
+
+            for param in projectParams:
+                if param.name == paraName:
+                    paraType = param.unit
+
+
+            if not paraFormat.UseDefault:
+                try:
+                    paraType = paraFormat.GetUnitTypeId()
+                except:
+                    paraType = paraFormat.DisplayUnits
+
+
+
         index += 1
 
     index = 0
@@ -97,9 +123,12 @@ def getParaInd(paraName, definition):
                 sortGroupInd = index
         index += 1
 
+
+
     try:
         param = paramCell(paraIndex, sortGroupInd, paraName)
         param.unitType = paraType
+
     except:
         print 'Параметр ' + paraName + ' не обнаружен в таблице'
         sys.exit()
@@ -115,6 +144,7 @@ def getParamsInShed(definition):
 
 
 errorList = []
+projectParams = []
 def execute():
     uiapp = DocumentManager.Instance.CurrentUIApplication
     # app = uiapp.Application
@@ -198,8 +228,13 @@ def execute():
 
             targetParam = sheduleElement.LookupParameter(endParamName)
             if not targetParam:
+                ElemTypeId = sheduleElement.GetTypeId()
+                ElemType = doc.GetElement(ElemTypeId)
+                targetParam = ElemType.LookupParameter(endParamName)
+            if not targetParam:
                 print 'У элементов спецификации не существует целевого параметра. Возможно вы выбрали расчетное значение.'
-                sys.exit()
+                row+=1
+                continue
 
             if targetParam.IsReadOnly:
                 error = 'Целевой параметр недоступен для редактирования'
