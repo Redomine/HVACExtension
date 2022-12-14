@@ -20,6 +20,7 @@ clr.AddReference("RevitServices")
 import RevitServices
 from RevitServices.Persistence import DocumentManager
 from RevitServices.Transactions import TransactionManager
+
 from pyrevit import revit
 from rpw.ui.forms import SelectFromList
 from System import Guid
@@ -40,6 +41,7 @@ class paramCell:
         self.index = paraIndex
         self.sortGroupInd = sortGroupInd
         self.name = sortname
+        self.unitType = ''
 
 
 report_rows = []
@@ -54,6 +56,7 @@ def isElementEditedBy(element):
             report_rows.add(edited_by)
         return True
     return False
+
 
 
 
@@ -80,6 +83,11 @@ def getParaInd(paraName, definition):
         scheduleField = definition.GetField(scheduleGroupField)
         if scheduleField.GetName() == paraName:
             paraIndex = index
+            paraFormat = scheduleField.GetFormatOptions()
+            try:
+                paraType = paraFormat.GetUnitTypeId()
+            except:
+                paraType = None
         index += 1
 
     index = 0
@@ -91,6 +99,7 @@ def getParaInd(paraName, definition):
 
     try:
         param = paramCell(paraIndex, sortGroupInd, paraName)
+        param.unitType = paraType
     except:
         print 'Параметр ' + paraName + ' не обнаружен в таблице'
         sys.exit()
@@ -104,6 +113,8 @@ def getParamsInShed(definition):
         paramList.append(scheduleField.GetName())
     return paramList
 
+
+errorList = []
 def execute():
     uiapp = DocumentManager.Instance.CurrentUIApplication
     # app = uiapp.Application
@@ -121,6 +132,28 @@ def execute():
 
 
     with revit.Transaction("Запись айди"):
+        elementsOnView = FilteredElementCollector(doc, doc.ActiveView.Id)
+        try:
+            for element in elementsOnView:
+                if not isElementEditedBy(element):
+                    position = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
+                    position.Set(str(element.Id.IntegerValue))
+                else:
+                    pass
+        except:
+            print 'Не удалось обратотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
+
+        #перебираем элементы на активном виде и для начала прописываем айди в позицию
+        parameters = getParamsInShed(definition)
+        #for element in elementsOnView:
+
+        startParamName = SelectFromList('Выберите исходный параметр', parameters)
+        endParamName = SelectFromList('Выберите целевой параметр', parameters)
+
+        if startParamName == endParamName:
+            print 'Имя исходного и целевого параметра одинаковое'
+            sys.exit()
+
         rollback_itemized = False
         rollback_header = False
 
@@ -141,67 +174,58 @@ def execute():
             definition.GetField(i).IsHidden = False
             i += 1
 
-        elementsOnView = FilteredElementCollector(doc, doc.ActiveView.Id)
-        try:
-            for element in elementsOnView:
-                if not isElementEditedBy(element):
-                    position = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
-                    position.Set(str(element.Id.IntegerValue))
-                else:
-                    pass
-        except:
-            print 'Не удалось обратотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
+
 
 
     with revit.Transaction("Перенос параметров"):
-
-        #перебираем элементы на активном виде и для начала прописываем айди в позицию
-        parameters = getParamsInShed(definition)
-        #for element in elementsOnView:
-
-        startParamName = SelectFromList('Выберите исходный параметр', parameters)
-        endParamName = SelectFromList('Выберите целевой параметр', parameters)
-
-        if startParamName == endParamName:
-            print 'Имя исходного и целевого параметра одинаковое'
-            sys.exit()
-
         paraObj = getParaInd(startParamName, definition)
+        endParaObj = getParaInd(endParamName, definition)
         posParaObj = getParaInd('ФОП_ВИС_Позиция', definition)
-
-
 
         row = sectionData.FirstRowNumber
         while row <= sectionData.LastRowNumber:
-
             try:  # могут быть неправильные номера строк, заголовки там и тд - пропускаем их
                 elId = vs.GetCellText(SectionType.Body, row, posParaObj.index)
                 sheduleElement = doc.GetElement(ElementId(int(elId)))
-
-                try:
-                    startParamValue = sheduleElement.GetParamValue(startParamName)
-                except:
-                    startParamValue = vs.GetCellText(SectionType.Body, row, paraObj.index)
-
-                targetParam = sheduleElement.LookupParameter(endParamName)
-
-                if str(targetParam.StorageType) == 'Double':
-                    if startParamValue == None: startParamValue = 0
-                    targetParam.Set(float(startParamValue))
-                if str(targetParam.StorageType) == 'Integer':
-                    if startParamValue == None: startParamValue = 0
-                    targetParam.Set(int(startParamValue))
-                if str(targetParam.StorageType) == 'String':
-                    if startParamValue == None: startParamValue = ''
-                    targetParam.Set(str(startParamValue))
-
-                #element.SetParamValue(targetParam, startParamValue)
-                position = sheduleElement.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
-                position.Set(str(''))
             except:
-                pass
+                row+=1
+                continue
+
+            try:
+                startParamValue = sheduleElement.GetParamValue(startParamName)
+            except:
+                startParamValue = vs.GetCellText(SectionType.Body, row, paraObj.index)
+
+            targetParam = sheduleElement.LookupParameter(endParamName)
+            if not targetParam:
+                print 'У элементов спецификации не существует целевого параметра. Возможно вы выбрали расчетное значение.'
+                sys.exit()
+
+            if targetParam.IsReadOnly:
+                error = 'Целевой параметр недоступен для редактирования'
+                if error not in errorList:
+                    errorList.append(error)
+                row+=1
+                continue
+
+            if str(targetParam.StorageType) == 'Double':
+                if startParamValue == None or startParamValue == '': startParamValue = 0
+                startParamValue = UnitUtils.ConvertToInternalUnits(float(startParamValue), endParaObj.unitType)
+                targetParam.Set(float(startParamValue))
+            if str(targetParam.StorageType) == 'Integer':
+                if startParamValue == None or startParamValue == '': startParamValue = 0
+                targetParam.Set(int(startParamValue))
+            if str(targetParam.StorageType) == 'String':
+                if startParamValue == None: startParamValue = ''
+                targetParam.Set(str(startParamValue))
             row+=1
 
+        for element in elementsOnView:
+            position = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
+            position.Set('')
+
+        for error in errorList:
+            print error
 
         if rollback_itemized == True:
             definition.IsItemized = False
