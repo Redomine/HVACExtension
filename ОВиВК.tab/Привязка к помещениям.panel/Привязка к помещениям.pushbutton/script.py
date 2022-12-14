@@ -417,9 +417,11 @@ def selectName(element):
         roomName = element.LookupParameter('ФОП_Помещение').AsString()
     elif element.LookupParameter('ADSK_Номер квартиры'):
         roomName = element.LookupParameter('ADSK_Номер квартиры').AsString()
+        if str(roomName) == 'None':
+            if element.LookupParameter('ADSK_Номер помещения квартиры'):
+                roomName = element.LookupParameter('ADSK_Номер помещения квартиры').AsString()
     else:
         roomName = element.GetParamValue(BuiltInParameter.ROOM_NAME)
-
     return roomName
 
 def rename_sub(element):
@@ -438,14 +440,11 @@ def rename_sub(element):
             subFloor.Set(floor)
             subRoom.Set(room)
 
-
-
 def execute():
     with revit.Transaction("Привязка к помещениям"):
 
         #Вид нужен потому что у уровней есть боксы только когда они видимы
         newView = View3D.CreateIsometric(doc, viewFamilyTypeId)
-
 
         projectLevels = []
         for element in levelCol:
@@ -458,12 +457,13 @@ def execute():
             ind = projectLevels.index(projectLevel)
             try:
                 projectLevel.z_max = projectLevels[ind + 1].z_min
+                projectLevel.mid = (projectLevel.z_max - projectLevel.z_min) / 2 + projectLevel.z_min
             except:
-                projectLevel.z_max = projectLevel.z_min + 100
+                diff = projectLevel.z_min - projectLevels[ind - 1].z_min
+                projectLevel.z_max = projectLevel.z_min + diff
+                projectLevel.mid = (projectLevel.z_max - projectLevel.z_min) / 2 + projectLevel.z_min
 
             projectLevel.mid = (projectLevel.z_max - projectLevel.z_min) / 2 + projectLevel.z_min
-
-
 
         #Перебираем коллекции комнат и создаем на их базе объекты контуров комнат
         rooms = []
@@ -485,7 +485,6 @@ def execute():
 
                     for face in roomSolid.Faces:
                         Loops = face.GetEdgesAsCurveLoops()
-
                         for loop in Loops:
                             for roomLine in loop:
                                 newLines = getTessallatedLine(roomLine.Tessellate(), element)
@@ -500,16 +499,12 @@ def execute():
                     newRoom.topBorder = borders[1]
                     rooms.append(newRoom)
 
-
         #Аналогично проходимся по приоритетным элементам модели и создаем объекты координатных точек
         equipmentPoints = []
         for collection in priorityCollections:
             for element in collection:
-                #element.Location.Curve
                 newEquipment = elementPoint(element)
                 elementLevel = getElementLevelName(element)
-
-
 
                 for projectLevel in projectLevels:
                     if newEquipment.z > projectLevel.z_min and newEquipment.z < projectLevel.z_max:
@@ -531,17 +526,22 @@ def execute():
 
         #перебираем координатные точки и если они попадают в помещение прописываем имя внутри экземпляра
         for equipmentPoint in equipmentPoints:
+
             for room in rooms:
-                if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
+                    if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
+                        if isEquipmenInRoom(equipmentPoint, room):
+                            equipmentPoint.roomNumber = room.roomName
+                            break
+                        else:
+                            if equipmentPoint.roomNumber == 'None':
+                                equipmentPoint.roomNumber = 'Вне обозначенных помещений'
 
-                    if isEquipmenInRoom(equipmentPoint, room):
-                        equipmentPoint.roomNumber = room.roomName
-                        break
-                    else:
-                        equipmentPoint.roomNumber = 'Вне обозначенных помещений'
 
 
-        #вставляем нужное имя в параметр ФОП_Помещение
+
+
+
+        # # #вставляем нужное имя в параметр ФОП_Помещение
         for equipmentPoint in equipmentPoints:
             equipmentPoint.insert(equipmentPoint.roomNumber)
 
@@ -563,6 +563,7 @@ def execute():
                     for connector in connectors:
                             for el in connector.AllRefs:
                                 if isValidSecondary(el.Owner) or el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting) or el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
+
                                     if el.Owner.LookupParameter("ФОП_Этаж"):
                                         variant = el.Owner.LookupParameter("ФОП_Этаж").AsString()
 
