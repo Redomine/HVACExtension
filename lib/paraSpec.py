@@ -142,11 +142,13 @@ def script_execute():
 
     with revit.Transaction("Добавление параметров"):
 
+
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
         shared_parameter('ФОП_Номер корпуса', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Номер секции', genDefinitions, defaultCatSet)
+        shared_parameter('ФОП_Номер секции', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Этаж', genDefinitions, defaultCatSet)
-        shared_parameter('ФОП_Помещение', arDefinitions, defaultCatSet)
+        shared_parameter('ФОП_Привязка к помещениям', genDefinitions, projectCatSet)
 
         shared_parameter('ФОП_ВИС_Имя системы', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Код изделия', visDefinitions, defaultCatSet)

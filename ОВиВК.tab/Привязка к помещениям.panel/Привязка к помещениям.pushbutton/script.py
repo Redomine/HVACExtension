@@ -93,6 +93,7 @@ roomCols = []
 roomOfThisCol = documentLink(doc, make_col(BuiltInCategory.OST_Rooms), None)
 roomCols.append(roomOfThisCol)
 linksCol = make_col(BuiltInCategory.OST_RvtLinks)
+
 for link in linksCol:
     try:
         linkedDoc = link.GetLinkDocument()
@@ -110,11 +111,14 @@ for link in linksCol:
 
 
 class line:
-    def __init__(self, x1, y1, x2, y2):
+    def __init__(self, x1, y1,z1 ,x2, y2, z2):
         self.x1 = x1
         self.y1 = y1
+        self.z1 = z1
         self.x2 = x2
         self.y2 = y2
+        self.z2 = z2
+
 
         self.linename_v1 = str(x1)+str(y1)+str(x2)+str(y2)
         self.linename_v2 = str(x2)+str(y2)+str(x1)+str(y1)
@@ -140,9 +144,16 @@ class elementPoint:
         self.floorName = ''
         self.mid = 0
         if not 'LocationPoint' in str(element.Location):
-            self.elementLines = getTessallatedLine(element.Location.Curve.Tessellate(), element)
-            self.z = element.Location.Curve.Origin[2]
-            self.getElementCenter(self.elementLines)
+            if self.element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
+                controlPoints = self.element.Location.Curve.ControlPoints
+                controlPoint = controlPoints[1]
+                self.x = controlPoint[0]
+                self.y = controlPoint[1]
+                self.z = controlPoint[2]
+            else:
+                self.elementLines = getTessallatedLine(element.Location.Curve.Tessellate(), element)
+                self.z = element.Location.Curve.Origin[2]
+                self.getElementCenter(self.elementLines)
 
         else:
             if element.HasSpatialElementCalculationPoint:
@@ -158,17 +169,21 @@ class elementPoint:
 
 class flatroom:
     def appendLine(self, line):
-        self.roomLines.append(line)
-        self.roomLinesNames.append(line.linename_v1)
-        self.roomLinesNames.append(line.linename_v2)
+        if line.linename_v1 not in self.roomLinesNames and line.linename_v2 not in self.roomLinesNames:
+
+            self.roomLines.append(line)
+            self.roomLinesNames.append(line.linename_v1)
+            self.roomLinesNames.append(line.linename_v2)
     def __init__(self, roomNumber, roomName, roomId):
         self.downBorder = 0
         self.topBorder = 0
+        self.mid = 0
         self.roomLines = []
         self.roomLinesNames = []
         self.roomNumber = roomNumber
         self.roomName = roomName
         self.roomId = roomId
+        self.roomLocation = 0
 def getTessallatedLine(coord_list, element):
     newLines = []
     current = 'Начало линии'
@@ -176,15 +191,18 @@ def getTessallatedLine(coord_list, element):
     for coordinate in coord_list:
         x = coordinate[0]
         y = coordinate[1]
+        z = coordinate[2]
         if current == 'Начало линии':
             x1 = x
             y1 = y
+            z1 = z
             current = 'Конец линии'
         else:
             x2 = x
             y2 = y
+            z2 = z
             current = 'Начало линии'
-            segmentLine = line(x1, y1, x2, y2)
+            segmentLine = line(x1, y1, z1, x2, y2, z2)
 
             if element.Category.IsId(BuiltInCategory.OST_Rooms):
                 if segmentLine.x1 == segmentLine.x2 and segmentLine.y1 == segmentLine.y2:
@@ -295,8 +313,11 @@ def isEquipmenInRoom(point, room):
     intersects_v2 = 0
     intersects_v3 = 0
     intersects_v4 = 0
+    # print room.mid
+    # print str(point.x) + '_' + str(point.y)
 
     for roomLine in room.roomLines:
+
         p1 = stolPoint(roomLine.x1, roomLine.y1)
         q1 = stolPoint(roomLine.x2, roomLine.y2)
         p2 = stolPoint(point.x, point.y)
@@ -311,6 +332,9 @@ def isEquipmenInRoom(point, room):
         isV2Intersect = doIntersect(p1, q1, p2, q2_v2)
         isV3Intersect = doIntersect(p1, q1, p2, q2_v3)
         isV4Intersect = doIntersect(p1, q1, p2, q2_v4)
+        # if isV1Intersect or isV2Intersect or isV3Intersect or isV4Intersect:
+        #     print str(roomLine.x1) + '_' + str(roomLine.y1) + '_' + str(roomLine.z1)
+        #     print str(roomLine.x2) + '_' + str(roomLine.y2) + '_' + str(roomLine.z2)
 
         if isV1Intersect:
             intersects_v1 += 1
@@ -321,10 +345,17 @@ def isEquipmenInRoom(point, room):
         if isV4Intersect:
             intersects_v4 += 1
 
+    # print intersects_v1
+    # print intersects_v2
+    # print intersects_v3
+    # print intersects_v4
+    checkList = []
 
-
-    if intersects_v1 == 1 or intersects_v2 == 1 or intersects_v3 == 1 or intersects_v4 == 1:
+    if intersects_v1%2 != 0 or intersects_v2%2 != 0 or intersects_v3%2 != 0 or intersects_v4%2 != 0:
         return True
+
+    # if intersects_v1 == 1  or intersects_v2 == 1 or intersects_v3 == 1 or intersects_v4 == 1:
+    #     return True
     return  False
 
 class level:
@@ -412,16 +443,15 @@ def isFittingsAround(element):
 
 def selectName(element):
     roomName = 'Не удалось определить имя'
+    paraname = doc.ProjectInformation.LookupParameter('ФОП_Привязка к помещениям').AsString()
+    if paraname == None or paraname == '':
+        paraname = 'Номер'
 
-    if element.LookupParameter('ФОП_Помещение'):
-        roomName = element.LookupParameter('ФОП_Помещение').AsString()
-    elif element.LookupParameter('ADSK_Номер квартиры'):
-        roomName = element.LookupParameter('ADSK_Номер квартиры').AsString()
-        if str(roomName) == 'None':
-            if element.LookupParameter('ADSK_Номер помещения квартиры'):
-                roomName = element.LookupParameter('ADSK_Номер помещения квартиры').AsString()
-    else:
-        roomName = element.GetParamValue(BuiltInParameter.ROOM_NAME)
+    try:
+        roomName = element.LookupParameter(paraname).AsString()
+    except:
+        pass
+
     return roomName
 
 def rename_sub(element):
@@ -476,12 +506,22 @@ def execute():
                     newName = selectName(element)
                     newRoom = flatroom(roomNumber, newName, element.Id)
                     roomGeom = element.get_Geometry(_options)
+                    newRoom.roomLocation = element.Location.Point
 
                     if roomCol.transform != None:
                         roomGeom = roomGeom.GetTransformed(roomCol.transform)
                     for geom in roomGeom:
                         if 'Solid' in str(geom):
                             roomSolid = geom
+
+                    #if newRoom.roomId.IntegerValue == 20497856:
+                     #   print len(roomSolid.Faces)
+
+                    borders = getBorders(element)
+                    newRoom.downBorder = borders[0] - 60/304.8
+                    newRoom.topBorder = borders[1]
+                    newRoom.mid = (newRoom.topBorder - newRoom.downBorder)/2 + newRoom.downBorder
+
 
                     for face in roomSolid.Faces:
                         Loops = face.GetEdgesAsCurveLoops()
@@ -490,13 +530,12 @@ def execute():
                                 newLines = getTessallatedLine(roomLine.Tessellate(), element)
                                 for newLine in newLines:
                                     if newLine:
-                                        if not str(round(newLine.x1, 3)) == str(round(newLine.x2, 3)) and str(round(newLine.y1, 3)) == str(round(newLine.y2, 3)):
-                                            if newLine.linename_v1 not in newRoom.roomLinesNames and newLine.linename_v2 not in newRoom.roomLinesNames:
-                                                newRoom.appendLine(newLine)
+                                        if newLine.z1 < newRoom.mid:
+                                        #if not str(round(newLine.x1, 3)) == str(round(newLine.x2, 3)) and str(round(newLine.y1, 3)) == str(round(newLine.y2, 3)):
+                                            #if newLine.linename_v1 not in newRoom.roomLinesNames and newLine.linename_v2 not in newRoom.roomLinesNames:
+                                            newRoom.appendLine(newLine)
 
-                    borders = getBorders(element)
-                    newRoom.downBorder = borders[0] - 60/304.8
-                    newRoom.topBorder = borders[1]
+
                     rooms.append(newRoom)
 
         #Аналогично проходимся по приоритетным элементам модели и создаем объекты координатных точек
@@ -511,7 +550,7 @@ def execute():
                         newEquipment.mid = projectLevel.mid
                         newEquipment.floorName = projectLevel.name
                 equipmentPoints.append(newEquipment)
-
+        #
         #проверяем во вторичном приоритете элементы без коннекторов, тогда обсчитываем их как обычные
         for collection in secondPriority:
             for element in collection:
@@ -523,21 +562,21 @@ def execute():
                             newEquipment.mid = projectLevel.mid
                     equipmentPoints.append(newEquipment)
 
-
+        #
         #перебираем координатные точки и если они попадают в помещение прописываем имя внутри экземпляра
         for equipmentPoint in equipmentPoints:
-
+            #if equipmentPoint.element.Id.IntegerValue == 1686439:
             for room in rooms:
-                    if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
-                        if isEquipmenInRoom(equipmentPoint, room):
-                            equipmentPoint.roomNumber = room.roomName
-                            break
-                        else:
-                            if equipmentPoint.roomNumber == 'None':
-                                equipmentPoint.roomNumber = 'Вне обозначенных помещений'
-
-
-
+                    #if room.roomId.IntegerValue == 20497854:
+                    #print room.roomLocation
+                if equipmentPoint.mid > room.downBorder and equipmentPoint.mid < room.topBorder:
+                        #print isEquipmenInRoom(equipmentPoint, room)
+                    if isEquipmenInRoom(equipmentPoint, room):
+                        equipmentPoint.roomNumber = room.roomName
+                        break
+                    else:
+                        if equipmentPoint.roomNumber == 'None':
+                            equipmentPoint.roomNumber = 'Вне обозначенных помещений'
 
 
 
@@ -571,7 +610,9 @@ def execute():
 
                                     if el.Owner.LookupParameter("ФОП_Помещение"):
                                         variant = el.Owner.LookupParameter("ФОП_Помещение").AsString()
-                                        elementRoom.Set(variant)
+
+                                        elementRoom.Set(str(variant))
+
 
         #Ищем суб-элементы и если находим обрабатываем
         for collection in possibleSubs:
@@ -581,4 +622,7 @@ def execute():
         #стираем вид
         doc.Delete(newView.Id)
 
-execute()
+parametersAdded = paraSpec.check_parameters()
+
+if not parametersAdded:
+    execute()
