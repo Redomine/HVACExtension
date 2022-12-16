@@ -123,9 +123,6 @@ class line:
         self.linename_v1 = str(x1)+str(y1)+str(x2)+str(y2)
         self.linename_v2 = str(x2)+str(y2)+str(x1)+str(y1)
 
-
-
-
 class elementPoint:
     def getElementCenter(self, lines):
         for elemLine in lines:
@@ -230,6 +227,20 @@ def getBorders(element):
         z_max = 0
 
     return [z_min, z_max]
+
+
+report_rows = []
+def isElementEditedBy(element):
+    try:
+        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+    except Exception:
+        edited_by = __revit__.Application.Username
+
+    if edited_by and edited_by != __revit__.Application.Username:
+        if edited_by not in report_rows:
+            report_rows.add(edited_by)
+        return True
+    return False
 
 
 
@@ -359,18 +370,12 @@ def isEquipmenInRoom(point, room):
     return  False
 
 class level:
-    def __init__(self, element, newView):
+    def __init__(self, element):
         self.name = element.Name
-        box = element.get_BoundingBox(newView)
-
         self.z_max = 0
         self.mid = 0
+        self.z_min = element.ProjectElevation - 60 / 304.8
 
-        try:
-            self.z_min = box.Min[2] - 60/304.8
-
-        except:
-            pass
 
 def getConnectors(element):
     try:
@@ -409,9 +414,6 @@ def getElementLevelName(element):
             level = element.LookupParameter('Базовый уровень').AsValueString()
 
     return level
-
-
-
 
 def isValidSecondary(owner):
     if owner.Category.IsId(BuiltInCategory.OST_MechanicalEquipment) or owner.Category.IsId(
@@ -465,20 +467,24 @@ def rename_sub(element):
 
         sub_elements = [doc.GetElement(element_id) for element_id in element.GetSubComponentIds()]
         for sub_element in sub_elements:
+            if sub_element.Category.IsId(BuiltInCategory.OST_GenericModel):
+                continue
             subFloor = sub_element.LookupParameter('ФОП_Этаж')
             subRoom = sub_element.LookupParameter('ФОП_Помещение')
+
             subFloor.Set(floor)
             subRoom.Set(room)
 
 def execute():
     with revit.Transaction("Привязка к помещениям"):
+        #
+        # #Вид нужен потому что у уровней есть боксы только когда они видимы
+        # newView = View3D.CreateIsometric(doc, viewFamilyTypeId)
 
-        #Вид нужен потому что у уровней есть боксы только когда они видимы
-        newView = View3D.CreateIsometric(doc, viewFamilyTypeId)
-
+        #создаем объекты уровней
         projectLevels = []
         for element in levelCol:
-            newLevel = level(element, newView)
+            newLevel = level(element)
             projectLevels.append(newLevel)
 
         projectLevels.sort(key=lambda x: x.z_min)
@@ -550,7 +556,8 @@ def execute():
                         newEquipment.mid = projectLevel.mid
                         newEquipment.floorName = projectLevel.name
                 equipmentPoints.append(newEquipment)
-        #
+
+
         #проверяем во вторичном приоритете элементы без коннекторов, тогда обсчитываем их как обычные
         for collection in secondPriority:
             for element in collection:
@@ -562,7 +569,6 @@ def execute():
                             newEquipment.mid = projectLevel.mid
                     equipmentPoints.append(newEquipment)
 
-        #
         #перебираем координатные точки и если они попадают в помещение прописываем имя внутри экземпляра
         for equipmentPoint in equipmentPoints:
             #if equipmentPoint.element.Id.IntegerValue == 1686439:
@@ -578,15 +584,15 @@ def execute():
                         if equipmentPoint.roomNumber == 'None':
                             equipmentPoint.roomNumber = 'Вне обозначенных помещений'
 
-
-
-        # # #вставляем нужное имя в параметр ФОП_Помещение
+        # вставляем нужное имя в параметр ФОП_Помещение
         for equipmentPoint in equipmentPoints:
             equipmentPoint.insert(equipmentPoint.roomNumber)
 
+        # Запись данных
         for equipmentPoint in equipmentPoints:
-            fopLevel = equipmentPoint.element.LookupParameter('ФОП_Этаж')
-            fopLevel.Set(equipmentPoint.floorName)
+            if not isElementEditedBy(equipmentPoint.element):
+                fopLevel = equipmentPoint.element.LookupParameter('ФОП_Этаж')
+                fopLevel.Set(equipmentPoint.floorName)
 
 
 
@@ -594,35 +600,40 @@ def execute():
         for collection in secondPriority:
             for element in collection:
                 if getConnectors(element):
-                    elementRoom = element.LookupParameter("ФОП_Помещение")
-                    elementFloor = element.LookupParameter("ФОП_Этаж")
-                    #try: #Пробуем перебрать через коннекторы, но их может и не быть
-                    connectors = getConnectors(element)
+                    if not isElementEditedBy(element):
+                        elementRoom = element.LookupParameter("ФОП_Помещение")
+                        elementFloor = element.LookupParameter("ФОП_Этаж")
+                        #try: #Пробуем перебрать через коннекторы, но их может и не быть
+                        connectors = getConnectors(element)
 
-                    for connector in connectors:
-                            for el in connector.AllRefs:
-                                if isValidSecondary(el.Owner) or el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting) or el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                        for connector in connectors:
+                                for el in connector.AllRefs:
+                                    if isValidSecondary(el.Owner) or el.Owner.Category.IsId(BuiltInCategory.OST_PipeFitting) or el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
 
-                                    if el.Owner.LookupParameter("ФОП_Этаж"):
-                                        variant = el.Owner.LookupParameter("ФОП_Этаж").AsString()
+                                        if el.Owner.LookupParameter("ФОП_Этаж"):
+                                            variant = el.Owner.LookupParameter("ФОП_Этаж").AsString()
 
-                                        elementFloor.Set(str(variant))
+                                            elementFloor.Set(str(variant))
 
-                                    if el.Owner.LookupParameter("ФОП_Помещение"):
-                                        variant = el.Owner.LookupParameter("ФОП_Помещение").AsString()
+                                        if el.Owner.LookupParameter("ФОП_Помещение"):
+                                            variant = el.Owner.LookupParameter("ФОП_Помещение").AsString()
 
-                                        elementRoom.Set(str(variant))
+                                            elementRoom.Set(str(variant))
 
 
         #Ищем суб-элементы и если находим обрабатываем
         for collection in possibleSubs:
             for element in collection:
-                rename_sub(element)
+                if not isElementEditedBy(element):
+                    rename_sub(element)
 
-        #стираем вид
-        doc.Delete(newView.Id)
+        # #стираем вид
+        # doc.Delete(newView.Id)
 
 parametersAdded = paraSpec.check_parameters()
 
 if not parametersAdded:
     execute()
+    if len(report_rows) > 0:
+        for report in report_rows:
+            print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
