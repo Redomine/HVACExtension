@@ -424,11 +424,9 @@ class shedule_position:
         return new_group
 
     def isDataToInsert(self, param, value):
-        try:
+        if param:
             if not param.IsReadOnly:
                 param.Set(value)
-        except:
-            pass
 
 
     def insert(self):

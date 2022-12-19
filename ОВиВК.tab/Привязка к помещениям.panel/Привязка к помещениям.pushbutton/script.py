@@ -59,9 +59,9 @@ possibleSubs = [colSprinklers, colAccessory,
                colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
 
 priorityCollections = [colCurves, colFlexCurves, colFlexPipeCurves, colPipeCurves, colSprinklers, colAccessory,
-               colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
+               colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures, colFittings, colPipeFittings]
 
-secondPriority = [colFittings, colPipeFittings,  colInsulations, colPipeInsulations]
+secondPriority = [colInsulations, colPipeInsulations]
 
 levelCol = make_col(BuiltInCategory.OST_Levels)
 
@@ -111,7 +111,7 @@ for link in linksCol:
 
 
 class line:
-    def __init__(self, x1, y1,z1 ,x2, y2, z2):
+    def __init__(self, x1, y1,z1, x2, y2, z2):
         self.x1 = x1
         self.y1 = y1
         self.z1 = z1
@@ -181,6 +181,7 @@ class flatroom:
         self.roomName = roomName
         self.roomId = roomId
         self.roomLocation = 0
+
 def getTessallatedLine(coord_list, element):
     newLines = []
     current = 'Начало линии'
@@ -540,7 +541,6 @@ def execute():
                                         #if not str(round(newLine.x1, 3)) == str(round(newLine.x2, 3)) and str(round(newLine.y1, 3)) == str(round(newLine.y2, 3)):
                                             #if newLine.linename_v1 not in newRoom.roomLinesNames and newLine.linename_v2 not in newRoom.roomLinesNames:
                                             newRoom.appendLine(newLine)
-
 
                     rooms.append(newRoom)
 
