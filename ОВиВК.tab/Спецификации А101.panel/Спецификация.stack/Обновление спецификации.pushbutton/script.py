@@ -422,32 +422,42 @@ class shedule_position:
     def regroop(self, element):
         new_group = self.paraGroup + "_" + self.FOP_name.AsString() + "_" + self.FOP_Mark.AsString()
         return new_group
-    def insert(self):
-        if not self.FOP_izm.IsReadOnly:
-            self.FOP_izm.Set(self.shedIzm(self.element, self.ADSK_izm, self.isSingle))
-        if not self.FOP_name.IsReadOnly:
-            self.FOP_name.Set(self.shedName(self.element))
-        if not self.FOP_Mark.IsReadOnly:
-            self.FOP_Mark.Set(self.shedMark(self.element))
-        if not self.FOP_pos.IsReadOnly:
-            self.FOP_pos.Set('')
-        self.FOP_number.Set(self.shedNumber(self.element))
 
-        if self.FOP_EF == None or self.FOP_EF == '':
-            if not self.FOP_EF.IsReadOnly:
-                self.FOP_EF.Set('None')
-        else:
+    def isDataToInsert(self, param, value):
+        try:
+            if not param.IsReadOnly:
+                param.Set(value)
+        except:
             pass
 
-        if not self.FOP_group.IsReadOnly:
-            self.FOP_group.Set(self.regroop(self.element))
-        if not self.FOP_maker.IsReadOnly:
-            self.FOP_maker.Set(self.ADSK_maker)
-        if not self.FOP_code.IsReadOnly:
-            self.FOP_code.Set(self.ADSK_code)
-        if not self.FOP_System.IsReadOnly:
+
+    def insert(self):
+        unit = self.shedIzm(self.element, self.ADSK_izm, self.isSingle)
+        name = self.shedName(self.element)
+        mark = self.shedMark(self.element)
+        number = self.shedNumber(self.element)
+        group = self.regroop(self.element)
+        maker = self.ADSK_maker
+        code = self.ADSK_code
+
+        self.isDataToInsert(self.FOP_izm, unit)
+        self.isDataToInsert(self.FOP_name, name)
+        self.isDataToInsert(self.FOP_Mark, mark)
+        self.isDataToInsert(self.FOP_pos, '')
+        self.isDataToInsert(self.FOP_number, number)
+        self.isDataToInsert(self.FOP_group, group)
+        self.isDataToInsert(self.FOP_maker, maker)
+        self.isDataToInsert(self.FOP_code, code)
+
+        if self.FOP_EF:
+            if self.FOP_EF.AsString() == None or self.FOP_EF.AsString() == '':
+                self.isDataToInsert(self.FOP_EF, 'None')
+
+        if self.FOP_System:
             if self.FOP_System.AsString() == None or self.FOP_System.AsString() == '':
-                self.FOP_System.Set('None')
+                self.isDataToInsert(self.FOP_System, 'None')
+
+
 
     def __init__(self, element, collection, parametric):
         for params in parametric:
