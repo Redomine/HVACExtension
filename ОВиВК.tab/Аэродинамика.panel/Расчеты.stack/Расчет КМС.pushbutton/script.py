@@ -200,7 +200,10 @@ def getTeeOrient(element):
     #в случе вытяжной системы, чтоб выбрать коннектор с выходящим воздухом из второстепенных, берем два коннектора у которых расход не максимальны
     #(максимальный точно выходной у вытяжной системы) и сравниваем. Тот что самый малый - ответветвление
     #а второй - точка вхождения потока воздуха из которой берем координаты для построения вектора
-    if str(connectors[0].DuctSystemType) == "ExhaustAir":
+
+
+
+    if str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir":
 
         if exhaustAirCons[0].Flow < exhaustAirCons[1].Flow:
             exitCons.append(exhaustAirCons[0])
@@ -211,8 +214,8 @@ def getTeeOrient(element):
             inTeeCon = getConCoords(exhaustAirCons[0])
             inDuctCon = getDuctCoords(inTeeCon, exhaustAirCons[0])
 
-    # среди выходящих коннекторов ищем диктующий по большему расходу
 
+    # среди выходящих коннекторов ищем диктующий по большему расходу
     if exitCons[0].Flow > exitCons[1].Flow:
         exitCon = exitCons[0]
         secondaryCon = exitCons[1]
@@ -263,12 +266,12 @@ def getTeeOrient(element):
 
     #тип 1
     #вытяжной воздуховод zп
-    if math.acos(cosMain) < 0.10 and str(connectors[0].DuctSystemType) == "ExhaustAir":
+    if math.acos(cosMain) < 0.10 and (str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir"):
         type = 1
 
     #тип 2
     #вытяжной воздуховод, zо
-    elif math.acos(cosMain) > 0.10 and str(connectors[0].DuctSystemType) == "ExhaustAir":
+    elif math.acos(cosMain) > 0.10 and (str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir"):
         type = 2
 
     #тип 3
@@ -497,6 +500,7 @@ def script_execute():
                     K = getDpTee(element)
             except Exception:
                 pass
+
 
             try:
                 if str(element.MEPModel.PartType) == 'TapAdjustable':
