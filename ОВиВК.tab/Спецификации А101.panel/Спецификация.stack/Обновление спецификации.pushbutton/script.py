@@ -342,8 +342,7 @@ class shedule_position:
                 if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
                     New_Name = '!Не учитывать'
             except Exception:
-                print
-                insType.Id
+                pass
 
         return New_Name
 
@@ -430,20 +429,21 @@ class shedule_position:
 
 
     def insert(self):
-        unit = self.shedIzm(self.element, self.ADSK_izm, self.isSingle)
-        name = self.shedName(self.element)
-        mark = self.shedMark(self.element)
-        number = self.shedNumber(self.element)
-        group = self.regroop(self.element)
-        maker = self.ADSK_maker
-        code = self.ADSK_code
 
+
+        code = self.ADSK_code
+        unit = self.shedIzm(self.element, self.ADSK_izm, self.isSingle)
         self.isDataToInsert(self.FOP_izm, unit)
+        name = self.shedName(self.element)
         self.isDataToInsert(self.FOP_name, name)
+        mark = self.shedMark(self.element)
         self.isDataToInsert(self.FOP_Mark, mark)
         self.isDataToInsert(self.FOP_pos, '')
+        number = self.shedNumber(self.element)
         self.isDataToInsert(self.FOP_number, number)
+        group = self.regroop(self.element)
         self.isDataToInsert(self.FOP_group, group)
+        maker = self.ADSK_maker
         self.isDataToInsert(self.FOP_maker, maker)
         self.isDataToInsert(self.FOP_code, code)
 
@@ -530,41 +530,33 @@ parametric = [
     settings(colPipeInsulations, '11. Материалы трубопроводной изоляции', False)
 ]
 
+report_rows = []
+def isElementEditedBy(element):
+    try:
+        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+    except Exception:
+        edited_by = __revit__.Application.Username
 
+    if edited_by and edited_by != __revit__.Application.Username:
+        if edited_by not in report_rows:
+            report_rows.add(edited_by)
+        return True
+    return False
 
 
 def script_execute():
     report_rows = set()
     for collection in collections:
         for element in collection:
-            try:
-                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-            except Exception:
-                print element.Id
-
-            if edited_by and edited_by != __revit__.Application.Username:
-                report_rows.add(edited_by)
-                continue
-
-            data = shedule_position(element, collection, parametric)
-            data.insert()
+            if not isElementEditedBy(element):
+                data = shedule_position(element, collection, parametric)
+                data.insert()
 
 
         for element in vis_collectors:
-            try:
-                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-            except Exception:
-                print element.Id
+            if not isElementEditedBy(element):
+                get_depend(element)
 
-            if edited_by and edited_by != __revit__.Application.Username:
-                report_rows.add(edited_by)
-                continue
-
-            get_depend(element)
-
-    if report_rows:
-        print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
-        print "\r\n".join(report_rows)
 
 parametersAdded = paraSpec.check_parameters()
 
@@ -578,6 +570,8 @@ if not parametersAdded:
         isol_reserve = 1 + (
                 doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
         script_execute()
+        for report in report_rows:
+            print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
 
     if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
         import numerateSpec
