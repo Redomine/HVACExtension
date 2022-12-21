@@ -378,6 +378,24 @@ class shedule_position:
             return 'м.п.'
 
     def shedNumber(self, element):
+        # Переменные для расчета
+        length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
+            'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+        isol_reserve = 1 + (
+                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+
+
+        if element.Id.IntegerValue == 2834097:
+            print length_reserve
+
+        if self.stock != 0:
+            isol_reserve = 1 + self.stock / 100
+            length_reserve = 1 + self.stock / 100
+
+            if element.Id.IntegerValue == 2834097:
+                print length_reserve
+
+
         FOP_izm = self.FOP_izm.AsString()
         if FOP_izm == 'шт.':
             return 1
@@ -429,7 +447,6 @@ class shedule_position:
 
 
     def insert(self):
-
 
         code = self.ADSK_code
         unit = self.shedIzm(self.element, self.ADSK_izm, self.isSingle)
@@ -483,9 +500,13 @@ class shedule_position:
         self.ADSK_mark = get_ADSK_Mark(element)
         self.ADSK_izm = get_ADSK_Izm(element)
         self.ADSK_code = get_ADSK_Code(element)
+        self.stock = 0
 
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
+
+        if ElemType.LookupParameter('ФОП_ВИС_Индивидуальный запас'):
+            self.stock = ElemType.LookupParameter('ФОП_ВИС_Индивидуальный запас').AsDouble()
 
         if ElemType.LookupParameter('ФОП_ВИС_Узел'):
             if ElemType.LookupParameter('ФОП_ВИС_Узел').AsInteger() == 1:
@@ -564,11 +585,7 @@ if not parametersAdded:
     with revit.Transaction("Обновление девятиграфной формы"):
         #список элементов для перебора в вид узлов:
         vis_collectors = []
-        # Переменные для расчета
-        length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
-            'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
-        isol_reserve = 1 + (
-                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+
         script_execute()
         for report in report_rows:
             print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
