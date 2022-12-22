@@ -130,8 +130,8 @@ class elementPoint:
             self.y = (elemLine.y1 + elemLine.y2)/2
 
     def insert(self, number):
-
         self.FOP_room.Set(str(number))
+
 
     def __init__(self, element):
         self.roomNumber = 'None'
