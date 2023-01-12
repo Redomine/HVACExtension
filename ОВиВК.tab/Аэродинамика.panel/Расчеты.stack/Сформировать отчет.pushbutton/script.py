@@ -213,6 +213,7 @@ for number in path:
                 if element.Id not in passed_taps:
                     Pd = (1.21 * velocity * velocity)/2 #Динамическое давление
                     K = getKofTap(element) #КМС
+                    K = str(K).replace(',', '.')
                     K = float(K)
                     Z = Pd * K
                     coef = K

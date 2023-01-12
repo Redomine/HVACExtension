@@ -79,11 +79,13 @@ def getDpElbow(element):
     angle = a[1].Angle
 
     try:
-        H = a[0].Height* 304.8
-        B = a[0].Width* 304.8
+        sizes = [a[0].Height* 304.8, a[0].Width* 304.8]
+        H = max(sizes)
+        B = min(sizes)
         E = 2.71828182845904
 
-        K = 0.25 * (B/H) ** 0.25 * (1.07 * E**(2/(2*(100 + B/2)/B +1)) - 1) ** 2
+        K = (0.25 * (B/H) ** 0.25) * (1.07 * E**(2/(2*(100 + B/2)/B +1)) - 1) ** 2
+
         if angle <= 1:
             K = K * 0.708
 
