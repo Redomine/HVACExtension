@@ -110,15 +110,16 @@ def getSystemDict(collection):
         if system.Name not in Dict:
             ElemTypeId = system.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
-            if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')):
-                if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != None:
-                    if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != "":
-                        EF = ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString()
+            if ElemType.LookupParameter('ФОП_ВИС_Экономическая функция'):
+                if ElemType.LookupParameter('ФОП_ВИС_Экономическая функция') != None:
+                    if ElemType.LookupParameter('ФОП_ВИС_Экономическая функция') != "":
+                        EF = ElemType.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
                         Dict[system.Name] = EF
-            if system.LookupParameter('ФОП_Экономическая функция').AsString() != None:
-                if system.LookupParameter('ФОП_Экономическая функция').AsString() != "":
-                    EF = system.LookupParameter('ФОП_Экономическая функция').AsString()
-                    Dict[system.Name] = EF
+            else:
+                if system.LookupParameter('ФОП_ВИС_Экономическая функция').AsString() != None:
+                    if system.LookupParameter('ФОП_ВИС_Экономическая функция').AsString() != "":
+                        EF = system.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
+                        Dict[system.Name] = EF
     return Dict
 
 

@@ -125,6 +125,15 @@ def script_execute():
          BuiltInCategory.OST_PipeInsulations,
          BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers, BuiltInCategory.OST_ProjectInformation])
 
+    visEFCatSet = get_cats([BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeCurves,
+         BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_FlexDuctCurves,
+         BuiltInCategory.OST_FlexPipeCurves,
+         BuiltInCategory.OST_DuctTerminal, BuiltInCategory.OST_DuctAccessory,
+         BuiltInCategory.OST_PipeAccessory,
+         BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctInsulations,
+         BuiltInCategory.OST_PipeInsulations,
+         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers, BuiltInCategory.OST_DuctSystem, BuiltInCategory.OST_PipingSystem])
+
 
     # нестандартные сеты категорий
     ductCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctInsulations])
@@ -134,6 +143,7 @@ def script_execute():
                            BuiltInCategory.OST_PlumbingFixtures])
     pipeCatSet = get_cats([BuiltInCategory.OST_PipeCurves])
     projectCatSet = get_cats([BuiltInCategory.OST_ProjectInformation])
+
     ductandpipeCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves])
     insulandliveCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations])
 
@@ -146,16 +156,18 @@ def script_execute():
 
 
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
+        shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, visEFCatSet, istype=True)
+
+
         shared_parameter('ФОП_Номер корпуса', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Помещение', arDefinitions, defaultCatSet)
         shared_parameter('ФОП_Номер секции', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Этаж', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Привязка к помещениям', genDefinitions, projectCatSet)
-
         shared_parameter('ФОП_ВИС_Имя системы', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Код изделия', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Завод-изготовитель', visDefinitions, defaultCatSet)
-        shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, defaultCatSet)
+
         shared_parameter('ФОП_ВИС_Группирование', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet)
