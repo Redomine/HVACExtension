@@ -77,20 +77,21 @@ def get_cats(list_of_cats):
     return set
 
 def check_spfile(group):
-    spFile = doc.Application.OpenSharedParameterFile()
-    # проверяем тот ли файл общих параметров подгружен
-    spFileName = str(doc.Application.SharedParametersFilename)
-    spFileName = spFileName.split('\\')
-    spFileName = spFileName[-1]
-
-    if "ФОП_v1.txt" != spFileName:
-        try:
-            doc.Application.SharedParametersFilename = str(
-                os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_v1.txt"
-        except Exception:
-            print
-            'По стандартному пути не найден файл общих параметров, обратитесь в BIM-отдел или замените вручную на ФОП_v1.txt'
-            sys.exit()
+    # spFile = doc.Application.OpenSharedParameterFile()
+    # # проверяем тот ли файл общих параметров подгружен
+    # spFileName = str(doc.Application.SharedParametersFilename)
+    # spFileName = spFileName.split('\\')
+    # spFileName = spFileName[-1]
+    #
+    # if "ФОП_v1.txt" != spFileName:
+    try:
+        doc.Application.SharedParametersFilename = str(
+            os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_v1.txt"
+        spFile = doc.Application.OpenSharedParameterFile()
+    except Exception:
+        print
+        'По стандартному пути не найден файл общих параметров, обратитесь в BIM-отдел или замените вручную на ФОП_v1.txt'
+        sys.exit()
 
     for dG in spFile.Groups:
         if str(dG.Name) == group:
