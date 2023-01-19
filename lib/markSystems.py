@@ -55,6 +55,7 @@ class elementOfBranch:
         self.flow = 0
         self.connectedElements = []
         self.XYZ = None
+        self.level = 0
 
 class branch:
     def __init__(self):
@@ -176,9 +177,10 @@ def makeCurve(element, number):
     midY = (start[1] + end[1])/2
     midZ = (start[2] + end[2])/2
 
+
     pt = Autodesk.Revit.DB.XYZ(midX,midY,midZ)
 
-
+    curve.level = midZ
     curve.XYZ = pt
 
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
@@ -234,10 +236,23 @@ def isSizeEqual(curve_1, curve_2):
     return True
 
 def isFlowEqual(curve_1, curve_2):
-    pass
+    if curve_1.flow != curve_2.flow:
+        return False
+
+    if curve_1.flow != curve_2.flow:
+        return False
+
+    if curve_1.flow != curve_2.flow:
+        return False
+
+    return True
 
 def isLevelEqual(curve_1, curve_2):
-    pass
+    if curve_1.level != curve_2.level:
+        return False
+
+
+    return True
 
 def placeMark(curve):
 
@@ -257,30 +272,66 @@ def compareCurves(branch, bySize, byFlow, byLevel):
     if len(branch.curves) == 0:
         return None
 
-    if len(branch.curves) == 1:
-        placeMark(branch.curves[0])
+    # if len(branch.curves) == 1:
+    #     placeMark(branch.curves[0])
 
-
+    # print len(branch.curves)
+    # if len(branch.curves) == 2:
+    #     print branch.curves[0].element.Id
+    #     print branch.curves[1].element.Id
+    # print bySize
+    # print byFlow
+    # print byLevel
     curvesToMark = []
+
+    #placeMark(branch.curves[0])  # в любом случае макируем первый элемент
+    # if len(branch.curves) > 1:
+    #     placeMark(branch.curves[-1])  # в любом случае макируем последний элемент
 
     for curve in branch.curves:
         index = curve.numberInLine
+        markNext = True
+        isLastOfBranch = False
 
         try:
             compareCurve = branch.curves[index + 1]
         except:
             compareCurve = branch.curves[index - 1]
+            markNext = False
+
 
         if bySize:
             sizeStatus = isSizeEqual(curve, compareCurve)
 
-        if not sizeStatus or not flowStatus or not levelStatus:
-            if curve not in curvesToMark:
-                curvesToMark.append(curve)
-            if compareCurve not in curvesToMark:
-                curvesToMark.append(compareCurve)
+        if byFlow:
+            flowStatus = isFlowEqual(curve, compareCurve)
+
+        if byLevel:
+            levelStatus = isLevelEqual(curve, compareCurve)
+
+        # if curve == branch.curves[-1]:
+        #     isLastOfBranch = True
+
+        # print sizeStatus
+        # print levelStatus
+        # print flowStatus
+
+        if isLastOfBranch:
+            curvesToMark.append(curve)
+        else:
+            if not sizeStatus or not flowStatus or not levelStatus:
+
+                if curve not in curvesToMark and not markNext:
+                    curvesToMark.append(curve)
+                if compareCurve not in curvesToMark and markNext:
+                    curvesToMark.append(compareCurve)
+        if len(curvesToMark) == 0:
+            curvesToMark.append(branch.curves[0])
+
+
     for curve in curvesToMark:
-        placeMark(curve)
+        if curve.numberInLine != 0: # первый и последний элемент уже промаркирован
+            placeMark(curve)
 
 
 
@@ -323,12 +374,10 @@ def execute(bySize = False, byFlow = False, byLevel = False):
     #     mark = el
 
     with revit.Transaction("Маркировка элементов"):
+        placeMark(branches[0].curves[0])
         for branch in branches:
             #сравниваем и маркируем соседние участки воздуховодов
             compareCurves(branch, bySize, byFlow, byLevel)
-
-
-
 
 
 
@@ -338,5 +387,5 @@ def markBySizeAndFlow():
 def markBySize():
     execute(bySize=True)
 
-
-
+def markByLevel():
+    execute(byLevel=True)

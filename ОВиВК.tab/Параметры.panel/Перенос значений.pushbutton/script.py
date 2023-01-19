@@ -35,6 +35,7 @@ from dosymep.Revit import ParamExtensions
 import Autodesk
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
+import paraSpec
 
 class paramCell:
     def __init__(self, paraIndex,sortGroupInd ,sortname):
