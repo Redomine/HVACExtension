@@ -81,28 +81,32 @@ def copyEF(collection):
         if EF != None:
             ElemTypeId = element.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
-            if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')):
-                if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString() != None:
-                    if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != "":
-                        EF = ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString()
+            if ElemType.LookupParameter('ФОП_Экономическая функция'):
+                if ElemType.LookupParameter('ФОП_Экономическая функция').AsString() != None:
+                    if ElemType.LookupParameter('ФОП_Экономическая функция') != "":
+                        EF = ElemType.LookupParameter('ФОП_Экономическая функция').AsString()
 
-            element.LookupParameter('ФОП_Экономическая функция').Set(EF)
-
+            try: #это на случай если рид онли
+                element.LookupParameter('ФОП_Экономическая функция').Set(EF)
+            except:
+                pass
 
 
 def getDependent(collection):
 
     for element in collection:
-
         EF = element.LookupParameter('ФОП_Экономическая функция').AsString()
-
         try:
             dependent = element.GetSubComponentIds()
 
             for depend in dependent:
-                doc.GetElement(depend).LookupParameter('ФОП_Экономическая функция').Set(EF)
+                try: #это на случай ридонли
+                    doc.GetElement(depend).LookupParameter('ФОП_Экономическая функция').Set(EF)
+                except:
+                    pass
         except Exception:
             pass
+
 
 def getSystemDict(collection):
     Dict = {}
@@ -121,9 +125,6 @@ def getSystemDict(collection):
                         EF = system.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
                         Dict[system.Name] = EF
     return Dict
-
-
-paraNames = ['ФОП_Экономическая функция', 'ФОП_ВИС_Экономическая функция']
 
 
 status = paraSpec.check_parameters()
