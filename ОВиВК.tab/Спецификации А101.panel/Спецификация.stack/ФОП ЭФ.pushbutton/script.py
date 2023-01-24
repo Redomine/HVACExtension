@@ -9,13 +9,20 @@ import os.path as op
 import clr
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
-
+import dosymep
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
+from dosymep.Bim4Everyone.Templates import ProjectParameters
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 import sys
 import paraSpec
 from Autodesk.Revit.DB import *
 from System import Guid
 from pyrevit import revit
+from Redomine import *
 #test
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
@@ -58,11 +65,12 @@ collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPi
 
 
 def getEFsystem(element):
-    sys_name = element.LookupParameter('Имя системы').AsString()
+
+    sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
     EF = None
     if sys_name != None:
         if element in colEquipment:
-            sys_name = element.LookupParameter('Имя системы').AsString()
+            sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
             sys_name = sys_name.split(',')
             sys_name = sys_name[0]
 
@@ -72,7 +80,8 @@ def getEFsystem(element):
             EF = pipeDict[sys_name]
 
     if EF == None:
-        EF = doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString()
+
+        EF = lookupCheck(information, 'ФОП_Экономическая функция').AsString()
     return EF
 
 def copyEF(collection):
@@ -81,27 +90,29 @@ def copyEF(collection):
         if EF != None:
             ElemTypeId = element.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
-            if ElemType.LookupParameter('ФОП_Экономическая функция'):
-                if ElemType.LookupParameter('ФОП_Экономическая функция').AsString() != None:
-                    if ElemType.LookupParameter('ФОП_Экономическая функция') != "":
-                        EF = ElemType.LookupParameter('ФОП_Экономическая функция').AsString()
+
+            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция').AsString()
+
+
+            if typeEF != None or typeEF != "":
+                EF = typeEF
 
             try: #это на случай если рид онли
-                element.LookupParameter('ФОП_Экономическая функция').Set(EF)
+                lookupCheck(element, 'ФОП_Экономическая функция').Set(EF)
             except:
                 pass
 
 
 def getDependent(collection):
-
     for element in collection:
-        EF = element.LookupParameter('ФОП_Экономическая функция').AsString()
+        EF = lookupCheck(element, 'ФОП_Экономическая функция').AsString()
+
         try:
             dependent = element.GetSubComponentIds()
 
             for depend in dependent:
                 try: #это на случай ридонли
-                    doc.GetElement(depend).LookupParameter('ФОП_Экономическая функция').Set(EF)
+                    lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция').Set(EF)
                 except:
                     pass
         except Exception:
@@ -114,15 +125,20 @@ def getSystemDict(collection):
         if system.Name not in Dict:
             ElemTypeId = system.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
-            if ElemType.LookupParameter('ФОП_ВИС_Экономическая функция'):
-                if ElemType.LookupParameter('ФОП_ВИС_Экономическая функция') != None:
-                    if ElemType.LookupParameter('ФОП_ВИС_Экономическая функция') != "":
-                        EF = ElemType.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
+
+            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция')
+
+
+            if typeEF:
+                if typeEF != None:
+                    if typeEF.AsString() != "":
+                        EF = typeEF.AsString()
                         Dict[system.Name] = EF
             else:
-                if system.LookupParameter('ФОП_ВИС_Экономическая функция').AsString() != None:
-                    if system.LookupParameter('ФОП_ВИС_Экономическая функция').AsString() != "":
-                        EF = system.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
+                systemEF = lookupCheck(system, 'ФОП_ВИС_Экономическая функция')
+                if systemEF.AsString() != None:
+                    if systemEF.AsString() != "":
+                        EF = systemEF.AsString()
                         Dict[system.Name] = EF
     return Dict
 
@@ -130,8 +146,10 @@ def getSystemDict(collection):
 status = paraSpec.check_parameters()
 
 if not status:
+    information = doc.ProjectInformation
     try:
-        if doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString() == None:
+
+        if lookupCheck(information, 'ФОП_Экономическая функция').AsString() == None:
             print 'ФОП_Экономическая функция не заполнен в сведениях о проекте'
             sys.exit()
     except Exception:

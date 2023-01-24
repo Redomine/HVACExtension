@@ -11,6 +11,7 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 import dosymep
+
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
@@ -31,10 +32,13 @@ def get_D_type(element):
     ElemTypeId = element.GetTypeId()
     ElemType = doc.GetElement(ElemTypeId)
 
-    if ElemType.LookupParameter('ФОП_ВИС_Ду').AsInteger() == 1: type = "Ду"
-    elif ElemType.LookupParameter('ФОП_ВИС_Ду х Стенка').AsInteger() == 1: type = "Ду х Стенка"
+    if lookupCheck(ElemType, 'ФОП_ВИС_Ду').AsInteger() == 1: type = "Ду"
+    elif lookupCheck(ElemType, 'ФОП_ВИС_Ду х Стенка').AsInteger() == 1: type = "Ду х Стенка"
     else: type = "Днар х Стенка"
     return type
+
+
+
 
 def duct_thickness(element):
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
@@ -74,15 +78,16 @@ def duct_thickness(element):
         el = doc.GetElement(elid)
         ElemTypeId = el.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
-            min_thickness = ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
+
+        if getParameter(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода'):
+            min_thickness = lookupCheck(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
             if min_thickness == None: min_thickness = 0
             if float(thickness) < min_thickness: thickness = str(min_thickness)
 
     ElemTypeId = element.GetTypeId()
     ElemType = doc.GetElement(ElemTypeId)
-    if ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода'):
-        min_thickness = ElemType.LookupParameter('ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
+    if getParameter(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода'):
+        min_thickness = lookupCheck(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
         if min_thickness == None: min_thickness = 0
         if float(thickness) < min_thickness: thickness = str(min_thickness)
 
@@ -95,7 +100,7 @@ def getDuct(connector):
         mainCon.append(connectorSet.Current)
 
     for con in mainCon:
-        if con.Owner.LookupParameter('ФОП_ВИС_Группирование'):
+        if getParameter(con.Owner, 'ФОП_ВИС_Группирование'):
             if str(con.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves)):
                 duct = con.Owner
                 return duct
@@ -153,7 +158,8 @@ def get_fitting_area(element):
 
 def get_depend(element):
     parent = element.get_Parameter(BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM).AsValueString()
-    parent_group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
+    parent_group = lookupCheck(element,'ФОП_ВИС_Группирование').AsString()
+
     subIds = element.GetSubComponentIds()
     vkheat_collector = []
     for subId in subIds:
@@ -199,11 +205,12 @@ class vkheat_collector_part:
 
         ElemTypeId = self.element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.LookupParameter('ФОП_ВИС_Поставляется отдельно от узла'):
+
+        if getParameter(ElemType, 'ФОП_ВИС_Поставляется отдельно от узла'):
             self.isKit = False
     def reinsert(self, number):
-        self.FOP_name = self.element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
-        self.FOP_group = self.element.LookupParameter('ФОП_ВИС_Группирование')
+        self.FOP_name = lookupCheck(self.element, 'ФОП_ВИС_Наименование комбинированное')
+        self.FOP_group =lookuoCheck(self.element, 'ФОП_ВИС_Группирование')
         new_group = self.parent_group + self.group
 
         if (str(number) + '. ') not in self.FOP_name.AsString():
@@ -243,7 +250,7 @@ class shedule_position:
                             if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
                                 ElemTypeId = el.Owner.GetTypeId()
                                 ElemType = doc.GetElement(ElemTypeId)
-                                if ElemType.LookupParameter('ФОП_ВИС_Учитывать фитинги').AsInteger() != 1:
+                                if lookupCheck(ElemType, 'ФОП_ВИС_Учитывать фитинги').AsInteger() != 1:
                                     New_Name = '!Не учитывать'
         except Exception:
             pass
@@ -291,7 +298,7 @@ class shedule_position:
                 for el in con.AllRefs:
                     if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                         insType = doc.GetElement(el.Owner.GetTypeId())
-                        if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                        if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
                             insName = get_ADSK_Name(el.Owner)
                             if insName == 'None':
                                 insName = 'None_Изоляция'
@@ -306,7 +313,7 @@ class shedule_position:
             for connector in connectors:
                 for el in connector.AllRefs:
                     if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
-                        pipe_name = el.Owner.LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+                        pipe_name = lookupCheck(el.Owner, 'ФОП_ВИС_Наименование комбинированное').AsString()
                         if pipe_name == None:
                             continue
                         if pipe_name[-1] == '.':
@@ -329,17 +336,20 @@ class shedule_position:
                     if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                         insType = doc.GetElement(el.Owner.GetTypeId())
                         try:
-                            if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                            if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
                                 if get_ADSK_Name(el.Owner) not in New_Name:
                                     New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
                         except Exception:
                             pass
 
+
+
+
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
 
             insType = doc.GetElement(element.GetTypeId())
             try:
-                if insType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
                     New_Name = '!Не учитывать'
             except Exception:
                 pass
@@ -379,10 +389,10 @@ class shedule_position:
 
     def shedNumber(self, element):
         # Переменные для расчета
-        length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
-            'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
-        isol_reserve = 1 + (
-                doc.ProjectInformation.LookupParameter('ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+
+        length_reserve = 1 + (lookupCheck(information, 'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+        isol_reserve = 1 + (lookupCheck(information, 'ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+
 
 
         if element.Id.IntegerValue == 2834097:
@@ -482,16 +492,19 @@ class shedule_position:
                 self.isSingle = params.isSingle
 
         self.element = element
-        self.FOP_System = element.LookupParameter('ФОП_ВИС_Имя системы')
-        self.FOP_EF = element.LookupParameter('ФОП_Экономическая функция')
-        self.FOP_group = element.LookupParameter('ФОП_ВИС_Группирование')
-        self.FOP_name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
-        self.FOP_number = element.LookupParameter('ФОП_ВИС_Число')
-        self.FOP_izm = element.LookupParameter('ФОП_ВИС_Единица измерения')
-        self.FOP_Mark = element.LookupParameter('ФОП_ВИС_Марка')
-        self.FOP_pos = element.LookupParameter('ФОП_ВИС_Позиция')
-        self.FOP_code = element.LookupParameter('ФОП_ВИС_Код изделия')
-        self.FOP_maker = element.LookupParameter('ФОП_ВИС_Завод-изготовитель')
+
+
+        self.FOP_System = lookupCheck(element, 'ФОП_ВИС_Имя системы')
+        self.FOP_EF = lookupCheck(element,'ФОП_Экономическая функция')
+        self.FOP_group = lookupCheck(element, 'ФОП_ВИС_Группирование')
+        self.FOP_name = lookupCheck(element, 'ФОП_ВИС_Наименование комбинированное')
+        self.FOP_number = lookupCheck(element, 'ФОП_ВИС_Число')
+        self.FOP_izm = lookupCheck(element, 'ФОП_ВИС_Единица измерения')
+        self.FOP_Mark = lookupCheck(element, 'ФОП_ВИС_Марка')
+        self.FOP_pos = lookupCheck(element, 'ФОП_ВИС_Позиция')
+        self.FOP_code = lookupCheck(element, 'ФОП_ВИС_Код изделия')
+        self.FOP_maker = lookupCheck(element, 'ФОП_ВИС_Завод-изготовитель')
+
 
 
         self.ADSK_maker = get_ADSK_Maker(element)
@@ -505,11 +518,11 @@ class shedule_position:
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if ElemType.LookupParameter('ФОП_ВИС_Индивидуальный запас'):
-            self.stock = ElemType.LookupParameter('ФОП_ВИС_Индивидуальный запас').AsDouble()
+        if getParameter(ElemType, 'ФОП_ВИС_Индивидуальный запас'):
+            self.stock = lookupCheck(ElemType, 'ФОП_ВИС_Индивидуальный запас').AsDouble()
 
-        if ElemType.LookupParameter('ФОП_ВИС_Узел'):
-            if ElemType.LookupParameter('ФОП_ВИС_Узел').AsInteger() == 1:
+        if getParameter(ElemType, 'ФОП_ВИС_Узел'):
+            if lookupCheck(ElemType, 'ФОП_ВИС_Узел').AsInteger() == 1:
                 vis_collectors.append(element)
 
 
@@ -582,6 +595,7 @@ def script_execute():
 parametersAdded = paraSpec.check_parameters()
 
 if not parametersAdded:
+    information = doc.ProjectInformation
     with revit.Transaction("Обновление девятиграфной формы"):
         #список элементов для перебора в вид узлов:
         vis_collectors = []
@@ -590,5 +604,5 @@ if not parametersAdded:
         for report in report_rows:
             print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
 
-    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or doc.ProjectInformation.LookupParameter('ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
+    if lookupCheck(information, 'ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or lookupCheck(information, 'ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
         import numerateSpec
