@@ -32,6 +32,22 @@ import clr
 
 output = script.get_output()
 
+
+def getParameter(element, paraName):
+    try:
+        parameter = element.LookupParameter(paraName)
+        return parameter
+    except:
+        return None
+
+def lookupCheck(element, paraName):
+    parameter = getParameter(element, paraName)
+
+    if parameter:
+        return parameter
+    else:
+        print 'Параметр ' + paraName + ' не назначен для категории ' + element.Category.Name
+        sys.exit()
 def getSharedParameter (element, paraName, replaceName):
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         if paraName == 'ADSK_Наименование':

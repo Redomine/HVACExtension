@@ -158,7 +158,6 @@ def script_execute():
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
         shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, visEFCatSet, istype=True)
 
-
         shared_parameter('ФОП_Номер корпуса', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Помещение', arDefinitions, defaultCatSet)
         shared_parameter('ФОП_Номер секции', genDefinitions, defaultCatSet)
