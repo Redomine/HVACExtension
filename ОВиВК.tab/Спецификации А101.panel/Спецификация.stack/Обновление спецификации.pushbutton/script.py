@@ -298,7 +298,7 @@ class shedule_position:
                 for el in con.AllRefs:
                     if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
                         insType = doc.GetElement(el.Owner.GetTypeId())
-                        if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() != 1:
+                        if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
                             insName = get_ADSK_Name(el.Owner)
                             if insName == 'None':
                                 insName = 'None_Изоляция'
