@@ -342,6 +342,9 @@ class shedule_position:
                         except Exception:
                             pass
 
+
+
+
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
 
             insType = doc.GetElement(element.GetTypeId())
@@ -489,6 +492,8 @@ class shedule_position:
                 self.isSingle = params.isSingle
 
         self.element = element
+
+
         self.FOP_System = lookupCheck(element, 'ФОП_ВИС_Имя системы')
         self.FOP_EF = lookupCheck(element,'ФОП_Экономическая функция')
         self.FOP_group = lookupCheck(element, 'ФОП_ВИС_Группирование')
@@ -598,8 +603,6 @@ if not parametersAdded:
         script_execute()
         for report in report_rows:
             print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
-
-
 
     if lookupCheck(information, 'ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or lookupCheck(information, 'ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
         import numerateSpec

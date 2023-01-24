@@ -46,7 +46,7 @@ def lookupCheck(element, paraName):
     if parameter:
         return parameter
     else:
-        print 'Параметр ' + paraName + ' не назначен для категории ' + element.Category.Name
+        print 'Параметр ' + paraName + ' не назначен для категории ' + element.Category.Name + ' (ID элемента на котором найдена ошибка ' + str(element.Id) +")"
         sys.exit()
 def getSharedParameter (element, paraName, replaceName):
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
