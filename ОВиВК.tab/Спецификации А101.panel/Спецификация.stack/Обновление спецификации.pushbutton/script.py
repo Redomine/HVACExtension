@@ -11,6 +11,7 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 import dosymep
+
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
