@@ -56,12 +56,15 @@ class elementOfBranch:
         self.connectedElements = []
         self.XYZ = None
         self.level = 0
+        self.prevCurve = None
+        self.nextCurve = None
 
 class branch:
     def __init__(self):
         self.curves = []
         self.fittings = []
         self.elementCount = 0
+        self.numberOfMarks = 0
 
 def getConnectors(element):
     connectors = []
@@ -98,7 +101,10 @@ def pick_elements(uidoc):
     return result
 
 def isDuctOrPipe(element):
-    if element.Category.IsId(BuiltInCategory.OST_DuctCurves) or element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves) \
+            or element.Category.IsId(BuiltInCategory.OST_PipeCurves) \
+            or element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves) \
+            or element.Category.IsId(BuiltInCategory.OST_FlexPipeCurves):
         return True
     else:
         return False
@@ -147,28 +153,38 @@ def findCurves(element, list):
 def getConnectedCurves(curve):
 
     nextCurves = []  # type: List
+
     for element in curve.connectedElements:
+
         nextCurves = findCurves(element, nextCurves)
+
 
     if len(nextCurves) == 0:
         return None
+
+
     nextCurves = optimizeList(nextCurves)
     nextCurve = makeCurve(nextCurves[0], number=(curve.numberInLine + 1))  # type: elementOfBranch
 
+
+
     if len(nextCurves) > 1:
         nextCurves.pop(0)
-
-        for curve in nextCurves:
-            branchesStarts.append(curve)
+        for newBranchStart in nextCurves:
+            newBranchStart = makeCurve(newBranchStart, 0)
+            newBranchStart.prevCurve = curve
+            branchesStarts.append(newBranchStart)
 
     return nextCurve
+
+
 
 def makeCurve(element, number):
     trashElements.append(element.Id)
     curve = elementOfBranch()  # type: elementOfBranch
     curve.element = element
 
-    XYZ = element.Location.Curve.Origin
+    #XYZ = element.Location.Curve.Origin
 
     start = element.Location.Curve.GetEndPoint(0)
     end = element.Location.Curve.GetEndPoint(1)
@@ -183,10 +199,10 @@ def makeCurve(element, number):
     curve.level = midZ
     curve.XYZ = pt
 
-    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves) or  element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
         curve.flow = element.GetParamValue(BuiltInParameter.RBS_DUCT_FLOW_PARAM)
 
-    if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+    if element.Category.IsId(BuiltInCategory.OST_PipeCurves) or element.Category.IsId(BuiltInCategory.OST_FlexPipeCurves):
         curve.flow = element.GetParamValue(BuiltInParameter.RBS_PIPE_FLOW_PARAM)
 
     try:
@@ -194,7 +210,12 @@ def makeCurve(element, number):
         curve.height = element.Height
 
     except:
-        curve.diameter = element.Diameter
+        d = element.Diameter * 304.8
+        d = float('{:.3f}'.format(d))
+        curve.diameter = d
+
+
+        #curve = element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
 
     connectors = getConnectors(element)
 
@@ -216,9 +237,10 @@ def isGoOn(branch, curve):
         isGoOn(branch, nextCurve)
     return branch
 
-def buildBranch(element):
+def buildBranch(curve):
+
     newBranch = branch() # type: branch
-    curve = makeCurve(element, number = 0) # type: elementOfBranch
+    #curve = makeCurve(element, number = 0) # type: elementOfBranch
     newBranch.curves.append(curve)
     newBranch = isGoOn(newBranch, curve)
     branches.append(newBranch)
@@ -230,108 +252,106 @@ def isSizeEqual(curve_1, curve_2):
     if curve_1.height != curve_2.height:
         return False
 
+
     if curve_1.diameter != curve_2.diameter:
         return False
 
     return True
 
 def isFlowEqual(curve_1, curve_2):
-    if curve_1.flow != curve_2.flow:
-        return False
 
     if curve_1.flow != curve_2.flow:
         return False
-
-    if curve_1.flow != curve_2.flow:
-        return False
-
-    return True
-
-def isLevelEqual(curve_1, curve_2):
-    if curve_1.level != curve_2.level:
-        return False
-
 
     return True
 
 def placeMark(curve):
-
     ref = Reference(curve.element)
     tagMode = TagMode.TM_ADDBY_CATEGORY
     tagorn = TagOrientation.Horizontal
-
-
     IndependentTag.Create(doc, doc.ActiveView.Id, ref, True, tagMode, tagorn, curve.XYZ)
 
 
+
 def compareCurves(branch, bySize, byFlow, byLevel):
-    sizeStatus = True
-    flowStatus = True
-    levelStatus = True
+    lastMarked = None
 
     if len(branch.curves) == 0:
         return None
 
-    # if len(branch.curves) == 1:
-    #     placeMark(branch.curves[0])
-
-    # print len(branch.curves)
-    # if len(branch.curves) == 2:
-    #     print branch.curves[0].element.Id
-    #     print branch.curves[1].element.Id
-    # print bySize
-    # print byFlow
-    # print byLevel
     curvesToMark = []
 
-    #placeMark(branch.curves[0])  # в любом случае макируем первый элемент
-    # if len(branch.curves) > 1:
-    #     placeMark(branch.curves[-1])  # в любом случае макируем последний элемент
+    #находим предыдущие и следующие если они есть
+    for curve in branch.curves: # type: elementOfBranch
+        sizeStatus = True
+        flowStatus = True
 
-    for curve in branch.curves:
         index = curve.numberInLine
-        markNext = True
-        isLastOfBranch = False
+
+
+        if not curve.prevCurve:
+            try:
+                curve.prevCurve = branch.curves[index - 1]
+            except:
+                pass
+
 
         try:
-            compareCurve = branch.curves[index + 1]
+            curve.nextCurve = branch.curves[index + 1]
         except:
-            compareCurve = branch.curves[index - 1]
-            markNext = False
+            pass
+
+        if curve.prevCurve:
+            if bySize:
+                if sizeStatus:
+                    sizeStatus = isSizeEqual(curve, curve.prevCurve)
+
+            if byFlow:
+                if flowStatus:
+                    flowStatus = isFlowEqual(curve, curve.prevCurve)
 
 
-        if bySize:
-            sizeStatus = isSizeEqual(curve, compareCurve)
+        if curve.nextCurve:
+            if bySize:
+                if sizeStatus:
+                    sizeStatus = isSizeEqual(curve, curve.nextCurve)
 
-        if byFlow:
-            flowStatus = isFlowEqual(curve, compareCurve)
+            if byFlow:
+                if flowStatus:
+                    flowStatus = isFlowEqual(curve, curve.nextCurve)
 
-        if byLevel:
-            levelStatus = isLevelEqual(curve, compareCurve)
 
-        # if curve == branch.curves[-1]:
-        #     isLastOfBranch = True
 
-        # print sizeStatus
-        # print levelStatus
-        # print flowStatus
 
-        if isLastOfBranch:
-            curvesToMark.append(curve)
-        else:
-            if not sizeStatus or not flowStatus or not levelStatus:
+        if not sizeStatus or not flowStatus:
 
-                if curve not in curvesToMark and not markNext:
+
+
+            if lastMarked:
+                if bySize and byFlow:
+                    if not isSizeEqual(curve, lastMarked) and isFlowEqual(curve, lastMarked):
+                        if curve not in curvesToMark:
+                            curvesToMark.append(curve)
+                if bySize:
+                    if not isSizeEqual(curve, lastMarked):
+                        if curve not in curvesToMark:
+                            curvesToMark.append(curve)
+
+
+            else:
+                if curve not in curvesToMark:
                     curvesToMark.append(curve)
-                if compareCurve not in curvesToMark and markNext:
-                    curvesToMark.append(compareCurve)
-        if len(curvesToMark) == 0:
-            curvesToMark.append(branch.curves[0])
+
+            lastMarked = curve
+
 
 
     for curve in curvesToMark:
-        if curve.numberInLine != 0: # первый и последний элемент уже промаркирован
+        try: #просто на случай если нет марок или нельзя на этом виде их ставить, потом добавим проверку
             placeMark(curve)
+        except:
+            pass
+        branch.numberOfMarks+=1
 
 
 
@@ -351,33 +371,27 @@ def execute(bySize = False, byFlow = False, byLevel = False):
     #циклично перебираем начиная с стартового отрезка элементы и собираем в список ответвлений
     selectedIds = uidoc.Selection.GetElementIds()
     startElement = pick_elements(uidoc) #элемент-начало ответвления
-    branchesStarts.append(startElement)
+    branchesStarts.append(makeCurve(startElement, 0))
 
     while len(branchesStarts) > 0:
+
         buildBranch(branchesStarts[0])
+
         branchesStarts.pop(0)
 
 
 
-    #выбираем марку
-    mark = FilteredElementCollector(doc)
-    if startElement.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        mark.OfClass(FamilySymbol).OfCategory(BuiltInCategory.OST_DuctTags).FirstElement()
-    if startElement.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        mark.OfClass(FamilySymbol).OfCategory(BuiltInCategory.OST_GenericAnnotation).FirstElement()
-
-
-
-    mark = doc.GetElement(ElementId(int(1673226)))
-    # for el in mark:
-    #     print el.Id
-    #     mark = el
-
     with revit.Transaction("Маркировка элементов"):
-        placeMark(branches[0].curves[0])
+
         for branch in branches:
             #сравниваем и маркируем соседние участки воздуховодов
             compareCurves(branch, bySize, byFlow, byLevel)
+
+            if branch.numberOfMarks == 0:
+                try:
+                    placeMark(branch.curves[0])
+                except:
+                    pass
 
 
 
