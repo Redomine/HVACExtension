@@ -79,44 +79,52 @@ def getEFsystem(element):
         if sys_name in pipeDict:
             EF = pipeDict[sys_name]
 
-    if EF == None:
+
+
+    if str(EF) == 'None':
 
         EF = lookupCheck(information, 'ФОП_Экономическая функция').AsString()
+
     return EF
 
 def copyEF(collection):
     for element in collection:
+
         EF = getEFsystem(element)
+
         if EF != None:
             ElemTypeId = element.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
 
             typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция').AsString()
 
+            if typeEF:
+                if str(typeEF) != 'None' or typeEF != "":
+                    EF = typeEF
 
-            if typeEF != None or typeEF != "":
-                EF = typeEF
 
-            try: #это на случай если рид онли
-                lookupCheck(element, 'ФОП_Экономическая функция').Set(EF)
-            except:
-                pass
+            parameter = lookupCheck(element, 'ФОП_Экономическая функция')
+            setIfNotRO(parameter, EF)
 
 
 def getDependent(collection):
     for element in collection:
         EF = lookupCheck(element, 'ФОП_Экономическая функция').AsString()
 
+        dependent = None
         try:
             dependent = element.GetSubComponentIds()
-
-            for depend in dependent:
-                try: #это на случай ридонли
-                    lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция').Set(EF)
-                except:
-                    pass
-        except Exception:
+        except:
             pass
+
+        if dependent:
+            for depend in dependent:
+                for list in collections:
+                    if depend in list:
+                        parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
+                        setIfNotRO(parameter, EF)
+
+
 
 
 def getSystemDict(collection):
@@ -126,7 +134,7 @@ def getSystemDict(collection):
             ElemTypeId = system.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
 
-            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция')
+            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция', isExit = False)
 
 
             if typeEF:
@@ -148,7 +156,6 @@ status = paraSpec.check_parameters()
 if not status:
     information = doc.ProjectInformation
     try:
-
         if lookupCheck(information, 'ФОП_Экономическая функция').AsString() == None:
             print 'ФОП_Экономическая функция не заполнен в сведениях о проекте'
             sys.exit()
