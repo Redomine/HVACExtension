@@ -36,40 +36,18 @@ def make_col(category):
                             .ToElements()
     return col
 
+collections = getDefCols()
 
 
-
-colFittings = make_col(BuiltInCategory.OST_DuctFitting)
-colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
-colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
-colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
-colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
-colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
-colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
-colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
-colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
-colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
-colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
-colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
-
-
-collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures]
-
-
-
-
-
 
 def getEFsystem(element):
 
     sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
     EF = None
     if sys_name != None:
-        if element in colEquipment:
+        if element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
             sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
             sys_name = sys_name.split(',')
             sys_name = sys_name[0]
@@ -149,7 +127,6 @@ def getSystemDict(collection):
                         EF = systemEF.AsString()
                         Dict[system.Name] = EF
     return Dict
-
 
 status = paraSpec.check_parameters()
 

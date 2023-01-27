@@ -46,6 +46,31 @@ def setIfNotRO(parameter, value):
 
 
 
+def getDefCols():
+    colFittings = make_col(BuiltInCategory.OST_DuctFitting)
+    colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
+    colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+    colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+    colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
+    colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
+    colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
+    colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
+    colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
+    colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
+    colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
+    colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+    colPlumbingFixtures = make_col(BuiltInCategory.OST_PlumbingFixtures)
+    colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
+
+    collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colInsulations,
+                   colPipeInsulations, colPipeCurves, colSprinklers, colAccessory,
+                   colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
+
+    return collections
+
+
+
+
 output = script.get_output()
 def lookupCheck(element, paraName, isExit = True):
     type = 'экземпляра '
