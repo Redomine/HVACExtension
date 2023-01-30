@@ -40,14 +40,56 @@ def getParameter(element, paraName):
     except:
         return None
 
-def lookupCheck(element, paraName):
+def setIfNotRO(parameter, value):
+    if not parameter.IsReadOnly:
+        parameter.Set(value)
+
+
+
+def getDefCols():
+    colFittings = make_col(BuiltInCategory.OST_DuctFitting)
+    colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
+    colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+    colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+    colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
+    colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
+    colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
+    colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
+    colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
+    colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
+    colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
+    colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+    colPlumbingFixtures = make_col(BuiltInCategory.OST_PlumbingFixtures)
+    colSprinklers = make_col(BuiltInCategory.OST_Sprinklers)
+
+    collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colInsulations,
+                   colPipeInsulations, colPipeCurves, colSprinklers, colAccessory,
+                   colPipeAccessory, colTerminals, colEquipment, colPlumbingFixtures]
+
+    return collections
+
+
+
+
+output = script.get_output()
+def lookupCheck(element, paraName, isExit = True):
+    type = 'экземпляра '
+    try:
+        if element.GetTypeId():
+            type = 'типа '
+    except:
+        pass
+
     parameter = getParameter(element, paraName)
 
     if parameter:
         return parameter
     else:
-        print 'Параметр ' + paraName + ' не назначен для категории ' + element.Category.Name + ' (ID элемента на котором найдена ошибка ' + str(element.Id) +")"
-        sys.exit()
+        if isExit:
+            print 'Параметр ' + type + paraName + ' не назначен для категории ' + element.Category.Name + ' (ID элемента на котором найдена ошибка ' + output.linkify(element.Id) +")"
+            sys.exit()
+        else:
+            return None
 def getSharedParameter (element, paraName, replaceName):
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         if paraName == 'ADSK_Наименование':

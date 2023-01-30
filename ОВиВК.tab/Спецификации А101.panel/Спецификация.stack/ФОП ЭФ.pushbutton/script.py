@@ -36,40 +36,18 @@ def make_col(category):
                             .ToElements()
     return col
 
+collections = getDefCols()
 
 
-
-colFittings = make_col(BuiltInCategory.OST_DuctFitting)
-colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
-colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
-colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
-colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
-colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
-colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
-colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
-colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
-colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
-colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
-colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
-
-
-collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures]
-
-
-
-
-
 
 def getEFsystem(element):
 
     sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
     EF = None
     if sys_name != None:
-        if element in colEquipment:
+        if element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
             sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
             sys_name = sys_name.split(',')
             sys_name = sys_name[0]
@@ -79,44 +57,52 @@ def getEFsystem(element):
         if sys_name in pipeDict:
             EF = pipeDict[sys_name]
 
-    if EF == None:
+
+
+    if str(EF) == 'None':
 
         EF = lookupCheck(information, 'ФОП_Экономическая функция').AsString()
+
     return EF
 
 def copyEF(collection):
     for element in collection:
+
         EF = getEFsystem(element)
+
         if EF != None:
             ElemTypeId = element.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
 
             typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция').AsString()
 
+            if typeEF:
+                if str(typeEF) != 'None' or typeEF != "":
+                    EF = typeEF
 
-            if typeEF != None or typeEF != "":
-                EF = typeEF
 
-            try: #это на случай если рид онли
-                lookupCheck(element, 'ФОП_Экономическая функция').Set(EF)
-            except:
-                pass
+            parameter = lookupCheck(element, 'ФОП_Экономическая функция')
+            setIfNotRO(parameter, EF)
 
 
 def getDependent(collection):
     for element in collection:
         EF = lookupCheck(element, 'ФОП_Экономическая функция').AsString()
 
+        dependent = None
         try:
             dependent = element.GetSubComponentIds()
-
-            for depend in dependent:
-                try: #это на случай ридонли
-                    lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция').Set(EF)
-                except:
-                    pass
-        except Exception:
+        except:
             pass
+
+        if dependent:
+            for depend in dependent:
+                for list in collections:
+                    if depend in list:
+                        parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
+                        setIfNotRO(parameter, EF)
+
+
 
 
 def getSystemDict(collection):
@@ -126,7 +112,7 @@ def getSystemDict(collection):
             ElemTypeId = system.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
 
-            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция')
+            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция', isExit = False)
 
 
             if typeEF:
@@ -142,13 +128,11 @@ def getSystemDict(collection):
                         Dict[system.Name] = EF
     return Dict
 
-
 status = paraSpec.check_parameters()
 
 if not status:
     information = doc.ProjectInformation
     try:
-
         if lookupCheck(information, 'ФОП_Экономическая функция').AsString() == None:
             print 'ФОП_Экономическая функция не заполнен в сведениях о проекте'
             sys.exit()
