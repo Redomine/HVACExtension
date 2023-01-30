@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __title__ = 'Очистка семейства'
-__doc__ = "Удаление электрических коннекторов и электрических параметров в семействе"
+__doc__ = "Удаление электрических параметров в семействе"
 
 
 import clr
@@ -53,14 +53,12 @@ spFile = doc.Application.OpenSharedParameterFile()
 
 set = doc.FamilyManager.Parameters
 
-paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',  'ADSK_Номинальная мощность', 'mS_Имя нагрузки', 'ФОП_ВИС_Нагреватель или шкаф',
-             'ФОП_ВИС_Частотный регулятор', 'mS_Координация оборудования']
+paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
+             'ADSK_Номинальная мощность', 'ФОП_ВИС_Нагреватель или шкаф', 'ФОП_ВИС_Частотный регулятор',
+                'mS_Имя нагрузки', 'mS_Координация оборудования', 'mS_Имя нагрузки Владельца', 'mS_Имя нагрузки Суффикс']
 
 
 with revit.Transaction("Добавление параметров"):
-    for connector in connectorCol:
-        if str(connector.Domain) == "DomainElectrical":
-            doc.Delete(connector.Id)
 
     for param in set:
         if str(param.Definition.Name) in paraNames:

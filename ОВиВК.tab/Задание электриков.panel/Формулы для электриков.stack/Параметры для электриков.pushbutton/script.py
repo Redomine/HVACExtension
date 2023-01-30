@@ -10,6 +10,13 @@ clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
+
+import dosymep
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
+
 import sys
 import System
 import math
@@ -28,39 +35,45 @@ import os
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
-
-
 def make_col(category):
     col = FilteredElementCollector(doc)\
                             .OfCategory(category)\
                             .WhereElementIsNotElementType()\
                             .ToElements()
-    return col 
-    
+    return col
+
 connectorCol = make_col(BuiltInCategory.OST_ConnectorElem)
 loadsCol = make_col(BuiltInCategory.OST_ElectricalLoadClassifications)
 
-try:
-    manager = doc.FamilyManager
-except Exception:
-    print "Надстройка предназначена для работы с семействами"
-    sys.exit()
+
+
 
 def associate(param, famparam):
+    manager = doc.FamilyManager
     manager.AssociateElementParameterToFamilyParameter(param, famparam)
 
 
 
-set = doc.FamilyManager.Parameters
 
+fullParaList = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
+             'ADSK_Номинальная мощность', 'ФОП_ВИС_Нагреватель или шкаф', 'ФОП_ВИС_Частотный регулятор',
+                'mS_Имя нагрузки', 'mS_Координация оборудования', 'mS_Имя нагрузки Владельца', 'mS_Имя нагрузки Суффикс']
 
-
-paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
+paraNamesADSK = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
              'ADSK_Номинальная мощность']
 
-paraNames_V1 = ['ФОП_ВИС_Нагреватель или шкаф', 'ФОП_ВИС_Частотный регулятор', 'mS_Имя нагрузки', 'mS_Координация оборудования']
+paraNamesFOP = ['ФОП_ВИС_Нагреватель или шкаф', 'ФОП_ВИС_Частотный регулятор']
+paraNamesMS = ['mS_Имя нагрузки', 'mS_Координация оборудования', 'mS_Имя нагрузки Владельца', 'mS_Имя нагрузки Суффикс']
 
-notFormula = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз']
+
+class familyParam:
+    def __init__(self):
+        self.Name = None
+        self.Param = None
+        self.Formula = None
+        self.defaultValue = None
+        self.connectorParam = None
+
 
 
 def update_fop(version):
@@ -89,26 +102,97 @@ def update_fop(version):
     return spFile
 
 
-connectorNum = 0
-try:
-    for connector in connectorCol:
-        if str(connector.Domain) == "DomainElectrical":
-            connectorNum = connectorNum + 1
-except Exception:
-    print "Не найдено электрических коннекторов, должен быть один"
-    sys.exit()
+def check_cons():
+    connectorNum = 0
+    try:
+        for connector in connectorCol:
+            if str(connector.Domain) == "DomainElectrical":
+                connectorNum = connectorNum + 1
+    except Exception:
+        print "Не найдено электрических коннекторов, должен быть один"
+        sys.exit()
+
+    if connectorNum > 1:
+        print "Электрических коннекторов больше одного, удалите лишние"
+        sys.exit()
+
+    if connectorNum == 0:
+        print "Не найдено электрических коннекторов, должен быть один"
+        sys.exit()
+
+def isFormulaExist(name):
+    if name == 'ADSK_Количество фаз':
+        return  "if(ADSK_Напряжение < 250 В, 1, 3)"
+
+    if name == 'ADSK_Коэффициент мощности':
+        return 'if(ФОП_ВИС_Частотный регулятор, 0.95, if(ФОП_ВИС_Нагреватель или шкаф, 1, if(ADSK_Номинальная мощность < 1000 Вт, 0.65, if(ADSK_Номинальная мощность < 4000 Вт, 0.75, 0.85))))'
+
+    if name == 'ADSK_Полная мощность':
+        return "ADSK_Номинальная мощность / ADSK_Коэффициент мощности"
+    return None
+
+def isDefaultExist(name):
+    if name == 'ФОП_ВИС_Нагреватель или шкаф':
+        return 0
+    if name == 'ФОП_ВИС_Частотный регулятор':
+        return 0
+    return None
+
+def isConnectorParaExist(name):
+    if name == 'ADSK_Коэффициент мощности':
+        return BuiltInParameter.RBS_ELEC_POWER_FACTOR  # коэффициент мощности
+
+    if name == 'ADSK_Напряжение':
+        return BuiltInParameter.RBS_ELEC_VOLTAGE  # напряжение
+
+    if name == 'ADSK_Полная мощность':
+        return BuiltInParameter.RBS_ELEC_APPARENT_LOAD  # полная мощность
+
+    if name == 'ADSK_Количество фаз':
+        return BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES  # количество полюсов
 
 
-if connectorNum > 1:
-    print "Электрических коннекторов больше одного, удалите лишние"
-    sys.exit()
-
-if connectorNum == 0:
-    print "Не найдено электрических коннекторов, должен быть один"
-    sys.exit()
+    return None
 
 
-with revit.Transaction("Добавление параметров"):
+def add_para_group(paraNames, group, fopName):
+    manager = doc.FamilyManager
+
+    spFile = update_fop(fopName)
+
+    for dG in spFile.Groups:
+        for name in paraNames:
+            if str(dG.Name) == group:
+                myDefinitions = dG.Definitions
+                eDef = myDefinitions.get_Item(name)
+
+
+                newPara = familyParam()
+
+                newPara.Name = name
+                newPara.Param = manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
+                newPara.Formula = isFormulaExist(name)
+                newPara.defaultValue = isDefaultExist(name)
+                newPara.connectorParam = isConnectorParaExist(name)
+
+                newParams.append(newPara)
+
+
+
+newParams = []
+def main():
+    try:
+        manager = doc.FamilyManager
+        global manager
+    except Exception:
+        print "Надстройка предназначена для работы с семействами"
+        sys.exit()
+
+    projectParams = doc.FamilyManager.Parameters
+
+    #проверяем количество электрических коннекторов - должен быть строго один
+    check_cons()
+
     #если в семействе нет никаких типоразмеров, ревит почему-то не даст создать формулы. Создаем хотя бы один тип
     typeNumber = 0
     for type in doc.FamilyManager.Types:
@@ -116,54 +200,64 @@ with revit.Transaction("Добавление параметров"):
     if typeNumber < 1:
         doc.FamilyManager.NewType('Стандарт')
 
-
-    #удаляем формулы на элементах, к которым будут присвоены свои, чтоб избежать конфликтов
-    for param in set:
-        if str(param.Definition.Name) in notFormula:
-            manager.SetFormula(param, "1")
-
     #проверяем наличие параметров из списка имен в проекте, присваиваем им параметры типа или экземпляра
-    for param in set:
-        if str(param.Definition.Name) in paraNames:
+    for param in projectParams:
+        if str(param.Definition.Name) in paraNamesADSK:
+            paraNamesADSK.remove(param.Definition.Name)
+        if str(param.Definition.Name) in paraNamesFOP:
+            paraNamesFOP.remove(param.Definition.Name)
+        if str(param.Definition.Name) in paraNamesMS:
+            paraNamesMS.remove(param.Definition.Name)
 
-            #мощность и напряжение иногда уже проставлены и могут быть любого типа, просто их не трогаю
-            if str(param.Definition.Name) == 'ADSK_Номинальная мощность' or str(param.Definition.Name) == 'ADSK_Напряжение':
-               pass
-            else:
-                manager.MakeInstance(param)
-            paraNames.remove(param.Definition.Name)
+    #добавляем сами параметры
+    with revit.Transaction("Добавление параметров"):
+        add_para_group(paraNamesADSK, "04 Обязательные ИНЖЕНЕРИЯ", "ADSK")
 
-        if str(param.Definition.Name) in paraNames_V1:
-            manager.MakeInstance(param)
-            paraNames_V1.remove(param.Definition.Name)
+        add_para_group(paraNamesFOP, "03_ВИС", "V1")
 
-    #если в списке имен после проверки осталось что-то, добавляем параметры из списка
-    if len(paraNames) > 0:
-        spFile = update_fop("ADSK")
-        for name in paraNames:
-            for dG in spFile.Groups:
-                group = "04 Обязательные ИНЖЕНЕРИЯ"
+        add_para_group(paraNamesMS, "mySchema", "V1")
 
-                if str(dG.Name) == group:
-                    myDefinitions = dG.Definitions
-                    eDef = myDefinitions.get_Item(name)
-                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение':
-                        manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
-                    else:
-                        manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
+    #настраиваем
+    with revit.Transaction("Присвоение к коннектору"):
+        for connector in connectorCol:
+            if str(connector.Domain) == "DomainElectrical":
+                connector.SystemClassification = MEPSystemClassification.PowerBalanced
+                connector.SetParamValue(BuiltInParameter.RBS_ELEC_POWER_FACTOR_STATE, 1)
+
+        #присваеваем параметры коннектору. Не очень хорошо, что я системные параметры проверяю по имени, надо посмотреть какой-то другой вариант
+        for connector in connectorCol:
+            params = connector.GetOrderedParameters()
+            for param in params: #type: Parameter
+
+                conParaBuiltIn = param.Definition.BuiltInParameter
+
+                for newParam in newParams: #type: familyParam
+                    if newParam.connectorParam == conParaBuiltIn:
+
+                        # print conParaName
+                        # print param.Definition.ParameterType
+                        associate(param, newParam.Param)
 
 
-with revit.Transaction("Добавление параметров"):
-    spFile = update_fop("v1")
-    for dG in spFile.Groups:
-        for name in paraNames_V1:
-            group = "03_ВИС"
-            if name == 'mS_Имя нагрузки' or name == 'mS_Координация оборудования': group = "mySchema"
-            if str(dG.Name) == group:
-                myDefinitions = dG.Definitions
-                eDef = myDefinitions.get_Item(name)
 
-                if name == 'ФОП_ВИС_Нагреватель или шкаф' or name == 'ФОП_ВИС_Частотный регулятор':
-                    manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
-                else:
-                    manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
+    #почему-то не получается одно действие добавить формулы и значения
+    # with revit.Transaction("Назначение формул"):
+    #     for newParam in newParams: #type: familyParam
+    #         if newParam.defaultValue:
+    #             print 1
+    #             manager.SetFormula(newParam.Param, '1 = 0')
+    #             manager.Set(newParam.Param, 0)
+
+        # for newParam in newParams: #type: familyParam
+        #     if newParam.Formula:
+        #         print newParam.Formula
+        #         manager.SetFormula(newParam.Param, newParam.Formula)
+
+
+
+
+
+
+
+
+main()
