@@ -31,6 +31,7 @@ from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 from System import Guid
 from pyrevit import revit
+from Redomine import *
 
 
 from System.Runtime.InteropServices import Marshal
@@ -176,11 +177,15 @@ for element in famtypeitr:
         temporary = famsymb
         is_temporary_in = True
 
-
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
 
 if is_temporary_in == False:
     print 'Не обнаружен якорный элемен(пустой). Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
+
+
 
 
 status = paraSpec.check_parameters()

@@ -128,6 +128,12 @@ def getSystemDict(collection):
                         Dict[system.Name] = EF
     return Dict
 
+
+
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
+
 status = paraSpec.check_parameters()
 
 if not status:

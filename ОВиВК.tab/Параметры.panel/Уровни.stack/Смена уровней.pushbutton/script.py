@@ -15,6 +15,7 @@ from RevitServices.Persistence import DocumentManager
 from RevitServices.Transactions import TransactionManager
 from pyrevit import revit
 from rpw.ui.forms import SelectFromList
+from Redomine import *
 
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
@@ -28,6 +29,10 @@ doc = __revit__.ActiveUIDocument.Document  # type: Document
 uiapp = DocumentManager.Instance.CurrentUIApplication
 #app = uiapp.Application
 uidoc = __revit__.ActiveUIDocument
+
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
 
 
 def make_col(category):

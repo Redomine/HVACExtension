@@ -251,6 +251,10 @@ def script_execute():
     Marshal.ReleaseComObject(workbook)
     Marshal.ReleaseComObject(exel)
 
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
+
 status = paraSpec.check_parameters()
 
 if not status:

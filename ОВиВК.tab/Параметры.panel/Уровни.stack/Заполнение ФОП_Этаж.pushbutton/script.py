@@ -111,6 +111,10 @@ def script_execute():
             print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
             print "\r\n".join(report_rows)
 
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
+
 parametersAdded = paraSpec.check_parameters()
 
 if not parametersAdded:

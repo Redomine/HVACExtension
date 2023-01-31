@@ -592,14 +592,20 @@ def script_execute():
                 get_depend(element)
 
 
+
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
+
 parametersAdded = paraSpec.check_parameters()
+
+
 
 if not parametersAdded:
     information = doc.ProjectInformation
     with revit.Transaction("Обновление девятиграфной формы"):
         #список элементов для перебора в вид узлов:
         vis_collectors = []
-
         script_execute()
         for report in report_rows:
             print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report

@@ -27,6 +27,7 @@ from System.Collections.Generic import List
 from rpw.ui.forms import SelectFromList
 from System import Guid
 from pyrevit import revit
+from Redomine import *
 from Autodesk.Revit.DB.Electrical import *
 import os
 
@@ -34,6 +35,10 @@ import os
 
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
+
+if not isItFamily():
+    print 'Надстройка предназначена для работы с семействами'
+    sys.exit()
 
 def make_col(category):
     col = FilteredElementCollector(doc)\
