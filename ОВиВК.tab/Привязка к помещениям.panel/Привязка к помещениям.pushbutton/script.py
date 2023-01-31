@@ -684,6 +684,10 @@ def execute():
         # #стираем вид
         # doc.Delete(newView.Id)
 
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
+
 parametersAdded = paraSpec.check_parameters()
 
 if not parametersAdded:

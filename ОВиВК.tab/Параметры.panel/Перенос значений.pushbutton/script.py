@@ -31,6 +31,7 @@ clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Revit import ParamExtensions
+from Redomine import *
 
 import Autodesk
 from Autodesk.Revit.DB import *
@@ -290,6 +291,10 @@ def execute():
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 vs = doc.ActiveView
+
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
 
 try:
     if vs.Category.IsId(BuiltInCategory.OST_Schedules):

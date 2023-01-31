@@ -26,6 +26,7 @@ from Autodesk.Revit.DB.ExternalService import *
 from Autodesk.Revit.DB.ExtensibleStorage import *
 from System.Collections.Generic import List
 from System import Guid
+from Redomine import *
 from pyrevit import revit
 
 from dosymep.Bim4Everyone.Templates import ProjectParameters
@@ -554,6 +555,10 @@ def script_execute():
         for el in colSystems:
             sysType = doc.GetElement(el.GetTypeId())
             sysType.CalculationLevel = sysType.CalculationLevel.All
+
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
 
 script_execute()
 

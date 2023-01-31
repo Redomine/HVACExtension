@@ -21,6 +21,7 @@ import sys
 import System
 import math
 from Autodesk.Revit.DB import *
+from Redomine import *
 from Autodesk.Revit.DB import Electrical
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -31,6 +32,9 @@ from pyrevit import revit
 
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
+if not isItFamily():
+    print 'Надстройка предназначена для работы с семействами'
+    sys.exit()
 
 def make_col(category):
     col = FilteredElementCollector(doc) \

@@ -72,6 +72,14 @@ def getDefCols():
 
 
 output = script.get_output()
+
+def isItFamily():
+    try:
+        manager = doc.FamilyManager
+        return True
+    except Exception:
+        pass
+
 def lookupCheck(element, paraName, isExit = True):
     type = 'экземпляра '
     try:

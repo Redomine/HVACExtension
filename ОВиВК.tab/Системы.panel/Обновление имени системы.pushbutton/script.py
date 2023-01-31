@@ -14,6 +14,7 @@ from Autodesk.Revit.DB import *
 from Autodesk.Revit.Exceptions import *
 
 from pyrevit.script import output
+from Redomine import *
 
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
@@ -216,6 +217,10 @@ def script_execute():
 			print "\r\n".join(report_rows)
 
 		transaction.Commit()
+
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
 
 status = paraSpec.check_parameters()
 if not status:

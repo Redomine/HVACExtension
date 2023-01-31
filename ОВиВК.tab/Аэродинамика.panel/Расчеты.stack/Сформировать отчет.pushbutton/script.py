@@ -27,6 +27,7 @@ import sys
 import System
 import math
 from Autodesk.Revit.DB import *
+from Redomine import *
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
 from Autodesk.Revit.DB.ExternalService import *
@@ -37,6 +38,11 @@ from pyrevit import revit
 from pyrevit import script
 
 doc = __revit__.ActiveUIDocument.Document
+
+if isItFamily():
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
+
 uidoc = __revit__.ActiveUIDocument
 selectedIds = uidoc.Selection.GetElementIds()
 if 0 == selectedIds.Count:
