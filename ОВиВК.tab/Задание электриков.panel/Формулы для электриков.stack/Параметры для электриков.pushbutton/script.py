@@ -170,12 +170,14 @@ def add_para_group(paraNames, group, fopName):
             if str(dG.Name) == group:
                 myDefinitions = dG.Definitions
                 eDef = myDefinitions.get_Item(name)
-
-
                 newPara = familyParam()
 
+
                 newPara.Name = name
-                newPara.Param = manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
+                if name == 'mS_Имя нагрузки Владельца':
+                    newPara.Param = manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
+                else:
+                    newPara.Param = manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
                 newPara.Formula = isFormulaExist(name)
                 newPara.defaultValue = isDefaultExist(name)
                 newPara.connectorParam = isConnectorParaExist(name)
