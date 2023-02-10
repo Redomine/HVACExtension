@@ -414,7 +414,11 @@ def getElementLevelName(element):
         if element.LookupParameter('Базовый уровень'):
             level = element.LookupParameter('Базовый уровень').AsValueString()
 
-    return level
+    try:
+        return level
+    except:
+        print element.Id
+        sys.exit()
 
 def isValidSecondary(owner):
     if owner.Category.IsId(BuiltInCategory.OST_MechanicalEquipment) or owner.Category.IsId(
@@ -596,54 +600,6 @@ def execute():
                 fopLevel.Set(equipmentPoint.floorName)
 
 
-
-        # class connectorSearch:
-        #     def reinsert(self):
-        #         self.element.LookupParameter('ФОП_Помещение').Set(self.roomname)
-        #
-        #     def __init__(self, roomname, element):
-        #         self.roomname = roomname
-        #         self.element = element
-
-
-        #
-        # reinsertList = []
-        # #Снова проходим по приоритетным элементам, ищем на коннекторах владельца
-        # for collection in priorityCollections:
-        #     for element in collection: # type: Element
-        #         if element.Id.IntegerValue == 2040776:
-        #             roomname = element.LookupParameter('ФОП_Помещение').AsString()
-        #             print roomname
-        #             if roomname == 'Вне обозначенных помещений':
-        #                 print 1
-        #                 connectors = getConnectors(element)
-        #                 if connectors:
-        #                     for connector in connectors:
-        #                         for el in connector.AllRefs: #type: Connector
-        #                             print el.Owner.LookupParameter('ФОП_Помещение').AsString()
-        #                             if el.Owner.LookupParameter('ФОП_Помещение'):
-        #
-        #                                 elRoomName = el.Owner.LookupParameter('ФОП_Помещение').AsString()
-        #
-        #                                 if elRoomName != 'Вне обозначенных помещений':
-        #                                     print elRoomName
-        #                                     reinsertElement = connectorSearch(elRoomName, element)
-        #
-        #                                     # reinsertElement.element = element
-        #                                     # reinsertElement.roomName = elRoomName
-        #
-        #                                     #
-        #                                     # print reinsertElement.element
-        #                                     # print reinsertElement.roomName
-        #                                     # print reinsertElement
-        #
-        #                                     reinsertList.append(reinsertElement)
-        #
-        # for reinsertElement in reinsertList:
-        #     reinsertElement.reinsert()
-        #
-        #
-        # sys.exit()
 
         #Проходимся по второстепенным элементам модели и присваиваем им помещения приоритетных
         for collection in secondPriority:
