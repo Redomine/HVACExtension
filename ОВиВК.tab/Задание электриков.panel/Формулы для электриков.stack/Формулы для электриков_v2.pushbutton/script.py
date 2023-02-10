@@ -57,13 +57,16 @@ set = doc.FamilyManager.Parameters
 
 
 def setFormula(parameter, formula):
+
     try:
         manager.SetFormula(parameter, formula)
     except:
-        print 'Не удалось присвоить формулу к параметру ' + str(param.Definition.Name)
+
+        print 'Не удалось присвоить формулу к параметру ' + str(parameter.Definition.Name)
 
 with revit.Transaction("Добавление формул"):
     for param in set:
+
 
         if str(param.Definition.Name) == "ФОП_ВИС_Частотный регулятор": regulator = param
 
