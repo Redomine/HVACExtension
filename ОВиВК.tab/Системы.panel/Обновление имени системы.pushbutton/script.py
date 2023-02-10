@@ -216,8 +216,8 @@ def script_execute():
 		elements = get_elements()
 		report_rows = update_element(elements)
 		if report_rows:
-			output1 = output.get_output()
-			output1.set_title("Обновление атрибута \"{}\"".format(SharedParamsConfig.Instance.MechanicalSystemName.Name))
+			#output1 = output.get_output()
+			#output1.set_title("Обновление атрибута \"{}\"".format(SharedParamsConfig.Instance.MechanicalSystemName.Name))
 
 			print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
 			print "\r\n".join(report_rows)
