@@ -106,8 +106,6 @@ def getParaInd(paraName, definition):
                 sortGroupInd = index
         index += 1
 
-    param = paramCell(paraIndex, sortGroupInd, paraName)
-    param.unitType = paraType
 
     try:
         param = paramCell(paraIndex, sortGroupInd, paraName)
