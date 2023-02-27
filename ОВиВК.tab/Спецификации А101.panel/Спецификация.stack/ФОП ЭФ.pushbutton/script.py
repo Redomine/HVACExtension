@@ -74,7 +74,12 @@ def copyEF(collection):
             ElemTypeId = element.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
 
-            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция').AsString()
+            typeEF = None
+
+            try:
+                typeEF = ElemType.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
+            except:
+                pass
 
             if typeEF:
                 if str(typeEF) != 'None' or typeEF != "":
@@ -152,6 +157,8 @@ if not status:
 
 
     with revit.Transaction("Обновление общей спеки"):
+
         for collection in collections:
             copyEF(collection)
+
             getDependent(collection)
