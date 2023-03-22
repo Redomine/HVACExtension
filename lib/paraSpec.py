@@ -46,11 +46,14 @@ class shared_parameter:
                 else:
                     element.LookupParameter(name).Set(0)
 
-        if name == 'ФОП_ВИС_Запас изоляции' or name == 'ФОП_ВИС_Запас воздуховодов/труб':
-
-
+        if name == 'ФОП_ВИС_Запас воздуховодов/труб':
             inf = doc.ProjectInformation.LookupParameter(name)
             inf.Set(10)
+
+        if name == 'ФОП_ВИС_Запас изоляции':
+            inf = doc.ProjectInformation.LookupParameter(name)
+            inf.Set(15)
+
 
     def __init__(self, name, definition, set, istype = False):
         if not is_exists_params(name):
