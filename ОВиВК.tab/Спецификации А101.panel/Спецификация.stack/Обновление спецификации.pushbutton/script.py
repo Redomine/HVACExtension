@@ -442,7 +442,8 @@ class shedule_position:
                 for connector in connectors:
                     for el in connector.AllRefs:
                         if el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
-                            return get_fitting_area(el.Owner)
+
+                            return round((get_fitting_area(el.Owner)* isol_reserve), 2)
             return area
 
 
