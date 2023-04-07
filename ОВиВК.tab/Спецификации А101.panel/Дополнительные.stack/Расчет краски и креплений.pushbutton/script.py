@@ -262,8 +262,8 @@ class calculation_element:
                 isType = generation[5]
 
 
-        self.corp = str(element.LookupParameter('ФОП_Номер корпуса').AsString())
-        self.sec = str(element.LookupParameter('ФОП_Номер секции').AsString())
+        self.corp = str(element.LookupParameter('ФОП_Блок СМР').AsString())
+        self.sec = str(element.LookupParameter('ФОП_Секция СМР').AsString())
         self.floor = str(element.LookupParameter('ФОП_Этаж').AsString())
         if parameter == 'ФОП_ВИС_Совместно с воздуховодом':
             pass
@@ -305,8 +305,8 @@ def new_position(calculation_elements):
     for position in calculation_elements:
         group = position.group + position.name + position.mark
         dummy = Models[0]
-        setElement(dummy, 'ФОП_Номер корпуса', position.corp)
-        setElement(dummy, 'ФОП_Номер секции', position.sec)
+        setElement(dummy, 'ФОП_Блок СМР', position.corp)
+        setElement(dummy, 'ФОП_Секция СМР', position.sec)
         setElement(dummy, 'ФОП_Этаж', position.floor)
         try:
             setElement(dummy, 'ADSK_Имя системы', position.system)

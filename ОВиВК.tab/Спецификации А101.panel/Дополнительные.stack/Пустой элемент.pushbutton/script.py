@@ -121,8 +121,8 @@ def new_position(element):
 
 
     dummy = familyInst
-    setElement(dummy, 'ФОП_Номер корпуса', element.corp)
-    setElement(dummy, 'ФОП_Номер секции', element.sec)
+    setElement(dummy, 'ФОП_Блок СМР', element.corp)
+    setElement(dummy, 'ФОП_Секция СМР', element.sec)
     setElement(dummy, 'ФОП_Этаж', element.floor)
     setElement(dummy, 'ФОП_ВИС_Имя системы', element.system)
     setElement(dummy, 'ФОП_ВИС_Группирование', element.group)
@@ -140,8 +140,8 @@ def new_position(element):
 def script_execute():
     with revit.Transaction("Добавление расчетных элементов"):
         element = doc.GetElement(selectedIds[0])
-        corp = element.LookupParameter('ФОП_Номер корпуса').AsString()
-        sec = element.LookupParameter('ФОП_Номер секции').AsString()
+        corp = element.LookupParameter('ФОП_Блок СМР').AsString()
+        sec = element.LookupParameter('ФОП_Секция СМР').AsString()
         floor = element.LookupParameter('ФОП_Этаж').AsString()
         system = element.LookupParameter('ФОП_ВИС_Имя системы').AsString()
         parentGroup = element.LookupParameter('ФОП_ВИС_Группирование').AsString()

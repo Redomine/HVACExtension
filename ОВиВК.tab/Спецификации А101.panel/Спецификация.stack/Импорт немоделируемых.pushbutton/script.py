@@ -22,6 +22,7 @@ from pyrevit import revit
 import paraSpec
 
 from Microsoft.Office.Interop import Excel
+from Redomine import *
 from System.Runtime.InteropServices import Marshal
 from rpw.ui.forms import select_file
 from rpw.ui.forms import TextInput
@@ -106,8 +107,8 @@ def new_position(calculation_elements, phaseid):
 
         group = posGroup + posName + posMark
         dummy = Models[0]
-        setElement(dummy, 'ФОП_Номер корпуса', position.corp)
-        setElement(dummy, 'ФОП_Номер секции', position.sec)
+        setElement(dummy, 'ФОП_Блок СМР', position.corp)
+        setElement(dummy, 'ФОП_Секция СМР', position.sec)
         setElement(dummy, 'ФОП_Этаж', position.floor)
         setElement(dummy, 'ФОП_ВИС_Имя системы', position.system)
         setElement(dummy, 'ФОП_ВИС_Группирование', group)
