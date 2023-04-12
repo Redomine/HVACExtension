@@ -162,6 +162,8 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, visEFCatSet, istype=True)
 
         shared_parameter('ФОП_Блок СМР', genDefinitions, defaultCatSet)
+
+        shared_parameter('ФОП_Код работы', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Помещение', arDefinitions, defaultCatSet)
         shared_parameter('ФОП_Секция СМР', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Этаж', genDefinitions, defaultCatSet)
