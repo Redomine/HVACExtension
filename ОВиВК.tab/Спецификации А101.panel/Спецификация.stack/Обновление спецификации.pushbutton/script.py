@@ -574,7 +574,7 @@ def isElementEditedBy(element):
 
     if edited_by and edited_by != __revit__.Application.Username:
         if edited_by not in report_rows:
-            report_rows.add(edited_by)
+            report_rows.append(edited_by)
         return True
     return False
 
