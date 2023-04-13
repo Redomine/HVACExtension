@@ -580,7 +580,6 @@ def isElementEditedBy(element):
 
 
 def script_execute():
-    report_rows = set()
     for collection in collections:
         for element in collection:
             if not isElementEditedBy(element):
