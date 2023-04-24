@@ -328,9 +328,6 @@ class shedule_position:
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             cons = getConnectors(element)
 
-
-
-
             for con in cons:
                 ductAround = False
                 for el in con.AllRefs:
@@ -412,15 +409,12 @@ class shedule_position:
 
 
 
-        if element.Id.IntegerValue == 2834097:
-            print length_reserve
+
 
         if self.stock != 0:
             isol_reserve = 1 + self.stock / 100
             length_reserve = 1 + self.stock / 100
 
-            if element.Id.IntegerValue == 2834097:
-                print length_reserve
 
 
         FOP_izm = self.FOP_izm.AsString()
