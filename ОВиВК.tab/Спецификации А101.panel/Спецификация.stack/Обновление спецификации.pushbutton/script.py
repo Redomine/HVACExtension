@@ -465,7 +465,8 @@ class shedule_position:
     def isDataToInsert(self, param, value):
         if param:
             if not param.IsReadOnly:
-                param.Set(value)
+
+                param.Set(str(value))
 
 
     def insert(self):
