@@ -179,7 +179,6 @@ def get_depend(element):
                 number += 1
                 old_group = part.group
 
-
             part.reinsert(number)
 
 class settings:
@@ -278,6 +277,14 @@ class shedule_position:
                 New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy) + 'x' + pipe_optimization(str(pipe_thickness))
             else:
                 New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(external_size) + 'x' + pipe_optimization(str(pipe_thickness))
+
+        if element.Category.IsId(BuiltInCategory.OST_FlexPipeCurves):
+            Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
+
+            if Dy[-2:] == '.0':
+                Dy = Dy[:-2]
+            New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy)
+
 
         if element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
             New_Name = ADSK_Name  + ' ' + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
@@ -408,16 +415,16 @@ class shedule_position:
         isol_reserve = 1 + (lookupCheck(information, 'ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
 
 
-
-
-
         if self.stock != 0:
             isol_reserve = 1 + self.stock / 100
             length_reserve = 1 + self.stock / 100
 
 
 
+
+
         FOP_izm = self.FOP_izm.AsString()
+
         if FOP_izm == 'шт.':
             return 1
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
@@ -465,8 +472,9 @@ class shedule_position:
     def isDataToInsert(self, param, value):
         if param:
             if not param.IsReadOnly:
-
-                param.Set(str(value))
+                if value == None:
+                    value = 'None'
+                param.Set(value)
 
 
     def insert(self):
@@ -480,6 +488,7 @@ class shedule_position:
         self.isDataToInsert(self.FOP_Mark, mark)
         self.isDataToInsert(self.FOP_pos, '')
         number = self.shedNumber(self.element)
+
         self.isDataToInsert(self.FOP_number, number)
         group = self.regroop(self.element)
         self.isDataToInsert(self.FOP_group, group)
@@ -572,7 +581,7 @@ parametric = [
 
     settings(colPipeAccessory, '7. Трубопроводная арматура', True),
     settings(colPipeCurves, '8. Трубопроводы', False),
-    settings(colFlexPipeCurves, '0. Гибкие трубопроводы', False),
+    settings(colFlexPipeCurves, '8. Гибкие трубопроводы', False),
     settings(colPipeFittings, '10. Фасонные детали трубопроводов', True),
     settings(colPipeInsulations, '11. Материалы трубопроводной изоляции', False)
 ]
