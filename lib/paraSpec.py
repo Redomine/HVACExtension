@@ -13,6 +13,7 @@ clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
+import checkAnchor
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
@@ -209,5 +210,7 @@ def script_execute():
         print 'Были добавлены параметры, перезапустите скрипт'
 
 def check_parameters():
+    checkAnchor.check_anchor()
+
     script_execute()
     return parameters_added
