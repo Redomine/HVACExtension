@@ -112,12 +112,17 @@ def getDependent(collection):
                 dependent = element.GetSubComponentIds()
             except:
                 pass
+            if element.Id.IntegerValue == 3808990:
+                dependent = element.GetSubComponentIds()
+
             if dependent:
                 for depend in dependent:
-                    for list in collections:
-                        if depend in list:
-                            parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
-                            setIfNotRO(parameter, EF)
+                    parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
+                    setIfNotRO(parameter, EF)
+                    # for list in collections:
+                    #     if depend in list:
+                    #         parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
+                    #         setIfNotRO(parameter, EF)
 
 
 
