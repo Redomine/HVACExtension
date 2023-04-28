@@ -68,11 +68,11 @@ def check_anchor():
         anchor1 = False
         anchor2 = False
         anchor3 = False
+        wayToPrint = False
 
         for element in famtypeitr:
             famtypeID = element
             famsymb = doc.GetElement(famtypeID)
-            wayToPrint = False
 
             famName = famsymb.Family.Name
             if famName in famNames:
@@ -83,13 +83,13 @@ def check_anchor():
 
                 if famName == anchor1Name:
                     anchor1 = True
-                    wayToPrint = True
+
                 if famName == anchor2Name:
                     anchor2 = True
-                    wayToPrint = True
+
                 if famName == anchor3Name:
                     anchor3 = True
-                    wayToPrint = True
+
 
                 if famVersion != actualVersion:
                     print 'Версия семейства ' + famsymb.Family.Name + ' расходится с актуальной, обновите его из шаблона.'
@@ -104,10 +104,13 @@ def check_anchor():
 
         if not anchor1:
             print "Не загружено семейство " + anchor1Name
+            wayToPrint = True
         if not anchor2:
             print "Не загружено семейство " + anchor2Name
+            wayToPrint = True
         if not anchor3:
             print "Не загружено семейство " + anchor3Name
+            wayToPrint = True
         if wayToPrint == True:
             print 'Для внутренних инженеров актуальные семейства и шаблоны лежат по пути:'
             print 'W:\Департаменты\Проектный институт\Отдел стандартизации BIM и RD\BIM-Ресурсы\2-Стандарты\Спецификации ОВ-ВК'
