@@ -85,6 +85,7 @@ def get_connectors(element):
 
 
 def get_type_system(element):
+	#print element
 	connectors = get_connectors(element)
 	hvac_connector = None
 
@@ -157,6 +158,21 @@ def update_system_name(element):
 
 	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
 		type_system_name = get_type_system_name(document.GetElement(element.HostElementId))
+
+	if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+
+
+		type_system_name = get_type_system_name(document.GetElement(element.HostElementId))
+
+		if not type_system_name:
+			type_system_name = document.GetElement(element.HostElementId).LookupParameter("ФОП_ВИС_Имя системы").AsString()
+		# if element.Id.IntegerValue == 5334514:
+		# 	if hasattr(element, "HostElementId"):
+		# 		mep_type = get_type_system_name(document.GetElement(element.HostElementId))
+		# 		print mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
+		# 	if hasattr(element, "MEPSystem") and element.MEPSystem:
+		# 		mep_type = document.GetElement(element.MEPSystem.GetTypeId())
+		# 		print mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
 
 	if type_system_name:
 		system_name = type_system_name
