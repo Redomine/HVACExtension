@@ -150,6 +150,7 @@ def script_execute():
 
     ductandpipeCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves])
     insulandliveCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations])
+    systemsCatSet = get_cats(([BuiltInCategory.OST_DuctSystem, BuiltInCategory.OST_PipingSystem]))
 
     #получаем группу из которой выбираем параметры
     visDefinitions = check_spfile("03_ВИС")
@@ -182,6 +183,9 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Примечание', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Индивидуальный запас', visDefinitions, insulandliveCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_ЭФ для системы', visDefinitions, systemsCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Сокращение для системы', visDefinitions, systemsCatSet, istype=True)
+
 
         shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet, istype=True)
