@@ -42,6 +42,21 @@ collections = getDefCols()
 colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
 
+
+report_rows = []
+def isElementEditedBy(element):
+    try:
+        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+    except Exception:
+        edited_by = __revit__.Application.Username
+
+    if edited_by and edited_by != __revit__.Application.Username:
+        if edited_by not in report_rows:
+            report_rows.append(edited_by)
+        return True
+    return False
+
+
 def getEFsystem(element):
 
     sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
@@ -60,52 +75,49 @@ def getEFsystem(element):
 
 
     if str(EF) == 'None':
-
         EF = lookupCheck(information, 'ФОП_Экономическая функция').AsString()
 
     return EF
 
 def copyEF(collection):
     for element in collection:
+        if not isElementEditedBy(element):
+            EF = getEFsystem(element)
+            if EF != None:
+                ElemTypeId = element.GetTypeId()
+                ElemType = doc.GetElement(ElemTypeId)
 
-        EF = getEFsystem(element)
+                typeEF = None
 
-        if EF != None:
-            ElemTypeId = element.GetTypeId()
-            ElemType = doc.GetElement(ElemTypeId)
+                try:
+                    typeEF = ElemType.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
+                except:
+                    pass
 
-            typeEF = None
+                if typeEF:
+                    if str(typeEF) != 'None' or typeEF != "":
+                        EF = typeEF
 
-            try:
-                typeEF = ElemType.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
-            except:
-                pass
-
-            if typeEF:
-                if str(typeEF) != 'None' or typeEF != "":
-                    EF = typeEF
-
-
-            parameter = lookupCheck(element, 'ФОП_Экономическая функция')
-            setIfNotRO(parameter, EF)
+                parameter = lookupCheck(element, 'ФОП_Экономическая функция')
+                setIfNotRO(parameter, EF)
 
 
 def getDependent(collection):
     for element in collection:
-        EF = lookupCheck(element, 'ФОП_Экономическая функция').AsString()
+        if not isElementEditedBy(element):
+            EF = lookupCheck(element, 'ФОП_Экономическая функция').AsString()
 
-        dependent = None
-        try:
-            dependent = element.GetSubComponentIds()
-        except:
-            pass
-
-        if dependent:
-            for depend in dependent:
-                for list in collections:
-                    if depend in list:
-                        parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
-                        setIfNotRO(parameter, EF)
+            dependent = None
+            try:
+                dependent = element.GetSubComponentIds()
+            except:
+                pass
+            if dependent:
+                for depend in dependent:
+                    for list in collections:
+                        if depend in list:
+                            parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
+                            setIfNotRO(parameter, EF)
 
 
 
@@ -117,8 +129,7 @@ def getSystemDict(collection):
             ElemTypeId = system.GetTypeId()
             ElemType = doc.GetElement(ElemTypeId)
 
-            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_Экономическая функция', isExit = False)
-
+            typeEF = lookupCheck(ElemType, 'ФОП_ВИС_ЭФ для системы', isExit = False)
 
             if typeEF:
                 if typeEF != None:
@@ -152,12 +163,10 @@ if not status:
         sys.exit()
 
     ductDict = getSystemDict(colDuctSystems)
-
     pipeDict = getSystemDict(colPipeSystems)
 
 
-    with revit.Transaction("Обновление общей спеки"):
-
+    with revit.Transaction("Обновление экономической функции"):
         for collection in collections:
             copyEF(collection)
 
