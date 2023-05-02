@@ -466,7 +466,15 @@ class shedule_position:
 
 
     def regroop(self, element):
-        new_group = self.paraGroup + "_" + self.FOP_name.AsString() + "_" + self.FOP_Mark.AsString()
+        maker = self.FOP_maker.AsString()
+        code = self.FOP_code.AsString()
+
+        if maker == None:
+            maker = 'None'
+        if code == None:
+            code = 'None'
+
+        new_group = self.paraGroup + "_" + self.FOP_name.AsString() + "_" + self.FOP_Mark.AsString() + "_" + code + "_" + maker
         return new_group
 
     def isDataToInsert(self, param, value):
