@@ -272,9 +272,9 @@ class shedule_position:
             d_type = get_D_type(element)
 
             if d_type == "Ду":
-                New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy)
+                New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(Dy)
             elif d_type == "Ду х Стенка":
-                New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy) + 'x' + pipe_optimization(str(pipe_thickness))
+                New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(Dy) + 'x' + pipe_optimization(str(pipe_thickness))
             else:
                 New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(external_size) + 'x' + pipe_optimization(str(pipe_thickness))
 
