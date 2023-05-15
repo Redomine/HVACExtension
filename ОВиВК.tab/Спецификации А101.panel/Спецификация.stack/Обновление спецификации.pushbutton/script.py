@@ -209,7 +209,7 @@ class vkheat_collector_part:
             self.isKit = False
     def reinsert(self, number):
         self.FOP_name = lookupCheck(self.element, 'ФОП_ВИС_Наименование комбинированное')
-        self.FOP_group =lookuoCheck(self.element, 'ФОП_ВИС_Группирование')
+        self.FOP_group =lookupCheck(self.element, 'ФОП_ВИС_Группирование')
         new_group = self.parent_group + self.group
 
         if (str(number) + '. ') not in self.FOP_name.AsString():
