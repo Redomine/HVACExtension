@@ -240,6 +240,10 @@ class shedule_position:
         ADSK_Name = self.ADSK_name
         New_Name = ADSK_Name
 
+        information = doc.ProjectInformation
+
+
+
         try:
             if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
                 cons = getConnectors(element)
@@ -249,7 +253,7 @@ class shedule_position:
                             if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
                                 ElemTypeId = el.Owner.GetTypeId()
                                 ElemType = doc.GetElement(ElemTypeId)
-                                if lookupCheck(ElemType, 'ФОП_ВИС_Учитывать фитинги').AsInteger() != 1:
+                                if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
                                     New_Name = '!Не учитывать'
         except Exception:
             pass
