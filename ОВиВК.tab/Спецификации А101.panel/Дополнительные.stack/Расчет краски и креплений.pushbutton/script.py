@@ -67,16 +67,6 @@ famtypeitr = collector.GetElementIdIterator()
 famtypeitr.Reset()
 
 
-class settings:
-    def __init__(self,
-                 group,
-                 name,
-                 unit,
-                 param_name,
-                 collection,
-                 is_type
-    ):
-        pass
 
 
 #settings('8. Расчетные элементы', "Металлические крепления для воздуховодов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colCurves, False)
@@ -89,8 +79,33 @@ generation_list = [
     ['12. Расчетные элементы', "Металлические крепления для трубопроводов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colPipes, False],
     ['12. Расчетные элементы', "Изоляция для фланцев и стыков", 'м².', 'ФОП_ВИС_Совместно с воздуховодом', colInsul, False],
     ['12. Расчетные элементы', "Краска антикоррозионная за два раза БТ-177", 'кг.', 'ФОП_ВИС_Расчет краски и грунтовки', colPipes, False],
-    ['12. Расчетные элементы', "Грунт ГФ-031", 'кг.', 'ФОП_ВИС_Расчет краски и грунтовки', colPipes, False]
+    ['12. Расчетные элементы', "Грунтовка  ГФ-031", 'кг.', 'ФОП_ВИС_Расчет краски и грунтовки', colPipes, False]
 ]
+
+class generationElement:
+    def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
+        self.group = group
+        self.name = name
+        self.mark = mark
+        self.maker = maker
+        self.unit = unit
+        self.collection = collection
+        self.method = method
+        self.isType = isType
+        self.art = art
+
+
+genList = [
+    generationElement(group = '12. Расчетные элементы', name = "Металлические крепления для воздуховодов", mark = '', art = '', unit = 'кг.', maker = '',method = 'ФОП_ВИС_Расчет металла для креплений', collection=colCurves,isType= False),
+    generationElement(group = '12. Расчетные элементы', name = "Металлические крепления для трубопроводов", mark = '', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет металла для креплений', collection= colPipes,isType= False),
+    generationElement(group = '12. Расчетные элементы', name = "Изоляция для фланцев и стыков", mark = '', art = '', unit = 'м².', maker = '', method =  'ФОП_ВИС_Совместно с воздуховодом', collection= colInsul,isType= False),
+    generationElement(group = '12. Расчетные элементы', name = "Краска антикоррозионная за два раза", mark = 'БТ-177', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
+    generationElement(group = '12. Расчетные элементы', name = "Грунтовка для стальных труб", mark = 'ГФ-031', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False)
+]
+
+
+
+
 
 def setElement(element, name, setting):
 
@@ -136,66 +151,7 @@ def get_ADSK_Name(element):
 
     return ADSK_Name
 
-def duct_material(element):
-    area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
-    if element.GetParamValue(BuiltInParameter.RBS_EQ_DIAMETER_PARAM) == element.GetParamValue(BuiltInParameter.RBS_HYDRAULIC_DIAMETER_PARAM):
-        D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
-        P = 3.14 * D
-    else:
-        A = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM)
-        B = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)
-        P = 2 * (A + B)
 
-    if P < 1001:
-        kg = area * 65
-    elif P < 1801:
-        kg = area * 122
-    else:
-        kg = area * 225
-
-    return kg
-
-def pipe_material(element):
-    lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))/1000
-
-    D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
-
-    if D < 25:
-        kg = 0.9 * lenght
-    elif D < 33:
-        kg = 0.73 * lenght
-    elif D < 41:
-        kg = 0.64 * lenght
-    elif D < 51:
-        kg = 0.67 * lenght
-    elif D < 66:
-        kg = 0.53 * lenght
-    elif D < 81:
-        kg = 0.7 * lenght
-    elif D < 101:
-        kg = 0.64 * lenght
-    elif D < 126:
-        kg = 1.16 * lenght
-    else:
-        kg = 0.96 * lenght
-    return kg
-
-def insul_stock(element):
-    area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
-    if area == None:
-        area = 0
-    area = area * 0.092903 * 0.03
-    return area
-
-def grunt(element):
-    area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
-    number = area / 10
-    return number
-
-def colorBT(element):
-    area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
-    number = area * 0.2 * 2
-    return number
 
 class collapsedElements:
     def __init__(self, corp, sec, floor, system, group, name, mark, art, maker, izm, number, mass, comment, EF):
@@ -215,23 +171,83 @@ class collapsedElements:
         self.EF = EF
 
 class calculation_element:
+    def duct_material(self, element):
+        area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
+        if element.GetParamValue(BuiltInParameter.RBS_EQ_DIAMETER_PARAM) == element.GetParamValue(
+                BuiltInParameter.RBS_HYDRAULIC_DIAMETER_PARAM):
+            D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
+            P = 3.14 * D
+        else:
+            A = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM)
+            B = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)
+            P = 2 * (A + B)
+
+        if P < 1001:
+            kg = area * 65
+        elif P < 1801:
+            kg = area * 122
+        else:
+            kg = area * 225
+
+        return kg
+
+    def pipe_material(self, element):
+        lenght = (304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)) / 1000
+
+        D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+
+        if D < 25:
+            kg = 0.9 * lenght
+        elif D < 33:
+            kg = 0.73 * lenght
+        elif D < 41:
+            kg = 0.64 * lenght
+        elif D < 51:
+            kg = 0.67 * lenght
+        elif D < 66:
+            kg = 0.53 * lenght
+        elif D < 81:
+            kg = 0.7 * lenght
+        elif D < 101:
+            kg = 0.64 * lenght
+        elif D < 126:
+            kg = 1.16 * lenght
+        else:
+            kg = 0.96 * lenght
+        return kg
+
+    def insul_stock(self, element):
+        area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+        if area == None:
+            area = 0
+        area = area * 0.092903 * 0.03
+        return area
+
+    def grunt(self, element):
+        area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
+        number = area / 10
+        return number
+
+    def colorBT(self, element):
+        area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
+        number = area * 0.2 * 2
+        return number
+
     def get_number(self, element, name):
         Number = 1
         if name == "Металлические крепления для трубопроводов" and element in colPipes:
-            Number = pipe_material(element)
+            Number = self.pipe_material(element)
         if name == "Металлические крепления для воздуховодов" and element in colCurves:
-            Number = duct_material(element)
+            Number = self.duct_material(element)
         if name == "Изоляция для фланцев и стыков" and element in colInsul:
-            Number = insul_stock(element)
-        if name == "Краска антикоррозионная за два раза БТ-177" and element in colPipes:
-            Number = colorBT(element)
-        if name == "Грунт ГФ-031" and element in colPipes:
-            Number = grunt(element)
-
-
+            Number = self.insul_stock(element)
+        if name == "Краска антикоррозионная за два раза" and element in colPipes:
+            Number = self.colorBT(element)
+        if name == "Грунтовка для стальных труб" and element in colPipes:
+            Number = self.grunt(element)
         return Number
 
-    def __init__(self, element, collection, parameter, Name):
+    def __init__(self, element, collection, parameter, Name, Mark, Maker):
 
         self.corp = ''
         self.sec = ''
@@ -245,9 +261,9 @@ class calculation_element:
                 self.system = 'None'
         self.group ='12. Расчетные элементы'
         self.name = Name
-        self.mark = ''
+        self.mark = Mark
         self.art = ''
-        self.maker = ''
+        self.maker = Maker
         self.izm = 'None'
         self.number = self.get_number(element, self.name)
         self.mass = ''
@@ -256,10 +272,16 @@ class calculation_element:
         self.parentId = element.Id.IntegerValue
 
 
-        for generation in generation_list:
-            if collection in generation and parameter in generation:
-                self.izm = generation[2]
-                isType = generation[5]
+        for gen in genList:
+            if gen.collection == collection and parameter == gen.method:
+                self.izm = gen.unit
+                isType = gen.isType
+
+
+        # for generation in generation_list:
+        #     if collection in generation and parameter in generation:
+        #         self.izm = generation[2]
+        #         isType = generation[5]
 
 
         self.corp = str(element.LookupParameter('ФОП_Блок СМР').AsString())
@@ -344,10 +366,10 @@ def remove_models(colModel):
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
             doc.Delete(element.Id)
-def is_object_to_generate(element, genCol, collection, parameter, generation_list = generation_list):
+def is_object_to_generate(element, genCol, collection, parameter, genList = genList):
     if element in genCol:
-        for generation in generation_list:
-            if collection in generation and parameter in generation:
+        for gen in genList:
+            if gen.collection == collection and parameter == gen.method:
                 try:
                     elemType = doc.GetElement(element.GetTypeId())
                     if elemType.LookupParameter(parameter).AsInteger() == 1:
@@ -356,13 +378,30 @@ def is_object_to_generate(element, genCol, collection, parameter, generation_lis
                     if element.LookupParameter(parameter).AsInteger() == 1:
                         return True
 
+        # for generation in generation_list:
+        #     if collection in generation and parameter in generation:
+        #         try:
+        #             elemType = doc.GetElement(element.GetTypeId())
+        #             if elemType.LookupParameter(parameter).AsInteger() == 1:
+        #                 return True
+        #         except Exception:
+        #             if element.LookupParameter(parameter).AsInteger() == 1:
+        #                 return True
+
 def collapse_list(lists):
     singles = []
-    for gen in generation_list:
-        name = gen[1]
-        isSingle = gen[5]
+    for gen in genList:
+        name = gen.name
+        isSingle = gen.isType
         if isSingle:
             singles.append(name)
+
+    #
+    # for gen in generation_list:
+    #     name = gen[1]
+    #     isSingle = gen[5]
+    #     if isSingle:
+    #         singles.append(name)
 
     dict = {}
 
@@ -407,14 +446,17 @@ def script_execute():
         for collection in collections:
             for element in collection:
                 elemType = doc.GetElement(element.GetTypeId())
-                for generation in generation_list:
-                    name = generation[1]
-                    parameter = generation[3]
-                    genCol = generation[4]
+                for gen in genList:
+                    name = gen.name
+                    mark = gen.mark
+                    maker = gen.maker
+
+                    parameter = gen.method
+                    genCol = gen.collection
 
                     if is_object_to_generate(element, genCol, collection, parameter):
 
-                        definition = calculation_element(element, collection, parameter, name)
+                        definition = calculation_element(element, collection, parameter, name, mark, maker)
                         definitionList = [definition.corp, definition.sec, definition.floor, definition.system,
                                           definition.group, definition.name, definition.mark, definition.art,
                                           definition.maker, definition.izm, definition.number, definition.mass,
