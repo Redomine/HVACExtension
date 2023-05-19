@@ -112,8 +112,6 @@ def getDependent(collection):
                 dependent = element.GetSubComponentIds()
             except:
                 pass
-            if element.Id.IntegerValue == 3808990:
-                dependent = element.GetSubComponentIds()
 
             if dependent:
                 for depend in dependent:
@@ -123,6 +121,7 @@ def getDependent(collection):
                     #     if depend in list:
                     #         parameter = lookupCheck(doc.GetElement(depend), 'ФОП_Экономическая функция')
                     #         setIfNotRO(parameter, EF)
+
 
 
 
@@ -175,4 +174,7 @@ if not status:
         for collection in collections:
             copyEF(collection)
 
+    with revit.Transaction("Проверка вложенных"):
+        for collection in collections:
             getDependent(collection)
+
