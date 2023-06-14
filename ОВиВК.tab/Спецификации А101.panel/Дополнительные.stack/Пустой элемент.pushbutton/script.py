@@ -97,15 +97,17 @@ class collapsedElements:
         self.EF = EF
 
 def new_position(element):
+    fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+
     #ищем стадию спеки для присвоения
     phaseOk = False
-    for phase in doc.Phases:
-        if phase.Name == 'Спецификация':
-            phaseid = phase.Id
+    for ws in fws:
+        if ws.Name == '99_Немоделируемые элементы':
+            WORKSET_ID = ws.Id
             phaseOk = True
 
     if not phaseOk:
-        print 'Не удалось присвоить стадию спецификация, проверьте список стадий'
+        print 'Не удалось найти рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
         sys.exit()
 
     # создаем заглушки по элементов собранных из таблицы
@@ -117,7 +119,9 @@ def new_position(element):
     colModel = make_col(BuiltInCategory.OST_GenericModel)
     for model in colModel:
         if model.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(пустой)':
-            model.CreatedPhaseId = phaseid
+            ews = model.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+            ews.Set(WORKSET_ID.IntegerValue)
+
 
 
     dummy = familyInst
