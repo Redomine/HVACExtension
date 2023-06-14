@@ -58,6 +58,19 @@ famNames = [anchor1Name, anchor2Name, anchor3Name]
 
 def check_anchor():
     with revit.Transaction("Проверка якорных элементов"):
+
+        if WorksetTable.IsWorksetNameUnique(doc, '99_Немоделируемые элементы'):
+            targetWorkset = Workset.Create(doc, '99_Немоделируемые элементы')
+            print 'Был создан рабочий набор "99_Немоделируемые элементы". Откройте диспетчер рабочих наборов и снимите галочку с параметра "Видимый на всех видах". ' \
+                  'В данном рабочем наборе будут создаваться немоделируемые элементы и требуется исключить их видимость.'
+        else:
+            fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+            for ws in fws:
+                if ws.Name == '99_Немоделируемые элементы' and ws.IsVisibleByDefault:
+
+                    print 'Рабочий набор "99_Немоделируемые элементы" на данный момент отображается на всех видах. Откройте диспетчер рабочих наборов и снимите галочку с параметра "Видимый на всех видах". ' \
+                  'В данном рабочем наборе будут создаваться немоделируемые элементы и требуется исключить их видимость.'
+
         # create a filtered element collector set to Category OST_Mass and Class FamilySymbol
         collector = FilteredElementCollector(doc)
         collector.OfCategory(BuiltInCategory.OST_GenericModel)

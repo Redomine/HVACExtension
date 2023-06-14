@@ -298,15 +298,17 @@ class calculation_element:
 
 
 def new_position(calculation_elements):
+    fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+
     #ищем стадию спеки для присвоения
     phaseOk = False
-    for phase in doc.Phases:
-        if phase.Name == 'Спецификация':
-            phaseid = phase.Id
+    for ws in fws:
+        if ws.Name == '99_Немоделируемые элементы':
+            WORKSET_ID = ws.Id
             phaseOk = True
 
     if not phaseOk:
-        print 'Не удалось присвоить стадию спецификация, проверьте список стадий'
+        print 'Не удалось найти рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
         sys.exit()
 
     # создаем заглушки по элементов собранных из таблицы
@@ -320,7 +322,8 @@ def new_position(calculation_elements):
     Models = []
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
-            element.CreatedPhaseId = phaseid
+            ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+            ews.Set(WORKSET_ID.IntegerValue)
             Models.append(element)
 
     # для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
