@@ -81,15 +81,38 @@ def new_position(calculation_elements, phaseid):
     #собираем список из созданных заглушек
     colModel = make_col(BuiltInCategory.OST_GenericModel)
     Models = []
-    for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
-            element.CreatedPhaseId = phaseid
-            try:
-                element.CreatedPhaseId = phaseid
-            except Exception:
-                print 'Не удалось присвоить стадию спецификация, проверьте список стадий'
 
+    fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+    for ws in fws:
+        if ws.Name == '99_Немоделируемые элементы':
+            WORKSET_ID = ws.Id
+
+
+    for element in colModel:
+        try:
+            if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
+                ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+                ews.Set(WORKSET_ID.IntegerValue)
+        except Exception:
+                 print 'Не удалось присвоить рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
+
+
+
+
+        # if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
+        #     try:
+        #         element.CreatedPhaseId = phaseid
+        #
+        #         ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+        #
+        #         print ews.AsValueString()
+        #         ews.Set(WORKSET_ID.ItnegerValue)
+        #         print ews.AsValueString()
+        #
+        #     except Exception:
+        #         print 'Не удалось присвоить стадию спецификация, проверьте список стадий'
             Models.append(element)
+
 
     index = 1
     #для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
@@ -123,6 +146,9 @@ def new_position(calculation_elements, phaseid):
         setElement(dummy, 'ФОП_Экономическая функция', position.EF)
 
         Models.pop(0)
+
+
+
 
 
 is_temporary_in = False
@@ -207,6 +233,7 @@ def script_execute():
 
     with revit.Transaction("Добавление расчетных элементов"):
 
+
         #при каждом повторе расчета удаляем старые версии
         for element in colModel:
             if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
@@ -239,12 +266,18 @@ def script_execute():
 
 
 
-        for phase in doc.Phases:
-            if phase.Name == 'Спецификация':
-                phaseid = phase.Id
+        # for phase in doc.Phases:
+        #     if phase.Name == 'Спецификация':
+        #         phaseid = phase.Id
+
+
+
 
         # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
         new_position(calculation_elements, phaseid)
+
+
+
 
 
     exel.ActiveWorkbook.Close(True)

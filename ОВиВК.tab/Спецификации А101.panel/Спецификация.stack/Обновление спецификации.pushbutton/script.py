@@ -269,15 +269,11 @@ class shedule_position:
 
             Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
 
-            if element.Id.IntegerValue == 3188043:
-                print Dy
+
 
             if Dy[-2:] == '.0':
                 Dy = Dy[:-2]
 
-            if element.Id.IntegerValue == 3188043:
-                print Dy
-                print pipe_optimization(Dy)
 
             external_size = str(external_size)
             if external_size[-2:] == '.0':
