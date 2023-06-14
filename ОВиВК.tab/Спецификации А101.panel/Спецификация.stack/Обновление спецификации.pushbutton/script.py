@@ -224,14 +224,17 @@ def pipe_optimization(size):
 
     old_char = ''
     ind = 0
-    for char in size:
-        if char == '0' and old_char == '0':
-            size = size[:(ind-1)]
-            if size[-1] == '.':
-                size = size[:-1]
-            return size
-        old_char = char
-        ind += 1
+
+    if '.' in size:
+        for char in size:
+            if char == '0' and old_char == '0':
+                size = size[:(ind-1)]
+                if size[-1] == '.':
+                    size = size[:-1]
+                return size
+            old_char = char
+            ind += 1
+
     return size
 
 
@@ -266,8 +269,15 @@ class shedule_position:
 
             Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
 
+            if element.Id.IntegerValue == 3188043:
+                print Dy
+
             if Dy[-2:] == '.0':
                 Dy = Dy[:-2]
+
+            if element.Id.IntegerValue == 3188043:
+                print Dy
+                print pipe_optimization(Dy)
 
             external_size = str(external_size)
             if external_size[-2:] == '.0':
@@ -593,7 +603,7 @@ parametric = [
 
     settings(colPipeAccessory, '7. Трубопроводная арматура', True),
     settings(colPipeCurves, '8. Трубопроводы', False),
-    settings(colFlexPipeCurves, '8. Гибкие трубопроводы', False),
+    settings(colFlexPipeCurves, '9. Гибкие трубопроводы', False),
     settings(colPipeFittings, '10. Фасонные детали трубопроводов', True),
     settings(colPipeInsulations, '11. Материалы трубопроводной изоляции', False)
 ]
