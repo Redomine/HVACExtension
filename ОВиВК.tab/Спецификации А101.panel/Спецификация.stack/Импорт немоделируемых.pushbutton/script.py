@@ -69,7 +69,7 @@ def setElement(element, name, setting):
         element.LookupParameter(name).Set(str(setting))
 
 
-def new_position(calculation_elements, phaseid):
+def new_position(calculation_elements):
 
     #создаем заглушки по элементов собранных из таблицы
     loc = XYZ(0, 0, 0)
@@ -93,6 +93,7 @@ def new_position(calculation_elements, phaseid):
             if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент':
                 ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
                 ews.Set(WORKSET_ID.IntegerValue)
+                Models.append(element)
         except Exception:
                  print 'Не удалось присвоить рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
 
@@ -111,7 +112,7 @@ def new_position(calculation_elements, phaseid):
         #
         #     except Exception:
         #         print 'Не удалось присвоить стадию спецификация, проверьте список стадий'
-            Models.append(element)
+
 
 
     index = 1
@@ -274,7 +275,7 @@ def script_execute():
 
 
         # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
-        new_position(calculation_elements, phaseid)
+        new_position(calculation_elements)
 
 
 
