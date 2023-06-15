@@ -171,10 +171,12 @@ def script_execute():
         shared_parameter('ФОП_Этаж', genDefinitions, defaultCatSet)
         #shared_parameter('ФОП_Привязка к помещениям', genDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Имя системы', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Имя системы принудительное', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Код изделия', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Завод-изготовитель', visDefinitions, defaultCatSet)
 
         shared_parameter('ФОП_ВИС_Группирование', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Группирование принудительное', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Наименование комбинированное', visDefinitions, defaultCatSet)

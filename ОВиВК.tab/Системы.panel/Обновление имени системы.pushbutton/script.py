@@ -85,6 +85,11 @@ def get_connectors(element):
 
 
 def get_type_system(element):
+	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+		element = document.GetElement(element.HostElementId)
+	if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+		element = document.GetElement(element.HostElementId)
+
 	#print element
 	connectors = get_connectors(element)
 	hvac_connector = None
@@ -137,60 +142,41 @@ def update_system_name(element):
 	if element.GetParam(SharedParamsConfig.Instance.MechanicalSystemName).IsReadOnly:
 		return
 
-	system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+	forced_name = element.LookupParameter('ФОП_ВИС_Имя системы принудительное')
 
-	if not system_name:
-		try:
-			super_component = element.SuperComponent
-			if super_component:
-				system_name = super_component.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
-		except Exception:
-			pass
+	#print forced_name.AsString()
+	if forced_name.AsString() != None:
+		if forced_name.AsString() != "":
+			system_name = forced_name.AsString()
 
-	if system_name:
-		# Т11 3,Т11 4 -> Т11
-		# Т11 3,Т12 4 -> Т11, Т12
-		system_name = ", ".join(set([s.split(" ")[0] for s in system_name.split(",")]))
+	else:
+		system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
 
+		if not system_name:
+			try:
+				super_component = element.SuperComponent
+				if super_component:
+					system_name = super_component.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+			except Exception:
+				pass
 
-
-	type_system_name = get_type_system(element)
-
-	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
-		type_system_name = get_type_system_name(document.GetElement(element.HostElementId))
-
-	if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
-
-
-		type_system_name = get_type_system_name(document.GetElement(element.HostElementId))
-
-		if not type_system_name:
-			type_system_name = document.GetElement(element.HostElementId).LookupParameter("ФОП_ВИС_Имя системы").AsString()
-		# if element.Id.IntegerValue == 5334514:
-		# 	if hasattr(element, "HostElementId"):
-		# 		mep_type = get_type_system_name(document.GetElement(element.HostElementId))
-		# 		print mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
-		# 	if hasattr(element, "MEPSystem") and element.MEPSystem:
-		# 		mep_type = document.GetElement(element.MEPSystem.GetTypeId())
-		# 		print mep_type.GetParamValueOrDefault("ФОП_ВИС_Сокращение для системы")
-
-	if type_system_name:
-		system_name = type_system_name
-
-	if element.Id.IntegerValue == 2517492:
-		print system_name
-
-	if element.Id.IntegerValue == 2517492:
-		print type_system_name
+		if system_name:
+			# Т11 3,Т11 4 -> Т11
+			# Т11 3,Т12 4 -> Т11, Т12
+			system_name = ", ".join(set([s.split(" ")[0] for s in system_name.split(",")]))
 
 
-	if system_name == None:
-		if document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов') != None:
-			system_name = document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов')
+		type_system_name = get_type_system(element)
+
+		if system_name == None:
+			if document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов') != None:
+				system_name = document.ProjectInformation.GetParamValueOrDefault('ФОП_ВИС_Имя внесистемных элементов')
+
+		if type_system_name:
+			system_name = type_system_name
 
 	element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 	element.LookupParameter('ФОП_ВИС_Имя системы').Set(str(system_name))
-
 
 
 def update_element(elements):
@@ -232,9 +218,6 @@ def script_execute():
 		elements = get_elements()
 		report_rows = update_element(elements)
 		if report_rows:
-			#output1 = output.get_output()
-			#output1.set_title("Обновление атрибута \"{}\"".format(SharedParamsConfig.Instance.MechanicalSystemName.Name))
-
 			print "Некоторые элементы не были обработаны, так как были заняты пользователями:"
 			print "\r\n".join(report_rows)
 
