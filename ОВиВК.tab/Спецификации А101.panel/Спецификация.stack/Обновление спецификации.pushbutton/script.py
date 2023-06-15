@@ -245,8 +245,6 @@ class shedule_position:
 
         information = doc.ProjectInformation
 
-
-
         try:
             if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
                 cons = getConnectors(element)
@@ -372,10 +370,6 @@ class shedule_position:
                             New_Name = el.Owner.LookupParameter("ФОП_ВИС_Наименование комбинированное").AsString()
 
 
-
-
-
-
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
 
             insType = doc.GetElement(element.GetTypeId())
@@ -476,6 +470,13 @@ class shedule_position:
 
 
     def regroop(self, element):
+        forced_group = element.LookupParameter('ФОП_ВИС_Группирование принудительное')
+
+
+        if forced_group.AsString() != None:
+            if forced_group.AsString() != "":
+                self.paraGroup = forced_group.AsString()
+
         maker = self.FOP_maker.AsString()
         code = self.FOP_code.AsString()
 
