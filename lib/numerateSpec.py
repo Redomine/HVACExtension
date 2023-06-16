@@ -199,7 +199,8 @@ if vs.Category.IsId(BuiltInCategory.OST_Schedules):
                 for element in colCurves:
                     note = element.LookupParameter('ФОП_ВИС_Примечание')
                     index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
-                    note.Set(str(duct_dict[index])+' м²')
+                    if note:
+                        note.Set(str(duct_dict[index])+' м²')
 
             if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Нумерация позиций').AsInteger() == 0:
                 elements = FilteredElementCollector(doc, doc.ActiveView.Id)
