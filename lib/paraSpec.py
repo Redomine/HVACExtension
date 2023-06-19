@@ -178,6 +178,8 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Единица измерения', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Масса', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Наименование комбинированное', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Отметка оси от нуля', visDefinitions, defaultCatSet)
+        shared_parameter('ФОП_ВИС_Отметка низа от нуля', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Позиция', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Марка', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
