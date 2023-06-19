@@ -158,8 +158,6 @@ def script_execute():
     genDefinitions  = check_spfile("00_Общие")
 
     with revit.Transaction("Добавление параметров"):
-
-
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
         shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, visEFCatSet, istype=True)
 
@@ -202,8 +200,6 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Учитывать фитинги труб', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet)
-        shared_parameter('ФОП_ВИС_Нумерация позиций', visDefinitions, projectCatSet)
-        shared_parameter('ФОП_ВИС_Площади воздуховодов в примечания', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Замена параметра_Единица измерения', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Замена параметра_Завод-изготовитель', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Замена параметра_Код изделия', visDefinitions, projectCatSet)
