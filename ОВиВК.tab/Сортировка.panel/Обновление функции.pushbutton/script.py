@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Обновление ФОП ЭФ'
+__title__ = 'Обновление\nфункции'
 __doc__ = "Обновляет экономическую функцию"
 
 import os.path as op
