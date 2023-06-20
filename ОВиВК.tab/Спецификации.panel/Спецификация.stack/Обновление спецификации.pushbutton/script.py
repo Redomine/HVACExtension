@@ -245,19 +245,13 @@ class shedule_position:
 
         information = doc.ProjectInformation
 
-        try:
-            if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
-                cons = getConnectors(element)
-                for con in cons:
+        if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
+            if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
+                New_Name = '!Не учитывать'
+                return New_Name
 
-                        for el in con.AllRefs:
-                            if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
-                                ElemTypeId = el.Owner.GetTypeId()
-                                ElemType = doc.GetElement(ElemTypeId)
-                                if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
-                                    New_Name = '!Не учитывать'
-        except Exception:
-            pass
+
+
 
 
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
