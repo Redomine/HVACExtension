@@ -139,15 +139,20 @@ def rename_sub_sub(element, system_name):
 
 
 def update_system_name(element):
-	if element.GetParam(SharedParamsConfig.Instance.MechanicalSystemName).IsReadOnly:
-		return
-
 	forced_name = element.LookupParameter('ФОП_ВИС_Имя системы принудительное')
+	system_name = None
 
 	#print forced_name.AsString()
 	if forced_name.AsString() != None:
 		if forced_name.AsString() != "":
 			system_name = forced_name.AsString()
+			element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
+			element.LookupParameter('ФОП_ВИС_Имя системы').Set(str(system_name))
+			return
+
+	if element.GetParam(SharedParamsConfig.Instance.MechanicalSystemName).IsReadOnly:
+		return
+
 
 	else:
 		system_name = element.GetParamValueOrDefault(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
