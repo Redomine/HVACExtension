@@ -139,6 +139,7 @@ def rename_sub_sub(element, system_name):
 
 
 def update_system_name(element):
+	#test
 	forced_name = element.LookupParameter('ФОП_ВИС_Имя системы принудительное')
 	system_name = None
 
