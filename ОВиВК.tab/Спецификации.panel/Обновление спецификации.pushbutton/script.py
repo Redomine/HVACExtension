@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Обновление спецификации'
+__title__ = 'Обновление\nспецификации'
 __doc__ = "Обновляет число подсчетных элементов"
 
 import os.path as op
@@ -245,19 +245,13 @@ class shedule_position:
 
         information = doc.ProjectInformation
 
-        try:
-            if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
-                cons = getConnectors(element)
-                for con in cons:
+        if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
+            if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
+                New_Name = '!Не учитывать'
+                return New_Name
 
-                        for el in con.AllRefs:
-                            if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
-                                ElemTypeId = el.Owner.GetTypeId()
-                                ElemType = doc.GetElement(ElemTypeId)
-                                if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
-                                    New_Name = '!Не учитывать'
-        except Exception:
-            pass
+
+
 
 
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
@@ -649,6 +643,3 @@ if not parametersAdded:
         script_execute()
         for report in report_rows:
             print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
-
-    if lookupCheck(information, 'ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or lookupCheck(information, 'ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
-        import numerateSpec
