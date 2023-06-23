@@ -643,6 +643,3 @@ if not parametersAdded:
         script_execute()
         for report in report_rows:
             print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
-
-    if lookupCheck(information, 'ФОП_ВИС_Нумерация позиций').AsInteger() == 1 or lookupCheck(information, 'ФОП_ВИС_Площади воздуховодов в примечания').AsInteger() == 1:
-        import numerateSpec
