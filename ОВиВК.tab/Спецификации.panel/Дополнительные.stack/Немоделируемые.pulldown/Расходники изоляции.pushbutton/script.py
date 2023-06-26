@@ -530,5 +530,6 @@ if is_temporary_in == False:
 
 status = paraSpec.check_parameters()
 if not status:
+    print 'Скрипт в разработке, цифры недостоверны'
     script_execute()
 
