@@ -69,7 +69,7 @@ famtypeitr.Reset()
 class insulType:
 
     def __init__(self, typeName, name1, name2, name3, mark1, mark2, mark3, unit1, unit2, unit3,
-                 maker1, maker2, maker3, expenditure1, expenditure2, expenditure3):
+                 maker1, maker2, maker3, expenditure1, expenditure2, expenditure3, isArea1, isArea2, isArea3):
         self.typeName = typeName
 
         self.name1 = name1
@@ -92,6 +92,10 @@ class insulType:
         self.expenditure2 = expenditure2
         self.expenditure3 = expenditure3
 
+        self.isArea1 = isArea1
+        self.isArea2 = isArea2
+        self.isArea3 = isArea3
+
 class insulPosition:
     def __init__(self, corp, sec, floor, system, name, EF, key):
         self.corp = corp
@@ -104,6 +108,7 @@ class insulPosition:
         self.key = key
 
         self.area = 0
+        self.length = 0
 
 class objectToGenerate:
     def getNumber(self, expenditure, motherArea):
@@ -286,6 +291,8 @@ def get_fitting_area(element):
 
 information = doc.ProjectInformation
 isol_reserve = 1 + (lookupCheck(information, 'ФОП_ВИС_Запас изоляции').AsDouble() / 100)  # запас площадей
+length_reserve = 1 + (lookupCheck(information, 'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
+
 def get_area(element):
     if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
         connectors = getConnectors(element)
@@ -298,6 +305,12 @@ def get_area(element):
     area = round((fromRevitToSquareMeters(area) * isol_reserve), 2)
     return area
 
+def get_length(element):
+    length = element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble()
+    length= round((fromRevitToMeters(length) * length_reserve), 2)
+    print element.Id
+    print length
+    return length
 
 def script_execute():
     with revit.Transaction("Добавление расходных элементов"):
@@ -324,12 +337,19 @@ def script_execute():
                 maker1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Изготовитель').AsValueString()
                 unit1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Ед. изм.').AsValueString()
                 expenditure1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Расход на м2').AsValueString()
+                isArea1 = True
+                if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Расход по м.п.').AsInteger() == 1:
+                    isArea1 = False
+
 
                 name2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Наименование').AsValueString()
                 mark2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Марка').AsValueString()
                 maker2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Изготовитель').AsValueString()
                 unit2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Ед. изм.').AsValueString()
                 expenditure2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Расход на м2').AsValueString()
+                isArea2 = True
+                if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Расход по м.п.').AsInteger() == 1:
+                    isArea2 = False
 
 
                 name3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Наименование').AsValueString()
@@ -337,6 +357,9 @@ def script_execute():
                 maker3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Изготовитель').AsValueString()
                 unit3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Ед. изм.').AsValueString()
                 expenditure3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Расход на м2').AsValueString()
+                isArea3 = True
+                if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Расход по м.п.').AsInteger() == 1:
+                    isArea3 = False
 
                 toAppend = True
                 for insulation in insulationsTypeList:
@@ -344,10 +367,9 @@ def script_execute():
                         toAppend = False
 
                 if toAppend:
-
                     newInsulation = insulType(typeName, name1, name2, name3, mark1, mark2, mark3,
                                                    unit1, unit2, unit3, maker1, maker2, maker3, expenditure1,
-                                                   expenditure2, expenditure3)
+                                                   expenditure2, expenditure3, isArea1, isArea2, isArea3)
                     insulationsTypeList.append(
                         newInsulation
                      )
@@ -370,6 +392,8 @@ def script_execute():
 
                 area = get_area(element)
 
+                length = get_length(element)
+
 
                 toAppend = True
                 for insulationsObject in insulationsObjectsList:
@@ -380,11 +404,13 @@ def script_execute():
                 if toAppend:
                     newInsulationObject = insulPosition(corp, sec, floor, system, typeName, EF, key)
                     newInsulationObject.area = area
+                    newInsulationObject.length = length
                     insulationsObjectsList.append(
                         newInsulationObject
                      )
                 else:
                     objectToArea.area = objectToArea.area + area
+                    objectToArea.length = objectToArea.area + length
 
 
 
@@ -397,6 +423,11 @@ def script_execute():
                     group = "12. Расходники изоляции" + "_" + insulationsObject.typeName
                     if isToGenerate(insulationType.name1, insulationType.expenditure1):
                         number = float(insulationType.expenditure1) * float(insulationsObject.area)
+                        if insulationType.isArea1:
+                            areaOrLength = insulationsObject.area
+                        else:
+                            areaOrLength = insulationsObject.length
+
                         newSheduleObj = objectToGenerate(
                             corp=insulationsObject.corp,
                             sec=insulationsObject.sec,
@@ -412,12 +443,17 @@ def script_execute():
                             mass=None,
                             comment='',
                             EF=insulationsObject.EF,
-                            motherArea=insulationsObject.area,
+                            motherArea=areaOrLength,
                             typeName= insulationsObject.typeName,
                             expenditure = insulationType.expenditure1
                         )
                         calculation_elements.append(newSheduleObj)
                     if isToGenerate(insulationType.name2, insulationType.expenditure2):
+                        if insulationType.isArea1:
+                            areaOrLength = insulationsObject.area
+                        else:
+                            areaOrLength = insulationsObject.length
+
                         newSheduleObj = objectToGenerate(
                             corp=insulationsObject.corp,
                             sec=insulationsObject.sec,
@@ -433,12 +469,18 @@ def script_execute():
                             mass=None,
                             comment='',
                             EF=insulationsObject.EF,
-                            motherArea=insulationsObject.area,
+                            motherArea=areaOrLength,
                             typeName= insulationsObject.typeName,
                             expenditure=insulationType.expenditure2
                         )
                         calculation_elements.append(newSheduleObj)
                     if isToGenerate(insulationType.name3, insulationType.expenditure3):
+
+                        if insulationType.isArea1:
+                            areaOrLength = insulationsObject.area
+                        else:
+                            areaOrLength = insulationsObject.length
+
                         newSheduleObj = objectToGenerate(
                             corp=insulationsObject.corp,
                             sec=insulationsObject.sec,
@@ -454,7 +496,7 @@ def script_execute():
                             mass=None,
                             comment='',
                             EF=insulationsObject.EF,
-                            motherArea=insulationsObject.area,
+                            motherArea=areaOrLength,
                             typeName= insulationsObject.typeName,
                             expenditure=insulationType.expenditure3
 

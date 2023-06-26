@@ -164,6 +164,8 @@ def script_execute():
                          group=BuiltInParameterGroup.PG_MATERIALS)
         shared_parameter('ФОП_ВИС_Изол_Расходник 1_Расход на м2', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 1_Расход по м.п.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
 
         shared_parameter('ФОП_ВИС_Изол_Расходник 2_Наименование', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
@@ -175,6 +177,8 @@ def script_execute():
                          group=BuiltInParameterGroup.PG_MATERIALS)
         shared_parameter('ФОП_ВИС_Изол_Расходник 2_Расход на м2', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 2_Расход по м.п.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
 
         shared_parameter('ФОП_ВИС_Изол_Расходник 3_Наименование', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
@@ -185,6 +189,8 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Изол_Расходник 3_Ед. изм.', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
         shared_parameter('ФОП_ВИС_Изол_Расходник 3_Расход на м2', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 3_Расход по м.п.', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
 
 
