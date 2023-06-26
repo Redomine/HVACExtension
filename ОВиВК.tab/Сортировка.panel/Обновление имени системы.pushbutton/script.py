@@ -85,10 +85,17 @@ def get_connectors(element):
 
 
 def get_type_system(element):
-	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
-		element = document.GetElement(element.HostElementId)
-	if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
-		element = document.GetElement(element.HostElementId)
+
+	try:
+		if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+			element = document.GetElement(element.HostElementId)
+	except:
+		pass
+	try:
+		if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+			element = document.GetElement(element.HostElementId)
+	except:
+		pass
 
 	#print element
 	connectors = get_connectors(element)

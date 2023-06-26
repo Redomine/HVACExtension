@@ -28,12 +28,14 @@ parameters_added = False
 
 
 class shared_parameter:
-    def insert(self, eDef, set, istype):
+    def insert(self, eDef, set, istype, group):
+
         if istype:
             newBinding = doc.Application.Create.NewTypeBinding(set)
         else:
             newBinding = doc.Application.Create.NewInstanceBinding(set)
-        doc.ParameterBindings.Insert(eDef, newBinding, BuiltInParameterGroup.PG_DATA)
+
+        doc.ParameterBindings.Insert(eDef, newBinding, group)
 
     def default_values(self, name):
         pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка', 'ФОП_ВИС_Имя трубы из сегмента',
@@ -56,10 +58,10 @@ class shared_parameter:
             inf.Set(15)
 
 
-    def __init__(self, name, definition, set, istype = False):
+    def __init__(self, name, definition, set, istype = False, group = BuiltInParameterGroup.PG_DATA):
         if not is_exists_params(name):
             self.eDef = definition.get_Item(name)
-            self.insert(self.eDef, set, istype)
+            self.insert(self.eDef, set, istype, group)
             self.default_values(name)
             global parameters_added
             parameters_added = True
@@ -81,13 +83,6 @@ def get_cats(list_of_cats):
     return set
 
 def check_spfile(group):
-    # spFile = doc.Application.OpenSharedParameterFile()
-    # # проверяем тот ли файл общих параметров подгружен
-    # spFileName = str(doc.Application.SharedParametersFilename)
-    # spFileName = spFileName.split('\\')
-    # spFileName = spFileName[-1]
-    #
-    # if "ФОП_v1.txt" != spFileName:
     try:
         doc.Application.SharedParametersFilename = str(
             os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\ФОП_v1.txt"
@@ -151,6 +146,7 @@ def script_execute():
     ductandpipeCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves])
     insulandliveCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations])
     systemsCatSet = get_cats(([BuiltInCategory.OST_DuctSystem, BuiltInCategory.OST_PipingSystem]))
+    insulsCatSet = get_cats([BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations])
 
     #получаем группу из которой выбираем параметры
     visDefinitions = check_spfile("03_ВИС")
@@ -158,6 +154,47 @@ def script_execute():
     genDefinitions  = check_spfile("00_Общие")
 
     with revit.Transaction("Добавление параметров"):
+        shared_parameter('ФОП_ВИС_Изол_Расходник 1_Наименование', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 1_Марка', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 1_Изготовитель', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 1_Ед. изм.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 1_Расход на м2', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 1_Расход по м.п.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+
+        shared_parameter('ФОП_ВИС_Изол_Расходник 2_Наименование', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 2_Марка', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 2_Изготовитель', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 2_Ед. изм.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 2_Расход на м2', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 2_Расход по м.п.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+
+        shared_parameter('ФОП_ВИС_Изол_Расходник 3_Наименование', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 3_Марка', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 3_Изготовитель', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 3_Ед. изм.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 3_Расход на м2', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+        shared_parameter('ФОП_ВИС_Изол_Расходник 3_Расход по м.п.', visDefinitions, insulsCatSet, istype=True,
+                         group=BuiltInParameterGroup.PG_MATERIALS)
+
+
+
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
         shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, visEFCatSet, istype=True)
 
