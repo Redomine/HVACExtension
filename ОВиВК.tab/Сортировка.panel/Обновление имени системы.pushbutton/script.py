@@ -14,6 +14,8 @@ from Autodesk.Revit.DB import *
 from Autodesk.Revit.Exceptions import *
 
 from pyrevit.script import output
+
+import Redomine
 from Redomine import *
 
 from dosymep.Bim4Everyone.Templates import ProjectParameters
