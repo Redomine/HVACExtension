@@ -87,8 +87,7 @@ def check_anchor():
                     anchor3 = True
 
                 if famName == anchor4Name:
-                    anchor4 == True
-
+                    anchor4 = True
 
                 if famVersion != actualVersion:
                     print 'Версия семейства ' + famsymb.Family.Name + ' расходится с актуальной, обновите его из шаблона.'
