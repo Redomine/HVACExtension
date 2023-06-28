@@ -148,7 +148,7 @@ def remove_models(colModel):
     except Exception:
         pass
     for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(Расходники)':
+        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент(Расходники)':
             doc.Delete(element.Id)
 
 def setElement(element, name, setting):
@@ -187,7 +187,7 @@ def new_position(calculation_elements):
 
     for element in colModel:
         try:
-            if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(Расходники)':
+            if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемент(Расходники)':
                 ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
                 ews.Set(WORKSET_ID.IntegerValue)
                 Models.append(element)
@@ -519,7 +519,7 @@ for element in famtypeitr:
     famsymb = doc.GetElement(famtypeID)
 
 
-    if famsymb.Family.Name == '_Якорный элемен(Расходники)':
+    if famsymb.Family.Name == '_Якорный элемент(Расходники)':
         temporary = famsymb
         is_temporary_in = True
 
@@ -528,7 +528,7 @@ if isItFamily():
     sys.exit()
 
 if is_temporary_in == False:
-    print 'Не обнаружен якорный элемен(металл и краска). Проверьте наличие семейства или восстановите исходное имя.'
+    print 'Не обнаружен якорный элемент(Расходники). Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
 
 
