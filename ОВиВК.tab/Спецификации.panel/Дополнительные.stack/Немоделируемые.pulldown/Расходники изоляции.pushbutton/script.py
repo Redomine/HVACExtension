@@ -152,7 +152,6 @@ def remove_models(colModel):
             doc.Delete(element.Id)
 
 def setElement(element, name, setting):
-
     if setting == 'None':
         setting = ''
     if setting == None:
@@ -307,10 +306,15 @@ def get_area(element):
 
 def get_length(element):
     length = element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble()
-    length= round((fromRevitToMeters(length) * length_reserve), 2)
-    print element.Id
-    print length
+    length= round((fromRevitToMeters(length) * isol_reserve), 2)
     return length
+
+def checkExpenditure(number):
+    number = str(number)
+    if ',' in number:
+        number = number.replace(',','.')
+    return number
+
 
 def script_execute():
     with revit.Transaction("Добавление расходных элементов"):
@@ -336,7 +340,7 @@ def script_execute():
                 mark1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Марка').AsValueString()
                 maker1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Изготовитель').AsValueString()
                 unit1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Ед. изм.').AsValueString()
-                expenditure1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Расход на м2').AsValueString()
+                expenditure1 = checkExpenditure(elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Расход на м2').AsValueString())
                 isArea1 = True
                 if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Расход по м.п.').AsInteger() == 1:
                     isArea1 = False
@@ -346,7 +350,7 @@ def script_execute():
                 mark2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Марка').AsValueString()
                 maker2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Изготовитель').AsValueString()
                 unit2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Ед. изм.').AsValueString()
-                expenditure2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Расход на м2').AsValueString()
+                expenditure2 = checkExpenditure(elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Расход на м2').AsValueString())
                 isArea2 = True
                 if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Расход по м.п.').AsInteger() == 1:
                     isArea2 = False
@@ -356,7 +360,7 @@ def script_execute():
                 mark3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Марка').AsValueString()
                 maker3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Изготовитель').AsValueString()
                 unit3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Ед. изм.').AsValueString()
-                expenditure3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Расход на м2').AsValueString()
+                expenditure3 = checkExpenditure(elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Расход на м2').AsValueString())
                 isArea3 = True
                 if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Расход по м.п.').AsInteger() == 1:
                     isArea3 = False
@@ -410,7 +414,8 @@ def script_execute():
                      )
                 else:
                     objectToArea.area = objectToArea.area + area
-                    objectToArea.length = objectToArea.area + length
+                    objectToArea.length = objectToArea.length + length
+
 
 
 
@@ -530,6 +535,5 @@ if is_temporary_in == False:
 
 status = paraSpec.check_parameters()
 if not status:
-    print 'Скрипт в разработке, цифры недостоверны'
     script_execute()
 
