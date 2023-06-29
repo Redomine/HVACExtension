@@ -16,6 +16,7 @@ import sys
 import System
 import dosymep
 import paraSpec
+import checkAnchor
 
 
 clr.ImportExtensions(dosymep.Revit)
@@ -43,16 +44,16 @@ from rpw.ui.forms import Alert
 
 
 
-
+#Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
-
-    
 colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 colModel = make_col(BuiltInCategory.OST_GenericModel)
 colSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colInsul = make_col(BuiltInCategory.OST_DuctInsulations)
+nameOfModel = '_Якорный элемент'
+description = 'Расчет краски и креплений'
 
 
 class generationElement:
@@ -253,7 +254,7 @@ def collapse_list(lists):
 def script_execute():
     with revit.Transaction("Добавление расчетных элементов"):
         # при каждом повторе расчета удаляем старые версии
-        remove_models(colModel, '_Якорный элемен(металл и краска)')
+        remove_models(colModel, nameOfModel, description)
 
         #список элементов которые будут сгенерированы
         calculation_elements = []
@@ -303,21 +304,23 @@ def script_execute():
                                      EF=element[13]))
 
 
-        new_position(newPos, temporary, '_Якорный элемен(металл и краска)')
+        new_position(newPos, temporary, nameOfModel, description)
 
-temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, '_Якорный элемен(металл и краска)')
+temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
 if temporary == None:
-    print 'Не обнаружен якорный элемен(металл и краска). Проверьте наличие семейства или восстановите исходное имя.'
+    print 'Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
 
 
 
 status = paraSpec.check_parameters()
 if not status:
-    script_execute()
+    anchor = checkAnchor.check_anchor(showText = False)
+    if anchor:
+        script_execute()
 

@@ -12,6 +12,8 @@ clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neut
 
 import sys
 import System
+import paraSpec
+import checkAnchor
 
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
@@ -19,7 +21,7 @@ from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 from System import Guid
 from pyrevit import revit
-import paraSpec
+
 
 from Microsoft.Office.Interop import Excel
 from Redomine import *
@@ -29,14 +31,14 @@ from rpw.ui.forms import TextInput
 from rpw.ui.forms import SelectFromList
 from rpw.ui.forms import Alert
 
-
+#Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
-
-    
 colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 colModel = make_col(BuiltInCategory.OST_GenericModel)
+nameOfModel = '_Якорный элемент'
+description = 'Импорт немоделируемых'
 
 def setElement(element, name, setting):
     if name == 'ФОП_ВИС_Число':
@@ -51,7 +53,7 @@ def setElement(element, name, setting):
             setting = ''
         element.LookupParameter(name).Set(str(setting))
 
-temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, '_Якорный элемент')
+temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
@@ -112,7 +114,7 @@ def script_execute():
 
     with revit.Transaction("Добавление расчетных элементов"):
         # при каждом повторе расчета удаляем старые версии
-        remove_models(colModel, '_Якорный элемент')
+        remove_models(colModel, nameOfModel, description)
         #при каждом повторе расчета удаляем старые версии
 
         calculation_elements = []
@@ -141,7 +143,7 @@ def script_execute():
             calculation_elements.append(newPos)
 
         # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
-        new_position(calculation_elements, temporary, '_Якорный элемент')
+        new_position(calculation_elements, temporary, nameOfModel, description)
 
     exel.ActiveWorkbook.Close(True)
     Marshal.ReleaseComObject(worksheet)
@@ -155,7 +157,9 @@ if isItFamily():
 status = paraSpec.check_parameters()
 
 if not status:
-    script_execute()
+    anchor = checkAnchor.check_anchor(showText = False)
+    if anchor:
+        script_execute()
 
 
 

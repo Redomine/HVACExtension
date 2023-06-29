@@ -16,6 +16,7 @@ import sys
 import System
 import dosymep
 import paraSpec
+import checkAnchor
 
 
 clr.ImportExtensions(dosymep.Revit)
@@ -43,11 +44,14 @@ from rpw.ui.forms import Alert
 
 
 
-
+#Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 selectedIds = uidoc.Selection.GetElementIds()
+nameOfModel = '_Якорный элемент'
+description = 'Пустая строка'
+
 
 def script_execute():
     with revit.Transaction("Добавление расчетных элементов"):
@@ -77,17 +81,17 @@ def script_execute():
                              comment='',
                              EF=parentEF)
 
-        new_position([hollowElement], temporary, '_Якорный элемен(пустой)')
+        new_position([hollowElement], temporary, nameOfModel, description)
 
 
-temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, '_Якорный элемен(пустой)')
+temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
 if temporary == None:
-    print 'Не обнаружен якорный элемен(пустой). Проверьте наличие семейства или восстановите исходное имя.'
+    print 'Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
 
 
@@ -99,7 +103,9 @@ if not status:
         if 0 == selectedIds.Count:
             print 'Выделите целевой элемент'
         else:
-            script_execute()
+            anchor = checkAnchor.check_anchor(showText = False)
+            if anchor:
+                script_execute()
     else:
         print 'Добавление пустого элемента возможно только на целевой спецификации'
 

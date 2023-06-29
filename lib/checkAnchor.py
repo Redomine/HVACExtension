@@ -27,20 +27,20 @@ doc = __revit__.ActiveUIDocument.Document  # type: Document
 
 IFamilyLoadOptions
 
-actualVersion = '1.0'
+actualVersion = '1.01'
 
 # anchor1Path = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\_Якорный элемент.rfa"
 # anchor2Path = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\_Якорный элемен(пустой).rfa"
 # anchor3Path = str(os.environ['USERPROFILE']) + "\\AppData\\Roaming\\pyRevit\\Extensions\\04.OV-VK.extension\\_Якорный элемен(металл и краска).rfa"
 
 anchor1Name = "_Якорный элемент"
-anchor2Name = "_Якорный элемен(пустой)"
-anchor3Name = "_Якорный элемен(металл и краска)"
-anchor4Name = "_Якорный элемент(Расходники)"
+# anchor2Name = "_Якорный элемен(пустой)"
+# anchor3Name = "_Якорный элемен(металл и краска)"
+# anchor4Name = "_Якорный элемент(Расходники)"
 
-famNames = [anchor1Name, anchor2Name, anchor3Name, anchor4Name]
+famNames = [anchor1Name]
 
-def check_anchor():
+def check_anchor(showText = True):
     with revit.Transaction("Проверка якорных элементов"):
         if WorksetTable.IsWorksetNameUnique(doc, '99_Немоделируемые элементы'):
             targetWorkset = Workset.Create(doc, '99_Немоделируемые элементы')
@@ -61,9 +61,9 @@ def check_anchor():
         famtypeitr.Reset()
 
         anchor1 = False
-        anchor2 = False
-        anchor3 = False
-        anchor4 = False
+        # anchor2 = False
+        # anchor3 = False
+        # anchor4 = False
         wayToPrint = False
 
         for element in famtypeitr:
@@ -80,35 +80,29 @@ def check_anchor():
                 if famName == anchor1Name:
                     anchor1 = True
 
-                if famName == anchor2Name:
-                    anchor2 = True
-
-                if famName == anchor3Name:
-                    anchor3 = True
-
-                if famName == anchor4Name:
-                    anchor4 = True
 
                 if famVersion != actualVersion:
-                    print 'Версия семейства ' + famsymb.Family.Name + ' расходится с актуальной, обновите его из шаблона.'
-                    wayToPrint = True
+                    if showText:
+                        print 'Версия семейства ' + famsymb.Family.Name + ' расходится с актуальной, обновите его из шаблона.'
+                        wayToPrint = True
 
 
-        if not anchor1:
-            print "Не загружено семейство " + anchor1Name
-            wayToPrint = True
-        if not anchor2:
-            print "Не загружено семейство " + anchor2Name
-            wayToPrint = True
-        if not anchor3:
-            print "Не загружено семейство " + anchor3Name
-            wayToPrint = True
-        if not anchor4:
-            print "Не загружено семейство " + anchor4Name
-            wayToPrint = True
+        if showText:
+            if not anchor1:
+                print "Не загружено семейство " + anchor1Name
+                wayToPrint = True
 
-        if wayToPrint == True:
-            print 'Для внутренних инженеров актуальные семейства и шаблоны лежат по пути:'
-            print 'W:\Департаменты\Проектный институт\Отдел стандартизации BIM и RD\BIM-Ресурсы\2-Стандарты\11 - Спецификации ОВ-ВК'
-            print 'Для инженеров подрядных организаций, обратитесь к ведущему BIM-координатору, или проверьте облако семейств'
 
+            if wayToPrint == True:
+                print 'Для внутренних инженеров актуальные семейства и шаблоны лежат по пути:'
+                print 'W:\Департаменты\Проектный институт\Отдел стандартизации BIM и RD\BIM-Ресурсы\2-Стандарты\11 - Спецификации ОВ-ВК'
+                print 'Для инженеров подрядных организаций, обратитесь к ведущему BIM-координатору, или проверьте облако семейств'
+
+        else:
+            if not anchor1:
+                return False
+            else:
+                if famVersion != actualVersion:
+                    return False
+                else:
+                    return True
