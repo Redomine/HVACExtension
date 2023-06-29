@@ -49,98 +49,6 @@ view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 selectedIds = uidoc.Selection.GetElementIds()
 
-
-collector = FilteredElementCollector(doc)
-collector.OfCategory(BuiltInCategory.OST_GenericModel)
-collector.OfClass(FamilySymbol)
-famtypeitr = collector.GetElementIdIterator()
-famtypeitr.Reset()
-
-def make_col(category):
-    col = FilteredElementCollector(doc)\
-                            .OfCategory(category)\
-                            .WhereElementIsNotElementType()\
-                            .ToElements()
-    return col
-
-def setElement(element, name, setting):
-    if setting == 'ФОП_ВИС_Масса':
-        if setting == 'None':
-            setting = ''
-
-        if setting == None:
-            setting = ''
-    if name == 'ФОП_ВИС_Число' or name == 'ФОП_ВИС_Масса':
-        element.LookupParameter(name).Set(setting)
-    else:
-        try:
-            element.LookupParameter(name).Set(str(setting))
-        except:
-            element.LookupParameter(name).Set(setting)
-
-
-class collapsedElements:
-    def __init__(self, corp, sec, floor, system, group, name, mark, art, maker, izm, number, mass, comment, EF):
-        self.corp = corp
-        self.sec = sec
-        self.floor = floor
-        self.system = system
-        self.group = group
-        self.name = name
-        self.mark = mark
-        self.art = art
-        self.maker = maker
-        self.izm = izm
-        self.number = number
-        self.mass = mass
-        self.comment = comment
-        self.EF = EF
-
-def new_position(element):
-    fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
-
-    #ищем стадию спеки для присвоения
-    phaseOk = False
-    for ws in fws:
-        if ws.Name == '99_Немоделируемые элементы':
-            WORKSET_ID = ws.Id
-            phaseOk = True
-
-    if not phaseOk:
-        print 'Не удалось найти рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
-        sys.exit()
-
-    # создаем заглушки по элементов собранных из таблицы
-    loc = XYZ(0, 0, 0)
-
-    temporary.Activate()
-    familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
-    # собираем список из созданных заглушек
-    colModel = make_col(BuiltInCategory.OST_GenericModel)
-    for model in colModel:
-        if model.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(пустой)':
-            ews = model.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
-            ews.Set(WORKSET_ID.IntegerValue)
-
-
-
-    dummy = familyInst
-    setElement(dummy, 'ФОП_Блок СМР', element.corp)
-    setElement(dummy, 'ФОП_Секция СМР', element.sec)
-    setElement(dummy, 'ФОП_Этаж', element.floor)
-    setElement(dummy, 'ФОП_ВИС_Имя системы', element.system)
-    setElement(dummy, 'ФОП_ВИС_Группирование', element.group)
-    setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', element.name)
-    setElement(dummy, 'ФОП_ВИС_Марка', element.mark)
-    setElement(dummy, 'ФОП_ВИС_Код изделия', element.art)
-    setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', element.maker)
-    setElement(dummy, 'ФОП_ВИС_Единица измерения', element.izm)
-    setElement(dummy, 'ФОП_ВИС_Число', element.number)
-    setElement(dummy, 'ФОП_ВИС_Масса', element.mass)
-    setElement(dummy, 'ФОП_ВИС_Примечание', element.comment)
-    setElement(dummy, 'ФОП_Экономическая функция', element.EF)
-
-
 def script_execute():
     with revit.Transaction("Добавление расчетных элементов"):
         element = doc.GetElement(selectedIds[0])
@@ -153,7 +61,8 @@ def script_execute():
         group = parentGroup + '_1'
 
 
-        hollowElement= collapsedElements(corp=corp,
+
+        hollowElement= rowOfSpecification(corp=corp,
                              sec=sec,
                              floor=floor,
                              system=system,
@@ -162,34 +71,24 @@ def script_execute():
                              mark='',
                              art= '',
                              maker='',
-                             izm='',
+                             unit='',
                              number='',
                              mass='',
                              comment='',
                              EF=parentEF)
 
-        new_position(hollowElement)
-
-is_temporary_in = False
-
-for element in famtypeitr:
-    famtypeID = element
-    famsymb = doc.GetElement(famtypeID)
+        new_position([hollowElement], temporary, '_Якорный элемен(пустой)')
 
 
-    if famsymb.Family.Name == '_Якорный элемен(пустой)':
-        temporary = famsymb
-        is_temporary_in = True
+temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, '_Якорный элемен(пустой)')
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
-if is_temporary_in == False:
+if temporary == None:
     print 'Не обнаружен якорный элемен(пустой). Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
-
-
 
 
 status = paraSpec.check_parameters()

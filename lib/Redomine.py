@@ -155,6 +155,7 @@ def fromRevitToSquareMeters(number):
     return square
 
 
+#создает коллекцию из экземпляров категории
 def make_col(category):
     col = FilteredElementCollector(doc) \
         .OfCategory(category) \
@@ -214,3 +215,183 @@ def get_ADSK_Code(element):
     replaceName = 'ФОП_ВИС_Замена параметра_Код изделия'
     ADSK_Code = getSharedParameter(element, paraName, replaceName)
     return ADSK_Code
+
+def getConnectors(element):
+    connectors = []
+    try:
+        a = element.ConnectorManager.Connectors.ForwardIterator()
+        while a.MoveNext():
+            connectors.append(a.Current)
+    except:
+        try:
+            a = element.MEPModel.ConnectorManager.Connectors.ForwardIterator()
+            while a.MoveNext():
+                connectors.append(a.Current)
+        except:
+            a = element.MEPSystem.ConnectorManager.Connectors.ForwardIterator()
+            while a.MoveNext():
+                connectors.append(a.Current)
+    return connectors
+
+
+#возвращает площадь фитинга воздуховода
+def get_fitting_area(element):
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        options = Options()
+        geoms = element.get_Geometry(options)
+
+        for g in geoms:
+            solids = g.GetInstanceGeometry()
+        area = 0
+
+        for solid in solids:
+            if isinstance(solid, Line) or isinstance(solid, Arc):
+                continue
+            for face in solid.Faces:
+                area = area + face.Area
+
+        area = fromRevitToSquareMeters(area)
+        connectors = getConnectors(element)
+
+        for connector in connectors:
+            try:
+                H = connector.Height
+                B = connector.Width
+                S = (H * B)
+                S = fromRevitToSquareMeters(S)
+                area = area - S
+            except Exception:
+                R = connector.Radius
+                S = (3.14 * R * R)
+                S = fromRevitToSquareMeters(S)
+                area = (area - S)
+        area = round(area, 2)
+    return area
+
+
+#заполняет ячейки в сгенерированном немоделируемом
+def setElement(element, name, setting):
+    if setting == 'None':
+        setting = ''
+    if setting == None:
+        setting = ''
+
+    if name == 'ФОП_ВИС_Число' or name == 'ФОП_ВИС_Масса':
+        element.LookupParameter(name).Set(setting)
+    else:
+        try:
+            element.LookupParameter(name).Set(str(setting))
+        except:
+            element.LookupParameter(name).Set(setting)
+
+
+#генерирует пустые элементы в рабочем наборе немоделируемых
+def new_position(calculation_elements, temporary, famName):
+    #создаем заглушки по элементов собранных из таблицы
+    loc = XYZ(0, 0, 0)
+
+    temporary.Activate()
+    for element in calculation_elements:
+        familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
+
+    #собираем список из созданных заглушек
+    colModel = make_col(BuiltInCategory.OST_GenericModel)
+    Models = []
+
+    fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+    for ws in fws:
+        if ws.Name == '99_Немоделируемые элементы':
+            WORKSET_ID = ws.Id
+
+
+    for element in colModel:
+        try:
+            if element.LookupParameter('Семейство').AsValueString() == famName:
+                ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+                ews.Set(WORKSET_ID.IntegerValue)
+                Models.append(element)
+        except Exception:
+                 print 'Не удалось присвоить рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
+
+    index = 1
+    #для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
+    for position in calculation_elements:
+        group = position.group
+        if famName != '_Якорный элемен(пустой)':
+            posGroup = str(position.group) + '_' + str(position.name) + '_' + str(position.mark) + '_' + str(index)
+            index+=1
+            group = posGroup
+
+        if famName != '_Якорный элемен(пустой)':
+            dummy = Models[0]
+        else:
+            dummy = familyInst
+        setElement(dummy, 'ФОП_Блок СМР', position.corp)
+        setElement(dummy, 'ФОП_Секция СМР', position.sec)
+        setElement(dummy, 'ФОП_Этаж', position.floor)
+        setElement(dummy, 'ФОП_ВИС_Имя системы', position.system)
+        setElement(dummy, 'ФОП_ВИС_Группирование', group)
+        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', position.name)
+        setElement(dummy, 'ФОП_ВИС_Марка', position.mark)
+        setElement(dummy, 'ФОП_ВИС_Код изделия', position.art)
+        setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', position.maker)
+        setElement(dummy, 'ФОП_ВИС_Единица измерения', position.unit)
+        setElement(dummy, 'ФОП_ВИС_Число', position.number)
+        setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
+        setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
+        setElement(dummy, 'ФОП_Экономическая функция', position.EF)
+        Models.pop(0)
+
+#для прогона новых ревизий генерации немоделируемых: стирает элмент с переданным именем модели
+def remove_models(colModel, famName):
+    try:
+        for element in colModel:
+            edited_by = element.LookupParameter('Редактирует').AsString()
+            if edited_by and edited_by != __revit__.Application.Username:
+                print "Якорные элементы не были обработаны, так как были заняты пользователями:"
+                print edited_by
+                sys.exit()
+    except Exception:
+        pass
+    for element in colModel:
+        if element.LookupParameter('Семейство').AsValueString() == famName:
+            doc.Delete(element.Id)
+
+#класс содержащий все ячейки типовой спецификации
+class rowOfSpecification:
+    def __init__(self, corp, sec, floor, system, group, name, mark, art, maker, unit, number, mass, comment, EF):
+        self.corp = corp
+        self.sec = sec
+        self.floor = floor
+        self.system = system
+        self.group = group
+        self.name = name
+        self.mark = mark
+        self.art = art
+        self.maker = maker
+        self.unit = unit
+        self.number = number
+        self.mass = mass
+        self.comment = comment
+        self.EF = EF
+
+#возвращает famsymbol если семейство есть в проекте, None если нет
+def isFamilyIn(builtin, name):
+    # create a filtered element collector set to Category OST_Mass and Class FamilySymbol
+    collector = FilteredElementCollector(doc)
+    collector.OfCategory(builtin)
+    collector.OfClass(FamilySymbol)
+    famtypeitr = collector.GetElementIdIterator()
+    famtypeitr.Reset()
+
+    is_temporary_in = False
+    for element in famtypeitr:
+        famtypeID = element
+        famsymb = doc.GetElement(famtypeID)
+
+        if famsymb.Family.Name == name:
+            temporary = famsymb
+            is_temporary_in = True
+            return temporary
+    else:
+        return None
