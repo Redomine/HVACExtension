@@ -286,7 +286,7 @@ def setElement(element, name, setting):
 
 
 #генерирует пустые элементы в рабочем наборе немоделируемых
-def new_position(calculation_elements, temporary, famName):
+def new_position(calculation_elements, temporary, famName, description):
     #создаем заглушки по элементов собранных из таблицы
     loc = XYZ(0, 0, 0)
 
@@ -306,10 +306,11 @@ def new_position(calculation_elements, temporary, famName):
 
     for element in colModel:
         try:
-            if element.LookupParameter('Семейство').AsValueString() == famName:
-                ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
-                ews.Set(WORKSET_ID.IntegerValue)
-                Models.append(element)
+            if element.get_Parameter(BuiltInParameter.ELEM_FAMILY_PARAM).AsValueString() == famName:
+                if element.LookupParameter('ФОП_ВИС_Назначение').AsValueString() == '':
+                    ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+                    ews.Set(WORKSET_ID.IntegerValue)
+                    Models.append(element)
         except Exception:
                  print 'Не удалось присвоить рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
 
@@ -317,12 +318,12 @@ def new_position(calculation_elements, temporary, famName):
     #для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
     for position in calculation_elements:
         group = position.group
-        if famName != '_Якорный элемен(пустой)':
+        if description != 'Пустая строка':
             posGroup = str(position.group) + '_' + str(position.name) + '_' + str(position.mark) + '_' + str(index)
             index+=1
             group = posGroup
 
-        if famName != '_Якорный элемен(пустой)':
+        if description != 'Пустая строка':
             dummy = Models[0]
         else:
             dummy = familyInst
@@ -340,10 +341,11 @@ def new_position(calculation_elements, temporary, famName):
         setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
         setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
         setElement(dummy, 'ФОП_Экономическая функция', position.EF)
+        setElement(dummy, 'ФОП_ВИС_Назначение', description)
         Models.pop(0)
 
 #для прогона новых ревизий генерации немоделируемых: стирает элмент с переданным именем модели
-def remove_models(colModel, famName):
+def remove_models(colModel, famName, description):
     try:
         for element in colModel:
             edited_by = element.LookupParameter('Редактирует').AsString()
@@ -353,9 +355,14 @@ def remove_models(colModel, famName):
                 sys.exit()
     except Exception:
         pass
+
     for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == famName:
-            doc.Delete(element.Id)
+        if element.LookupParameter('ФОП_ВИС_Назначение'):
+            currentName = element.LookupParameter('Семейство').AsValueString()
+            currentDescription = element.LookupParameter('ФОП_ВИС_Назначение').AsValueString()
+        if  currentName == famName:
+            if currentDescription == description:
+                doc.Delete(element.Id)
 
 #класс содержащий все ячейки типовой спецификации
 class rowOfSpecification:

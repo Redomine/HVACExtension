@@ -16,6 +16,7 @@ import sys
 import System
 import dosymep
 import paraSpec
+import checkAnchor
 
 
 clr.ImportExtensions(dosymep.Revit)
@@ -43,15 +44,13 @@ from rpw.ui.forms import Alert
 
 
 
-
+#Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
-
-
-
 colPipeInsul = make_col(BuiltInCategory.OST_PipeInsulations)
 colDuctInsul = make_col(BuiltInCategory.OST_DuctInsulations)
-
+nameOfModel = '_Якорный элемент'
+description = 'Расходники изоляции'
 
 
 class insulType:
@@ -168,7 +167,7 @@ def script_execute():
         insulationsTypeList = []
         insulationsObjectsList = []
         # при каждом повторе расчета удаляем старые версии
-        remove_models(colModel, '_Якорный элемент(Расходники)')
+        remove_models(colModel, nameOfModel, description)
 
 
         collections = [colDuctInsul, colPipeInsul]
@@ -354,21 +353,24 @@ def script_execute():
                         calculation_elements.append(newSheduleObj)
 
         #проходимся по списку объектов под генерацию и создаем их
-        new_position(calculation_elements, temporary, '_Якорный элемент(Расходники)')
+        new_position(calculation_elements, temporary, nameOfModel, description)
 
-temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, '_Якорный элемент(Расходники)')
+temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
 if temporary == None:
-    print 'Не обнаружен якорный элемент(Расходники). Проверьте наличие семейства или восстановите исходное имя.'
+    print 'Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
 
 
 
 status = paraSpec.check_parameters()
 if not status:
-    script_execute()
+    anchor = checkAnchor.check_anchor(showText = False)
+    if anchor:
+        script_execute()
+
 
