@@ -5,9 +5,15 @@ __title__ = 'Полное\nобновление'
 __doc__ = "Последовательно обновляет имя системы, функцию и саму спецификацию"
 
 from pyrevit.loader.sessionmgr import execute_command
+import paraSpec
 
-execute_command("04dotov-vk-овивк-сортировка-обновлениеименисистемы")
+parametersAdded = paraSpec.check_parameters()
 
-execute_command("04dotov-vk-овивк-сортировка-обновлениефункции")
 
-execute_command("04dotov-vk-овивк-сортировка-обновлениеспецификации")
+
+if not parametersAdded:
+    execute_command("04dotov-vk-овивк-сортировка-обновлениеименисистемы")
+
+    execute_command("04dotov-vk-овивк-сортировка-обновлениефункции")
+
+    execute_command("04dotov-vk-овивк-сортировка-обновлениеспецификации")

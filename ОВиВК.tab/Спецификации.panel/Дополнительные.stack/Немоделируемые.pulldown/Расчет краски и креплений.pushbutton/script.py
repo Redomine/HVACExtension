@@ -47,40 +47,13 @@ from rpw.ui.forms import Alert
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
-def make_col(category):
-    col = FilteredElementCollector(doc)\
-                            .OfCategory(category)\
-                            .WhereElementIsNotElementType()\
-                            .ToElements()
-    return col 
     
 colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 colModel = make_col(BuiltInCategory.OST_GenericModel)
 colSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colInsul = make_col(BuiltInCategory.OST_DuctInsulations)
-# create a filtered element collector set to Category OST_Mass and Class FamilySymbol
-collector = FilteredElementCollector(doc)
-collector.OfCategory(BuiltInCategory.OST_GenericModel)
-collector.OfClass(FamilySymbol)
-famtypeitr = collector.GetElementIdIterator()
-famtypeitr.Reset()
 
-
-
-
-#settings('8. Расчетные элементы', "Металлические крепления для воздуховодов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colCurves, False)
-
-generation_list = [
-    # для добавления элементов внести в список на генерацию по форме ниже
-    # Если число формируется по отдельному алгоритму - добавляем формулу в функцию, иначе выпадет 1
-    # [Группирование, Имя, Единица измерения, ФОП_Имя параметра, Коллекция, Один элемент на систему?]
-    ['12. Расчетные элементы', "Металлические крепления для воздуховодов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colCurves, False],
-    ['12. Расчетные элементы', "Металлические крепления для трубопроводов", 'кг.', 'ФОП_ВИС_Расчет металла для креплений', colPipes, False],
-    ['12. Расчетные элементы', "Изоляция для фланцев и стыков", 'м².', 'ФОП_ВИС_Совместно с воздуховодом', colInsul, False],
-    ['12. Расчетные элементы', "Краска антикоррозионная за два раза БТ-177", 'кг.', 'ФОП_ВИС_Расчет краски и грунтовки', colPipes, False],
-    ['12. Расчетные элементы', "Грунтовка  ГФ-031", 'кг.', 'ФОП_ВИС_Расчет краски и грунтовки', colPipes, False]
-]
 
 class generationElement:
     def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
@@ -103,72 +76,6 @@ genList = [
     generationElement(group = '12. Расчетные элементы', name = "Грунтовка для стальных труб", mark = 'ГФ-031', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False)
 ]
 
-
-
-
-
-def setElement(element, name, setting):
-
-
-    if setting == 'ФОП_ВИС_Масса':
-        if setting == 'None':
-            setting = ''
-
-        if setting == None:
-            setting = ''
-    if name == 'ФОП_ВИС_Число' or name == 'ФОП_ВИС_Масса':
-        element.LookupParameter(name).Set(setting)
-    else:
-        try:
-            element.LookupParameter(name).Set(str(setting))
-        except:
-            element.LookupParameter(name).Set(setting)
-
-def get_ADSK_Name(element):
-    if element.LookupParameter('ADSK_Наименование'):
-        ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
-        if ADSK_Name == None or ADSK_Name == "":
-            ADSK_Name = "None"
-    else:
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-
-        if ElemType.LookupParameter('ADSK_Наименование') == None\
-                or ElemType.LookupParameter('ADSK_Наименование').AsString() == None \
-                or ElemType.LookupParameter('ADSK_Наименование').AsString() == "":
-            ADSK_Name = "None"
-        else:
-            ADSK_Name = ElemType.LookupParameter('ADSK_Наименование').AsString()
-
-    if str(element.Category.Name) == 'Трубы':
-        ElemTypeId = element.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента'):
-            if ElemType.LookupParameter('ФОП_ВИС_Имя трубы из сегмента').AsInteger() == 1:
-                ADSK_Name = element.LookupParameter('Описание сегмента').AsString()
-
-
-
-    return ADSK_Name
-
-
-
-class collapsedElements:
-    def __init__(self, corp, sec, floor, system, group, name, mark, art, maker, izm, number, mass, comment, EF):
-        self.corp = corp
-        self.sec = sec
-        self.floor = floor
-        self.system = system
-        self.group = group
-        self.name = name
-        self.mark = mark
-        self.art = art
-        self.maker = maker
-        self.izm = izm
-        self.number = number
-        self.mass = mass
-        self.comment = comment
-        self.EF = EF
 
 class calculation_element:
     def duct_material(self, element):
@@ -278,10 +185,6 @@ class calculation_element:
                 isType = gen.isType
 
 
-        # for generation in generation_list:
-        #     if collection in generation and parameter in generation:
-        #         self.izm = generation[2]
-        #         isType = generation[5]
 
 
         self.corp = str(element.LookupParameter('ФОП_Блок СМР').AsString())
@@ -296,79 +199,6 @@ class calculation_element:
         if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
             self.name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
 
-
-def new_position(calculation_elements):
-    fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
-
-    #ищем стадию спеки для присвоения
-    phaseOk = False
-    for ws in fws:
-        if ws.Name == '99_Немоделируемые элементы':
-            WORKSET_ID = ws.Id
-            phaseOk = True
-
-    if not phaseOk:
-        print 'Не удалось найти рабочий набор "99_Немоделируемые элементы", проверьте список наборов'
-        sys.exit()
-
-    # создаем заглушки по элементов собранных из таблицы
-    loc = XYZ(0, 0, 0)
-
-    temporary.Activate()
-    for element in calculation_elements:
-        familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
-    # собираем список из созданных заглушек
-    colModel = make_col(BuiltInCategory.OST_GenericModel)
-    Models = []
-    for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
-            ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
-            ews.Set(WORKSET_ID.IntegerValue)
-            Models.append(element)
-
-    # для первого элмента списка заглушек присваиваем все параметры, после чего удаляем его из списка
-    for position in calculation_elements:
-        group = position.group + position.name + position.mark
-        dummy = Models[0]
-        setElement(dummy, 'ФОП_Блок СМР', position.corp)
-        setElement(dummy, 'ФОП_Секция СМР', position.sec)
-        setElement(dummy, 'ФОП_Этаж', position.floor)
-        try:
-            setElement(dummy, 'ADSK_Имя системы', position.system)
-        except:
-            pass
-
-        setElement(dummy, 'ФОП_ВИС_Имя системы', position.system)
-        setElement(dummy, 'ФОП_ВИС_Группирование', group)
-        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', position.name)
-        setElement(dummy, 'ФОП_ВИС_Марка', position.mark)
-        setElement(dummy, 'ФОП_ВИС_Код изделия', position.art)
-        setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', position.maker)
-        setElement(dummy, 'ФОП_ВИС_Единица измерения', position.izm)
-        setElement(dummy, 'ФОП_ВИС_Число', position.number)
-        setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
-        setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
-        setElement(dummy, 'ФОП_Экономическая функция', position.EF)
-
-
-
-        Models.pop(0)
-
-def remove_models(colModel):
-    try:
-        for element in colModel:
-            edited_by = element.LookupParameter('Редактирует').AsString()
-            if edited_by and edited_by != __revit__.Application.Username:
-                print "Якорные элементы не были обработаны, так как были заняты пользователями:"
-                print edited_by
-                sys.exit()
-    except Exception:
-        pass
-
-
-    for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == '_Якорный элемен(металл и краска)':
-            doc.Delete(element.Id)
 def is_object_to_generate(element, genCol, collection, parameter, genList = genList):
     if element in genCol:
         for gen in genList:
@@ -381,15 +211,6 @@ def is_object_to_generate(element, genCol, collection, parameter, genList = genL
                     if element.LookupParameter(parameter).AsInteger() == 1:
                         return True
 
-        # for generation in generation_list:
-        #     if collection in generation and parameter in generation:
-        #         try:
-        #             elemType = doc.GetElement(element.GetTypeId())
-        #             if elemType.LookupParameter(parameter).AsInteger() == 1:
-        #                 return True
-        #         except Exception:
-        #             if element.LookupParameter(parameter).AsInteger() == 1:
-        #                 return True
 
 def collapse_list(lists):
     singles = []
@@ -399,12 +220,6 @@ def collapse_list(lists):
         if isSingle:
             singles.append(name)
 
-    #
-    # for gen in generation_list:
-    #     name = gen[1]
-    #     isSingle = gen[5]
-    #     if isSingle:
-    #         singles.append(name)
 
     dict = {}
 
@@ -438,7 +253,7 @@ def collapse_list(lists):
 def script_execute():
     with revit.Transaction("Добавление расчетных элементов"):
         # при каждом повторе расчета удаляем старые версии
-        remove_models(colModel)
+        remove_models(colModel, '_Якорный элемен(металл и краска)')
 
         #список элементов которые будут сгенерированы
         calculation_elements = []
@@ -472,7 +287,7 @@ def script_execute():
 
         newPos = []
         for element in calculation_elements:
-            newPos.append(collapsedElements(corp=element[0],
+            newPos.append(rowOfSpecification(corp=element[0],
                                      sec=element[1],
                                      floor=element[2],
                                      system=element[3],
@@ -481,31 +296,22 @@ def script_execute():
                                      mark=element[6],
                                      art= element[7],
                                      maker=element[8],
-                                     izm=element[9],
+                                     unit=element[9],
                                      number=element[10],
                                      mass=element[11],
                                      comment=element[12],
                                      EF=element[13]))
 
 
-        new_position(newPos)
+        new_position(newPos, temporary, '_Якорный элемен(металл и краска)')
 
-is_temporary_in = False
-
-for element in famtypeitr:
-    famtypeID = element
-    famsymb = doc.GetElement(famtypeID)
-
-
-    if famsymb.Family.Name == '_Якорный элемен(металл и краска)':
-        temporary = famsymb
-        is_temporary_in = True
+temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, '_Якорный элемен(металл и краска)')
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
-if is_temporary_in == False:
+if temporary == None:
     print 'Не обнаружен якорный элемен(металл и краска). Проверьте наличие семейства или восстановите исходное имя.'
     sys.exit()
 
