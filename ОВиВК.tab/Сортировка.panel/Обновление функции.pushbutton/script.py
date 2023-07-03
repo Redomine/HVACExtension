@@ -75,7 +75,10 @@ def getEFsystem(element):
 
 
     if str(EF) == 'None':
-        EF = lookupCheck(information, 'ФОП_Экономическая функция').AsString()
+        if not infEF:
+            EF = 'None'
+        else:
+            EF = infEF
 
     return EF
 
@@ -158,13 +161,12 @@ status = paraSpec.check_parameters()
 
 if not status:
     information = doc.ProjectInformation
-    try:
-        if lookupCheck(information, 'ФОП_Экономическая функция').AsString() == None:
-            print 'ФОП_Экономическая функция не заполнен в сведениях о проекте'
-            sys.exit()
-    except Exception:
-        print 'Не найден параметр ФОП_Экономическая функция'
-        sys.exit()
+
+    infEF = None
+
+    if lookupCheck(information, 'ФОП_Экономическая функция').AsString():
+        if lookupCheck(information, 'ФОП_Экономическая функция').AsString() == '':
+            infEF = None
 
     ductDict = getSystemDict(colDuctSystems)
     pipeDict = getSystemDict(colPipeSystems)

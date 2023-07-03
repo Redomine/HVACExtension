@@ -196,7 +196,8 @@ def script_execute():
 
 
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
-        shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, visEFCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, defaultCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_ЭФ для системы', visDefinitions, systemsCatSet, istype=True)
 
         shared_parameter('ФОП_Блок СМР', genDefinitions, defaultCatSet)
 
@@ -222,7 +223,6 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Число', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Примечание', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Индивидуальный запас', visDefinitions, insulandliveCatSet, istype=True)
-        shared_parameter('ФОП_ВИС_ЭФ для системы', visDefinitions, systemsCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Сокращение для системы', visDefinitions, systemsCatSet, istype=True)
 
 
