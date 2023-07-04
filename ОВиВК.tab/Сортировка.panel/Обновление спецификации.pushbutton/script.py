@@ -162,10 +162,17 @@ def get_depend(element):
     parentId = element.Id
     parent_group = lookupCheck(element,'ФОП_ВИС_Группирование').AsString()
 
+
     subIds = element.GetSubComponentIds()
     vkheat_collector = []
     for subId in subIds:
         subElement = doc.GetElement(subId)
+
+        if subElement.Category.IsId(BuiltInCategory.OST_PipeFitting):
+            realName = get_ADSK_Name(subElement)
+            namePara = subElement.LookupParameter('ФОП_ВИС_Наименование комбинированное')
+            namePara.Set(realName)
+
         part = vkheat_collector_part(element = subElement, ADSK_name= get_ADSK_Name(subElement),
                                      ADSK_mark= get_ADSK_Mark(subElement), ADSK_maker = get_ADSK_Maker(subElement),
                                      parent = parent, parent_group = parent_group, parentId = parentId)
