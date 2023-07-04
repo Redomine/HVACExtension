@@ -157,7 +157,9 @@ def get_fitting_area(element):
 
 
 def get_depend(element):
+
     parent = element.get_Parameter(BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM).AsValueString()
+    parentId = element.Id
     parent_group = lookupCheck(element,'ФОП_ВИС_Группирование').AsString()
 
     subIds = element.GetSubComponentIds()
@@ -166,8 +168,11 @@ def get_depend(element):
         subElement = doc.GetElement(subId)
         part = vkheat_collector_part(element = subElement, ADSK_name= get_ADSK_Name(subElement),
                                      ADSK_mark= get_ADSK_Mark(subElement), ADSK_maker = get_ADSK_Maker(subElement),
-                                     parent = parent, parent_group = parent_group)
+                                     parent = parent, parent_group = parent_group, parentId = parentId)
         vkheat_collector.append(part)
+        vis_collectors_parts.append(part)
+
+
     vkheat_collector.sort(key=lambda x: x.group)
 
     number = 0
@@ -181,6 +186,26 @@ def get_depend(element):
 
             part.reinsert(number)
 
+    isItFirstOb = False
+    if parent_group not in metСollectors:
+        isItFirstOb = True
+        metСollectors.append(parent_group)
+        for subId in subIds:
+            subElement = doc.GetElement(subId)
+            if subElement.Id not in recountIds:
+                recountIds.append(subElement.Id)
+
+    if isItFirstOb == False:
+        for subId in subIds:
+            subElement = doc.GetElement(subId)
+            if subElement.Id not in recountIds:
+                subElement.LookupParameter('ФОП_ВИС_Число').Set(0)
+                recountIds.append(subElement.Id)
+
+
+
+
+
 class settings:
     def __init__(self,
                  Collection,
@@ -192,7 +217,8 @@ class settings:
 
 
 class vkheat_collector_part:
-    def __init__(self, element, ADSK_name, ADSK_mark, ADSK_maker, parent, parent_group):
+    def __init__(self, element, ADSK_name, ADSK_mark, ADSK_maker, parent, parent_group, parentId):
+        self.parentId = parentId
         self.parent_group = parent_group
         self.element = element
         self.ADSK_maker = ADSK_maker
@@ -558,7 +584,7 @@ class shedule_position:
 
         if getParameter(ElemType, 'ФОП_ВИС_Узел'):
             if lookupCheck(ElemType, 'ФОП_ВИС_Узел').AsInteger() == 1:
-                vis_collectors.append(element)
+                inCollector.append(element)
 
 
 colFittings = make_col(BuiltInCategory.OST_DuctFitting)
@@ -621,7 +647,7 @@ def script_execute():
                 data.insert()
 
 
-        for element in vis_collectors:
+        for element in inCollector:
             if not isElementEditedBy(element):
                 get_depend(element)
 
@@ -639,7 +665,13 @@ if not parametersAdded:
     information = doc.ProjectInformation
     with revit.Transaction("Обновление девятиграфной формы"):
         #список элементов для перебора в вид узлов:
-        vis_collectors = []
+        inCollector = []
+        metСollectors = []
+        recountIds = []
+        vis_collectors_parts = []
+
         script_execute()
+
+
         for report in report_rows:
             print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report
