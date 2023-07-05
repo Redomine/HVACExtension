@@ -156,6 +156,25 @@ def get_fitting_area(element):
     return area
 
 
+def get_except(element):
+    ElemTypeId = element.GetTypeId()
+    ElemType = doc.GetElement(ElemTypeId)
+
+
+    if not element.LookupParameter('ФОП_ВИС_Исключить из узла'):
+        if not ElemType.LookupParameter('ФОП_ВИС_Исключить из узла'):
+            return True
+
+    if element.LookupParameter('ФОП_ВИС_Исключить из узла'):
+        if element.LookupParameter('ФОП_ВИС_Исключить из узла').AsInteger() == 1:
+            return False
+
+    if ElemType.LookupParameter('ФОП_ВИС_Исключить из узла'):
+        if ElemType.LookupParameter('ФОП_ВИС_Исключить из узла').AsInteger() == 1:
+            return False
+
+    return True
+
 def get_depend(element):
 
     parent = element.get_Parameter(BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM).AsValueString()
@@ -165,19 +184,32 @@ def get_depend(element):
 
     subIds = element.GetSubComponentIds()
     vkheat_collector = []
+    notInList = []
     for subId in subIds:
+
+
         subElement = doc.GetElement(subId)
 
-        if subElement.Category.IsId(BuiltInCategory.OST_PipeFitting):
-            realName = get_ADSK_Name(subElement)
-            namePara = subElement.LookupParameter('ФОП_ВИС_Наименование комбинированное')
-            namePara.Set(realName)
 
-        part = vkheat_collector_part(element = subElement, ADSK_name= get_ADSK_Name(subElement),
-                                     ADSK_mark= get_ADSK_Mark(subElement), ADSK_maker = get_ADSK_Maker(subElement),
-                                     parent = parent, parent_group = parent_group, parentId = parentId)
-        vkheat_collector.append(part)
-        vis_collectors_parts.append(part)
+
+        isItInCollector = get_except(subElement)
+
+
+        if isItInCollector:
+            if subElement.Category.IsId(BuiltInCategory.OST_PipeFitting):
+                realName = get_ADSK_Name(subElement)
+                namePara = subElement.LookupParameter('ФОП_ВИС_Наименование комбинированное')
+                namePara.Set(realName)
+
+            part = vkheat_collector_part(element = subElement, ADSK_name= get_ADSK_Name(subElement),
+                                         ADSK_mark= get_ADSK_Mark(subElement), ADSK_maker = get_ADSK_Maker(subElement),
+                                         parent = parent, parent_group = parent_group, parentId = parentId)
+            vkheat_collector.append(part)
+            vis_collectors_parts.append(part)
+
+        if not isItInCollector:
+            notInList.append(subElement.Id)
+
 
 
     vkheat_collector.sort(key=lambda x: x.group)
@@ -193,21 +225,25 @@ def get_depend(element):
 
             part.reinsert(number)
 
+
+
     isItFirstOb = False
     if parent_group not in metСollectors:
         isItFirstOb = True
         metСollectors.append(parent_group)
         for subId in subIds:
             subElement = doc.GetElement(subId)
-            if subElement.Id not in recountIds:
-                recountIds.append(subElement.Id)
+            if subElement.Id not in notInList:
+                if subElement.Id not in recountIds:
+                    recountIds.append(subElement.Id)
 
     if isItFirstOb == False:
         for subId in subIds:
             subElement = doc.GetElement(subId)
-            if subElement.Id not in recountIds:
-                subElement.LookupParameter('ФОП_ВИС_Число').Set(0)
-                recountIds.append(subElement.Id)
+            if subElement.Id not in notInList:
+                if subElement.Id not in recountIds:
+                    subElement.LookupParameter('ФОП_ВИС_Число').Set(0)
+                    recountIds.append(subElement.Id)
 
 
 
