@@ -37,6 +37,7 @@ view = doc.ActiveView
 colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 colModel = make_col(BuiltInCategory.OST_GenericModel)
+
 nameOfModel = '_Якорный элемент'
 description = 'Импорт немоделируемых'
 
