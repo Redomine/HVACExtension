@@ -306,8 +306,13 @@ def new_position(calculation_elements, temporary, famName, description):
 
     for element in colModel:
         try:
+            print element.LookupParameter('ФОП_ВИС_Назначение').AsValueString()
             if element.get_Parameter(BuiltInParameter.ELEM_FAMILY_PARAM).AsValueString() == famName:
                 if element.LookupParameter('ФОП_ВИС_Назначение').AsValueString() == '':
+                    ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+                    ews.Set(WORKSET_ID.IntegerValue)
+                    Models.append(element)
+                if element.LookupParameter('ФОП_ВИС_Назначение').AsValueString() == None:
                     ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
                     ews.Set(WORKSET_ID.IntegerValue)
                     Models.append(element)

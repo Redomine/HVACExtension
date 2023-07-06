@@ -162,11 +162,13 @@ status = paraSpec.check_parameters()
 if not status:
     information = doc.ProjectInformation
 
-    infEF = None
+    infEF = lookupCheck(information, 'ФОП_Экономическая функция').AsString()
 
     if lookupCheck(information, 'ФОП_Экономическая функция').AsString():
         if lookupCheck(information, 'ФОП_Экономическая функция').AsString() == '':
             infEF = None
+
+
 
     ductDict = getSystemDict(colDuctSystems)
     pipeDict = getSystemDict(colPipeSystems)
