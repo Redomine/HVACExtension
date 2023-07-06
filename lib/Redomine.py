@@ -307,7 +307,11 @@ def new_position(calculation_elements, temporary, famName, description):
     for element in colModel:
         try:
             if element.get_Parameter(BuiltInParameter.ELEM_FAMILY_PARAM).AsValueString() == famName:
-                if element.LookupParameter('ФОП_ВИС_Назначение').AsValueString() == '':
+                if element.LookupParameter('ФОП_ВИС_Назначение').AsString() == '':
+                    ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+                    ews.Set(WORKSET_ID.IntegerValue)
+                    Models.append(element)
+                if element.LookupParameter('ФОП_ВИС_Назначение').AsString() == None:
                     ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
                     ews.Set(WORKSET_ID.IntegerValue)
                     Models.append(element)
@@ -346,6 +350,8 @@ def new_position(calculation_elements, temporary, famName, description):
 
 #для прогона новых ревизий генерации немоделируемых: стирает элмент с переданным именем модели
 def remove_models(colModel, famName, description):
+
+
     try:
         for element in colModel:
             edited_by = element.LookupParameter('Редактирует').AsString()
@@ -359,10 +365,14 @@ def remove_models(colModel, famName, description):
     for element in colModel:
         if element.LookupParameter('ФОП_ВИС_Назначение'):
             currentName = element.LookupParameter('Семейство').AsValueString()
-            currentDescription = element.LookupParameter('ФОП_ВИС_Назначение').AsValueString()
-        if  currentName == famName:
-            if currentDescription == description:
-                doc.Delete(element.Id)
+            currentDescription = element.LookupParameter('ФОП_ВИС_Назначение').AsString()
+            #
+            # print description
+            # print currentDescription
+            # print currentDescription == description
+            if  currentName == famName:
+                if currentDescription == description:
+                    doc.Delete(element.Id)
 
 #класс содержащий все ячейки типовой спецификации
 class rowOfSpecification:
