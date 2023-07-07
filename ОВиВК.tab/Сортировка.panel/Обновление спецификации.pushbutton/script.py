@@ -442,6 +442,11 @@ class shedule_position:
             except Exception:
                 pass
 
+        if element.LookupParameter('ФОП_ВИС_Дополнение к имени'):
+            addition = element.LookupParameter('ФОП_ВИС_Дополнение к имени').AsString()
+            if addition != None:
+                New_Name = New_Name + ' ' + addition
+
         return New_Name
 
     def shedMark(self, element):
