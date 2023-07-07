@@ -446,6 +446,13 @@ class shedule_position:
             addition = element.LookupParameter('ФОП_ВИС_Дополнение к имени').AsString()
             if addition != None:
                 New_Name = New_Name + ' ' + addition
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+
+        if ElemType.LookupParameter('ФОП_ВИС_Дополнение к имени'):
+            addition = ElemType.LookupParameter('ФОП_ВИС_Дополнение к имени').AsString()
+            if addition != None:
+                New_Name = New_Name + ' ' + addition
 
         return New_Name
 
