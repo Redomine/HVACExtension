@@ -466,8 +466,9 @@ class shedule_position:
 
     def shedIzm(self, element, ADSK_Izm, isSingle):
         if isSingle:
-            if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-                return 'м²'
+            if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() != 1:
+                if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                    return 'м²'
             return 'шт.'
         else:
             if ADSK_Izm == 'шт' or ADSK_Izm == 'шт.' or ADSK_Izm == 'Шт.' or ADSK_Izm == 'Шт':
