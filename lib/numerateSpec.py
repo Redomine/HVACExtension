@@ -10,6 +10,7 @@ clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import Revit
+import Redomine
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 clr.AddReference("RevitServices")
@@ -169,8 +170,6 @@ def numerate(doNumbers, doAreas):
                             except Exception: #если вместо айди прилетает текст, пропускаем
                                 pass
 
-
-
                     try:
                         pos = doc.GetElement(ElementId(int(elId)))
                         if '_Узел_' not in group:
@@ -196,13 +195,13 @@ def numerate(doNumbers, doAreas):
                         definition.GetField(i).IsHidden = True
                     i += 1
 
+
+
                 if doAreas:
                     colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-
                     duct_dict = {}
                     for element in colCurves:
                         index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
-
                         if index not in duct_dict:
                             duct_dict[index] = get_duct_area(element)
                         else:
@@ -213,6 +212,28 @@ def numerate(doNumbers, doAreas):
                         index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
                         if note:
                             note.Set(str(duct_dict[index])+' м²')
+
+
+                    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() == 1:
+                        colFittings = make_col(BuiltInCategory.OST_DuctFitting)
+                        fitting_dict = {}
+                        for element in colFittings:
+
+                            index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
+                            if index not in fitting_dict:
+                                #print Redomine.get_fitting_area(element)
+                                fitting_dict[index] = Redomine.get_fitting_area(element)
+                            else:
+                                fitting_dict[index] = fitting_dict[index] + Redomine.get_fitting_area(element)
+
+                        for element in colFittings:
+                            note = element.LookupParameter('ФОП_ВИС_Примечание')
+                            index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
+                            if note:
+                                note.Set(str(fitting_dict[index]) + ' м²')
+
+
+
 
                 if doAreas and not doNumbers:
                     elements = FilteredElementCollector(doc, doc.ActiveView.Id)
