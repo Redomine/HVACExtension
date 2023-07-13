@@ -404,33 +404,33 @@ class shedule_position:
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-            cons = getConnectors(element)
-
-            for con in cons:
-                ductAround = False
-                for el in con.AllRefs:
-
-                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
-                        ductAround = True
-                        thickness = duct_thickness(el.Owner)
-                        New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
-
-
-                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
-                        insType = doc.GetElement(el.Owner.GetTypeId())
-                        try:
-                            if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                                if get_ADSK_Name(el.Owner) not in New_Name:
-                                    New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
-                                    ductAround = True
-                        except Exception:
-                            pass
-
-            for con in cons:
-                if not ductAround:
+            if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() != 1:
+                cons = getConnectors(element)
+                for con in cons:
+                    ductAround = False
                     for el in con.AllRefs:
-                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
-                            New_Name = el.Owner.LookupParameter("ФОП_ВИС_Наименование комбинированное").AsString()
+
+                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                            ductAround = True
+                            thickness = duct_thickness(el.Owner)
+                            New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
+
+
+                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                            insType = doc.GetElement(el.Owner.GetTypeId())
+                            try:
+                                if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                                    if get_ADSK_Name(el.Owner) not in New_Name:
+                                        New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
+                                        ductAround = True
+                            except Exception:
+                                pass
+
+                for con in cons:
+                    if not ductAround:
+                        for el in con.AllRefs:
+                            if el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                                New_Name = el.Owner.LookupParameter("ФОП_ВИС_Наименование комбинированное").AsString()
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
@@ -466,8 +466,9 @@ class shedule_position:
 
     def shedIzm(self, element, ADSK_Izm, isSingle):
         if isSingle:
-            if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-                return 'м²'
+            if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() != 1:
+                if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                    return 'м²'
             return 'шт.'
         else:
             if ADSK_Izm == 'шт' or ADSK_Izm == 'шт.' or ADSK_Izm == 'Шт.' or ADSK_Izm == 'Шт':
