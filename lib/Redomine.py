@@ -352,7 +352,9 @@ def new_position(calculation_elements, temporary, famName, description):
         setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
         setElement(dummy, 'ФОП_Экономическая функция', position.EF)
         setElement(dummy, 'ФОП_ВИС_Назначение', description)
-        Models.pop(0)
+
+        if description != 'Пустая строка':
+            Models.pop(0)
 
 #для прогона новых ревизий генерации немоделируемых: стирает элмент с переданным именем модели
 def remove_models(colModel, famName, description):
