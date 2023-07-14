@@ -502,7 +502,7 @@ class shedule_position:
                 if part_type == '!Не учитывать':
                     return '!Не учитывать'
 
-                New_Name = part_type + ', с толщиной стенки  ' + str(thickness) + ' мм'
+                New_Name = part_type + ', с толщиной стенки ' + str(thickness) + ' мм'
 
 
 
