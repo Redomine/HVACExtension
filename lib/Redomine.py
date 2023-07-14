@@ -323,8 +323,14 @@ def new_position(calculation_elements, temporary, famName, description):
     for position in calculation_elements:
         group = position.group
         if description != 'Пустая строка':
+
             posGroup = str(position.group) + '_' + str(position.name) + '_' + str(position.mark) + '_' + str(index)
             index+=1
+            if description == 'Расходники изоляции':
+                posGroup = str(position.group) + '_' + str(position.name) + '_' + str(position.mark)
+
+            if description == 'Расчет краски и креплений':
+                posGroup = str(position.group) + '_' + str(position.name) + '_' + str(position.mark)
             group = posGroup
 
         if description != 'Пустая строка':
