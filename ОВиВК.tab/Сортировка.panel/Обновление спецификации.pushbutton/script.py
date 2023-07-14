@@ -307,21 +307,96 @@ def pipe_optimization(size):
     return size
 
 
+def get_fitting_name(element):
+    startName = 'Не удалось определить тип фитинга '
+    size = element.get_Parameter(BuiltInParameter.RBS_CALCULATED_SIZE).AsString()
+    if str(element.MEPModel.PartType) != 'Transition':
+        size = size.split('-')
+        size = size[0]
+
+
+    if str(element.MEPModel.PartType) == 'Elbow':
+        a = getConnectors(element)
+        angle = a[1].Angle/0.0175
+
+        if angle <= 15.1:
+            fitAngle = '15'
+        elif angle <= 30.1:
+            fitAngle = '30'
+        elif angle <= 45.1:
+            fitAngle = '45'
+        elif angle <= 60.1:
+            fitAngle = '60'
+        elif angle <= 75.1:
+            fitAngle = '75'
+        elif angle <= 90.1:
+            fitAngle = '90'
+
+
+        a = getConnectors(element)
+        startName = 'Отвод воздуховода '
+        try:
+            a[0].Width
+            startName = 'Отвод '+ fitAngle + '° прямоугольного сечения '
+        except:
+            pass
+        try:
+            a[0].Radius
+            startName = 'Отвод '+ fitAngle + '° круглого сечения '
+        except:
+            pass
+
+
+    if str(element.MEPModel.PartType) == 'Transition':
+        startName = 'Переход между сечениями воздуховода '
+
+    if str(element.MEPModel.PartType) == 'Tee':
+        startName = 'Тройник '
+
+    if str(element.MEPModel.PartType) == 'TapAdjustable':
+        startName = 'Врезка в воздуховод '
+
+    if str(element.MEPModel.PartType) == 'Cross':
+        startName = 'Крестовина '
+
+    if str(element.MEPModel.PartType) == 'Union':
+        return '!Не учитывать'
+        #startName = 'Соединенитель воздуховода '
+
+    if str(element.MEPModel.PartType) == 'Cap':
+        startName = 'Заглушка '
+
+    name = startName + size
+    return name
+
+def get_fitting_thikness(element):
+    connectors = getConnectors(element)
+    thcs = []
+    for con in connectors:
+        for el in con.AllRefs:
+            if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                thc = duct_thickness(el.Owner)
+                thcs.append(thc)
+
+    if len(thcs) == 0:
+        return None
+    return max(thcs)
+
+
+
+
+
+
 class shedule_position:
     def shedName(self, element):
         ADSK_Name = self.ADSK_name
         New_Name = ADSK_Name
-
         information = doc.ProjectInformation
 
         if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
             if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
                 New_Name = '!Не учитывать'
                 return New_Name
-
-
-
-
 
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
             external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
@@ -356,19 +431,16 @@ class shedule_position:
                 Dy = Dy[:-2]
             New_Name = ADSK_Name + ' ' + 'DN' + pipe_optimization(Dy)
 
-
         if element.Category.IsId(BuiltInCategory.OST_FlexDuctCurves):
             New_Name = ADSK_Name  + ' ' + element.GetParamValue(BuiltInParameter.RBS_CALCULATED_SIZE)
-
-
 
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
             thickness = duct_thickness(element)
             try:
-                New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(
+                New_Name = ADSK_Name + ', с толщиной стенки  ' + thickness + ' мм,' + " " + element.GetParamValue(
                     BuiltInParameter.RBS_CALCULATED_SIZE)
             except Exception:
-                New_Name = ADSK_Name + ', толщиной ' + thickness + ' мм,' + " " + element.GetParamValue(
+                New_Name = ADSK_Name + ', с толщиной стенки  ' + thickness + ' мм,' + " " + element.GetParamValue(
                     BuiltInParameter.RBS_REFERENCE_FREESIZE)
 
             cons = getConnectors(element)
@@ -382,8 +454,6 @@ class shedule_position:
                                 insName = 'None_Изоляция'
                             if insName not in New_Name:
                                 New_Name = New_Name + " в изоляции " + insName
-
-
 
         if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
             New_Name = ADSK_Name
@@ -401,36 +471,42 @@ class shedule_position:
                     else:
                         New_Name = '!Не учитывать'
 
-
-
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+            baseName = 'Металл для фасонных деталей воздуховодов с толщиной стенки  '
+            ductAround = False
+            insName = ''
+            thickness = get_fitting_thikness(element)
+            if not thickness:
+                return "!Не учитывать"
+
+            cons = getConnectors(element)
+            for con in cons:
+                for el in con.AllRefs:
+                    if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+                        insType = doc.GetElement(el.Owner.GetTypeId())
+                        try:
+                            if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
+                                insName = insName + " в изоляции " + get_ADSK_Name(el.Owner)
+                        except:
+                            pass
+
+
+
+
             if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() != 1:
-                cons = getConnectors(element)
-                for con in cons:
-                    ductAround = False
-                    for el in con.AllRefs:
-
-                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
-                            ductAround = True
-                            thickness = duct_thickness(el.Owner)
-                            New_Name = 'Металл для фасонных деталей воздуховодов толщиной ' + str(thickness) + ' мм'
+                New_Name = baseName + str(thickness) + ' мм' + insName
 
 
-                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctInsulations):
-                            insType = doc.GetElement(el.Owner.GetTypeId())
-                            try:
-                                if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                                    if get_ADSK_Name(el.Owner) not in New_Name:
-                                        New_Name = New_Name + " в изоляции " + get_ADSK_Name(el.Owner)
-                                        ductAround = True
-                            except Exception:
-                                pass
+            if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() == 1:
+                part_type = get_fitting_name(element)
+                if part_type == '!Не учитывать':
+                    return '!Не учитывать'
 
-                for con in cons:
-                    if not ductAround:
-                        for el in con.AllRefs:
-                            if el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
-                                New_Name = el.Owner.LookupParameter("ФОП_ВИС_Наименование комбинированное").AsString()
+                New_Name = part_type + ', с толщиной стенки  ' + str(thickness) + ' мм'
+
+
+
+
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
@@ -462,6 +538,14 @@ class shedule_position:
             mark = ''
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             mark = ''
+            if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() == 1:
+                connectors = getConnectors(element)
+                for con in connectors:
+                    for el in con.AllRefs:
+                        if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                            mark = get_ADSK_Mark(el.Owner)
+
+
         return mark
 
     def shedIzm(self, element, ADSK_Izm, isSingle):
