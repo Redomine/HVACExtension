@@ -177,32 +177,33 @@ def script_execute():
             for element in collection:
                 elemType = doc.GetElement(element.GetTypeId())
 
-                typeName = elemType.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_NAME).AsValueString()
+                typeName = elemType.get_Parameter(BuiltInParameter.SYMBOL_FAMILY_AND_TYPE_NAMES_PARAM).AsString()
 
-                name1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Наименование').AsValueString()
-                mark1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Марка').AsValueString()
-                maker1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Изготовитель').AsValueString()
-                unit1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Ед. изм.').AsValueString()
+                name1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Наименование').AsString()
+
+                mark1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Марка').AsString()
+                maker1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Изготовитель').AsString()
+                unit1 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Ед. изм.').AsString()
                 expenditure1 = checkExpenditure(elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Расход на м2').AsValueString())
                 isArea1 = True
                 if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 1_Расход по м.п.').AsInteger() == 1:
                     isArea1 = False
 
 
-                name2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Наименование').AsValueString()
-                mark2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Марка').AsValueString()
-                maker2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Изготовитель').AsValueString()
-                unit2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Ед. изм.').AsValueString()
+                name2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Наименование').AsString()
+                mark2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Марка').AsString()
+                maker2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Изготовитель').AsString()
+                unit2 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Ед. изм.').AsString()
                 expenditure2 = checkExpenditure(elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Расход на м2').AsValueString())
                 isArea2 = True
                 if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 2_Расход по м.п.').AsInteger() == 1:
                     isArea2 = False
 
 
-                name3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Наименование').AsValueString()
-                mark3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Марка').AsValueString()
-                maker3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Изготовитель').AsValueString()
-                unit3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Ед. изм.').AsValueString()
+                name3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Наименование').AsString()
+                mark3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Марка').AsString()
+                maker3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Изготовитель').AsString()
+                unit3 = elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Ед. изм.').AsString()
                 expenditure3 = checkExpenditure(elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Расход на м2').AsValueString())
                 isArea3 = True
                 if elemType.LookupParameter('ФОП_ВИС_Изол_Расходник 3_Расход по м.п.').AsInteger() == 1:
@@ -225,13 +226,13 @@ def script_execute():
         for collection in collections:
             for element in collection:
                 elemType = doc.GetElement(element.GetTypeId())
-                typeName = elemType.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_NAME).AsValueString()
+                typeName = elemType.get_Parameter(BuiltInParameter.SYMBOL_FAMILY_AND_TYPE_NAMES_PARAM).AsString()
 
-                corp = element.LookupParameter('ФОП_Блок СМР').AsValueString()
-                sec = element.LookupParameter('ФОП_Секция СМР').AsValueString()
-                floor = element.LookupParameter('ФОП_Этаж').AsValueString()
-                EF = element.LookupParameter('ФОП_Экономическая функция').AsValueString()
-                system = element.LookupParameter('ФОП_ВИС_Имя системы').AsValueString()
+                corp = element.LookupParameter('ФОП_Блок СМР').AsString()
+                sec = element.LookupParameter('ФОП_Секция СМР').AsString()
+                floor = element.LookupParameter('ФОП_Этаж').AsString()
+                EF = element.LookupParameter('ФОП_Экономическая функция').AsString()
+                system = element.LookupParameter('ФОП_ВИС_Имя системы').AsString()
 
 
                 key = str(corp) + "_" + str(sec) + "_" + str(floor) + "_" + str(EF) + "_" + str(system) + "_" + \
@@ -270,6 +271,9 @@ def script_execute():
                 if insulationType.typeName == insulationsObject.typeName:
                     group = "12. Расходники изоляции" + "_" + insulationsObject.typeName
 
+                    print insulationType.name1
+                    print insulationType.expenditure1
+                    print isToGenerate(insulationType.name1, insulationType.expenditure1)
                     if isToGenerate(insulationType.name1, insulationType.expenditure1):
                         number = float(insulationType.expenditure1) * float(insulationsObject.area)
                         if insulationType.isArea1:
