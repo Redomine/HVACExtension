@@ -306,7 +306,9 @@ def new_position(calculation_elements, temporary, famName, description):
 
     for element in colModel:
         try:
-            if element.get_Parameter(BuiltInParameter.ELEM_FAMILY_PARAM).AsValueString() == famName:
+            elemType = doc.GetElement(element.GetTypeId())
+            if elemType.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString() == famName:
+
                 if element.LookupParameter('ФОП_ВИС_Назначение').AsString() == '':
                     ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
                     ews.Set(WORKSET_ID.IntegerValue)
@@ -372,7 +374,8 @@ def remove_models(colModel, famName, description):
 
     for element in colModel:
         if element.LookupParameter('ФОП_ВИС_Назначение'):
-            currentName = element.LookupParameter('Семейство').AsValueString()
+            elemType = doc.GetElement(element.GetTypeId())
+            currentName = elemType.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString()
             currentDescription = element.LookupParameter('ФОП_ВИС_Назначение').AsString()
             #
             # print description
