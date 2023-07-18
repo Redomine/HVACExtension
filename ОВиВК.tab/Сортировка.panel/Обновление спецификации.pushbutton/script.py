@@ -179,7 +179,17 @@ def get_depend(element):
 
     parent = element.get_Parameter(BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM).AsValueString()
     parentId = element.Id
+
+
     parent_group = lookupCheck(element,'ФОП_ВИС_Группирование').AsString()
+    parent_system = lookupCheck(element,'ФОП_ВИС_Имя системы').AsString()
+    parent_EF = lookupCheck(element,'ФОП_Экономическая функция').AsString()
+    parent_block = lookupCheck(element,'ФОП_Блок СМР').AsString()
+    parent_section = lookupCheck(element,'ФОП_Секция СМР').AsString()
+    parent_floor = lookupCheck(element, 'ФОП_Этаж').AsString()
+
+    parent_key = str(parent_block) + str(parent_section) + str(parent_floor) + str(parent_EF) + str(parent_system) + str(parent_group)
+
 
 
     subIds = element.GetSubComponentIds()
@@ -228,9 +238,9 @@ def get_depend(element):
 
 
     isItFirstOb = False
-    if parent_group not in metСollectors:
+    if parent_key not in metСollectors:
         isItFirstOb = True
-        metСollectors.append(parent_group)
+        metСollectors.append(parent_key)
         for subId in subIds:
             subElement = doc.GetElement(subId)
             if subElement.Id not in notInList:
