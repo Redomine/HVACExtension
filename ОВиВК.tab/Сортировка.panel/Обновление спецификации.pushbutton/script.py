@@ -392,8 +392,30 @@ def get_fitting_thikness(element):
         return None
     return max(thcs)
 
+def get_pipe_name(element, ADSK_Name):
+    external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
+    internal_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_INNER_DIAM_PARAM) * 304.8
+    pipe_thickness = (external_size - internal_size) / 2
 
+    Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
 
+    if Dy[-2:] == '.0':
+        Dy = Dy[:-2]
+
+    external_size = str(external_size)
+    if external_size[-2:] == '.0':
+        external_size = external_size[:-2]
+
+    d_type = get_D_type(element)
+
+    if d_type == "Ду":
+        New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(Dy)
+    elif d_type == "Ду х Стенка":
+        New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(Dy) + 'x' + pipe_optimization(str(pipe_thickness))
+    else:
+        New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(external_size) + 'x' + pipe_optimization(
+            str(pipe_thickness))
+    return New_Name
 
 
 
@@ -409,30 +431,8 @@ class shedule_position:
                 return New_Name
 
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-            external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
-            internal_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_INNER_DIAM_PARAM) * 304.8
-            pipe_thickness = (external_size - internal_size) / 2
+            New_Name = get_pipe_name(element, ADSK_Name)
 
-            Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
-
-
-
-            if Dy[-2:] == '.0':
-                Dy = Dy[:-2]
-
-
-            external_size = str(external_size)
-            if external_size[-2:] == '.0':
-                external_size = external_size[:-2]
-
-            d_type = get_D_type(element)
-
-            if d_type == "Ду":
-                New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(Dy)
-            elif d_type == "Ду х Стенка":
-                New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(Dy) + 'x' + pipe_optimization(str(pipe_thickness))
-            else:
-                New_Name = ADSK_Name + ' ' + '⌀' + pipe_optimization(external_size) + 'x' + pipe_optimization(str(pipe_thickness))
 
         if element.Category.IsId(BuiltInCategory.OST_FlexPipeCurves):
             Dy = str(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM) * 304.8)
@@ -471,7 +471,7 @@ class shedule_position:
             for connector in connectors:
                 for el in connector.AllRefs:
                     if el.Owner.Category.IsId(BuiltInCategory.OST_PipeCurves):
-                        pipe_name = lookupCheck(el.Owner, 'ФОП_ВИС_Наименование комбинированное').AsString()
+                        pipe_name = get_pipe_name(el.Owner, get_ADSK_Name(el.Owner))
                         if pipe_name == None:
                             continue
                         if pipe_name[-1] == '.':
@@ -513,10 +513,6 @@ class shedule_position:
                     return '!Не учитывать'
 
                 New_Name = part_type + ', с толщиной стенки ' + str(thickness) + ' мм'
-
-
-
-
 
 
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
@@ -563,8 +559,13 @@ class shedule_position:
             if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() != 1:
                 if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
                     return 'м²'
+            if ADSK_Izm == 'компл' or ADSK_Izm == 'компл.' or ADSK_Izm == 'Компл.' or ADSK_Izm == 'Компл' or ADSK_Izm == 'к-т' or ADSK_Izm == 'к-т.':
+                return 'компл.'
             return 'шт.'
         else:
+            if ADSK_Izm == 'компл' or ADSK_Izm == 'компл.' or ADSK_Izm == 'Компл.' or ADSK_Izm == 'Компл' or ADSK_Izm == 'к-т' or ADSK_Izm == 'к-т.':
+                return 'компл.'
+
             if ADSK_Izm == 'шт' or ADSK_Izm == 'шт.' or ADSK_Izm == 'Шт.' or ADSK_Izm == 'Шт':
                 return 'шт.'
             if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
@@ -598,7 +599,8 @@ class shedule_position:
 
 
         FOP_izm = self.FOP_izm.AsString()
-
+        if FOP_izm == 'компл.':
+            return 1
         if FOP_izm == 'шт.':
             return 1
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
