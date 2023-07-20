@@ -74,13 +74,32 @@ genList = [
     generationElement(group = '12. Расчетные элементы', name = "Металлические крепления для трубопроводов", mark = '', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет металла для креплений', collection= colPipes,isType= False),
     generationElement(group = '12. Расчетные элементы', name = "Изоляция для фланцев и стыков", mark = '', art = '', unit = 'м².', maker = '', method =  'ФОП_ВИС_Совместно с воздуховодом', collection= colInsul,isType= False),
     generationElement(group = '12. Расчетные элементы', name = "Краска антикоррозионная за два раза", mark = 'БТ-177', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Грунтовка для стальных труб", mark = 'ГФ-031', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False)
+    generationElement(group = '12. Расчетные элементы', name = "Грунтовка для стальных труб", mark = 'ГФ-031', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
+    generationElement(group = '12. Расчетные элементы', name = "Хомут трубный под шпильку М8", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False)
 ]
 
-
 class calculation_element:
+    def collars(self, element):
+        lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
+        D = fromRevitToMilimeters(element.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM).AsDouble())
+        D = int(D)
+
+        self.name = self.name + ', Ду' + str(D)
+
+        if lenght*1000 < D:
+            return 1
+        if lenght < 3000:
+            return 2
+        if lenght < 6000:
+            return 3
+        if lenght < 9000:
+            return 4
+        if lenght < 12000:
+            return 5
+
     def duct_material(self, element):
         area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
+
         if element.GetParamValue(BuiltInParameter.RBS_EQ_DIAMETER_PARAM) == element.GetParamValue(
                 BuiltInParameter.RBS_HYDRAULIC_DIAMETER_PARAM):
             D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
@@ -153,13 +172,17 @@ class calculation_element:
             Number = self.colorBT(element)
         if name == "Грунтовка для стальных труб" and element in colPipes:
             Number = self.grunt(element)
+        if name == "Хомут трубный под шпильку М8" and element in colPipes:
+            Number = self.collars(element)
+
+
         return Number
 
     def __init__(self, element, collection, parameter, Name, Mark, Maker):
+        self.corp = str(element.LookupParameter('ФОП_Блок СМР').AsString())
+        self.sec = str(element.LookupParameter('ФОП_Секция СМР').AsString())
+        self.floor = str(element.LookupParameter('ФОП_Этаж').AsString())
 
-        self.corp = ''
-        self.sec = ''
-        self.floor = ''
         if element.LookupParameter('ФОП_ВИС_Имя системы'):
             self.system = str(element.LookupParameter('ФОП_ВИС_Имя системы').AsString())
         else:
@@ -172,7 +195,7 @@ class calculation_element:
         self.mark = Mark
         self.art = ''
         self.maker = Maker
-        self.izm = 'None'
+        self.unit = 'None'
         self.number = self.get_number(element, self.name)
         self.mass = ''
         self.comment = ''
@@ -182,15 +205,10 @@ class calculation_element:
 
         for gen in genList:
             if gen.collection == collection and parameter == gen.method:
-                self.izm = gen.unit
+                self.unit = gen.unit
                 isType = gen.isType
 
 
-
-
-        self.corp = str(element.LookupParameter('ФОП_Блок СМР').AsString())
-        self.sec = str(element.LookupParameter('ФОП_Секция СМР').AsString())
-        self.floor = str(element.LookupParameter('ФОП_Этаж').AsString())
         if parameter == 'ФОП_ВИС_Совместно с воздуховодом':
             pass
 
@@ -199,6 +217,10 @@ class calculation_element:
         elemType = doc.GetElement(element.GetTypeId())
         if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
             self.name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
+
+        self.key = self.corp + self.sec + self.floor + self.system + \
+                   self.group + self.name + self.mark + self.art + \
+                   self.maker
 
 def is_object_to_generate(element, genCol, collection, parameter, genList = genList):
     if element in genCol:
@@ -209,47 +231,9 @@ def is_object_to_generate(element, genCol, collection, parameter, genList = genL
                     if elemType.LookupParameter(parameter).AsInteger() == 1:
                         return True
                 except Exception:
+                    print parameter
                     if element.LookupParameter(parameter).AsInteger() == 1:
                         return True
-
-
-def collapse_list(lists):
-    singles = []
-    for gen in genList:
-        name = gen.name
-        isSingle = gen.isType
-        if isSingle:
-            singles.append(name)
-
-
-    dict = {}
-
-    for list in lists:
-        system = list[3]
-        corp = list[0]
-        sec = list[1]
-        floor = list[2]
-        EF = list[13]
-        name = list[5]
-        number = list[10]
-
-        if name in singles:
-            number = 1
-        Key = str(corp) + "_" + str(sec) + "_" + str(floor) + "_" + str(EF) + "_" + str(system) + "_" + str(name)
-
-        if Key not in dict:
-            dict[Key] = list
-        else:
-            dict[Key][10] = dict[Key][10] + number
-            if name in singles:
-                dict[Key][10] = 1
-
-
-    collapsed_list = []
-    for x in dict:
-        collapsed_list.append(dict[x])
-    return collapsed_list
-
 
 def script_execute():
     with revit.Transaction("Добавление расчетных элементов"):
@@ -259,52 +243,39 @@ def script_execute():
         #список элементов которые будут сгенерированы
         calculation_elements = []
 
+        collpasing_objects = []
+
         collections = [colInsul, colPipes, colCurves]
 
-        #тут мы перебираем элементы из коллекций по дурацкому алгоритму соответствия списку параметризации
+        elements_to_generate = []
+        #перебираем элементы и выясняем какие из них подлежат генерации
         for collection in collections:
             for element in collection:
                 elemType = doc.GetElement(element.GetTypeId())
                 for gen in genList:
-                    name = gen.name
-                    mark = gen.mark
-                    maker = gen.maker
+                    binding_name = gen.name
+                    binding_mark = gen.mark
+                    binding_maker = gen.maker
 
                     parameter = gen.method
                     genCol = gen.collection
-
                     if is_object_to_generate(element, genCol, collection, parameter):
+                        definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
-                        definition = calculation_element(element, collection, parameter, name, mark, maker)
-                        definitionList = [definition.corp, definition.sec, definition.floor, definition.system,
-                                          definition.group, definition.name, definition.mark, definition.art,
-                                          definition.maker, definition.izm, definition.number, definition.mass,
-                                          definition.comment, definition.EF]
+                        key = definition.corp + definition.sec + definition.floor + definition.system + \
+                                          definition.group + definition.name + definition.mark + definition.art + \
+                                          definition.maker
 
-                        calculation_elements.append(definitionList)
+                        toAppend = True
+                        for element_to_generate in elements_to_generate:
+                            if element_to_generate.key == key:
+                                toAppend = False
+                                element_to_generate.number = element_to_generate.number + definition.number
 
+                        if toAppend:
+                            elements_to_generate.append(definition)
 
-        calculation_elements = collapse_list(calculation_elements)
-
-        newPos = []
-        for element in calculation_elements:
-            newPos.append(rowOfSpecification(corp=element[0],
-                                     sec=element[1],
-                                     floor=element[2],
-                                     system=element[3],
-                                     group=element[4],
-                                     name=element[5],
-                                     mark=element[6],
-                                     art= element[7],
-                                     maker=element[8],
-                                     unit=element[9],
-                                     number=element[10],
-                                     mass=element[11],
-                                     comment=element[12],
-                                     EF=element[13]))
-
-
-        new_position(newPos, temporary, nameOfModel, description)
+        new_position(elements_to_generate, temporary, nameOfModel, description)
 
 temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
 

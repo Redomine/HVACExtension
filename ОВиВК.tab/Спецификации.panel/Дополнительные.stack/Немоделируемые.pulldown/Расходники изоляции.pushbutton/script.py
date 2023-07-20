@@ -270,10 +270,6 @@ def script_execute():
             for insulationType in insulationsTypeList:
                 if insulationType.typeName == insulationsObject.typeName:
                     group = "12. Расходники изоляции" + "_" + insulationsObject.typeName
-
-                    print insulationType.name1
-                    print insulationType.expenditure1
-                    print isToGenerate(insulationType.name1, insulationType.expenditure1)
                     if isToGenerate(insulationType.name1, insulationType.expenditure1):
                         number = float(insulationType.expenditure1) * float(insulationsObject.area)
                         if insulationType.isArea1:
