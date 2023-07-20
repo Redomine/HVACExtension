@@ -39,7 +39,7 @@ class shared_parameter:
 
     def default_values(self, name):
         pipeparaNames = ['ФОП_ВИС_Ду', 'ФОП_ВИС_Ду х Стенка', 'ФОП_ВИС_Днар х Стенка', 'ФОП_ВИС_Имя трубы из сегмента',
-                         'ФОП_ВИС_Расчет краски и грунтовки']
+                         'ФОП_ВИС_Расчет краски и грунтовки', 'ФОП_ВИС_Расчет хомутов']
         if name in pipeparaNames:
             colPipeTypes = FilteredElementCollector(doc).OfCategory(
                 BuiltInCategory.OST_PipeCurves).WhereElementIsElementType().ToElements()
@@ -236,7 +236,9 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Днар х Стенка', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Имя трубы из сегмента', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Расчет краски и грунтовки', visDefinitions, pipeCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Расчет хомутов', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet, istype=True)
+
         shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True)
 
 

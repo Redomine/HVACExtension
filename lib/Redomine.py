@@ -271,10 +271,24 @@ def get_fitting_area(element):
 
 #заполняет ячейки в сгенерированном немоделируемом
 def setElement(element, name, setting):
+
     if setting == 'None':
         setting = ''
     if setting == None:
         setting = ''
+
+    if name == 'ФОП_Экономическая функция':
+        if setting == '':
+            setting = 'None'
+        if setting == None:
+            setting = 'None'
+
+    if name == 'ФОП_ВИС_Имя системы':
+        if setting == '':
+            setting = 'None'
+        if setting == None:
+            setting = 'None'
+
 
     if name == 'ФОП_ВИС_Число' or name == 'ФОП_ВИС_Масса':
         element.LookupParameter(name).Set(setting)
@@ -339,6 +353,7 @@ def new_position(calculation_elements, temporary, famName, description):
             dummy = Models[0]
         else:
             dummy = familyInst
+
         setElement(dummy, 'ФОП_Блок СМР', position.corp)
         setElement(dummy, 'ФОП_Секция СМР', position.sec)
         setElement(dummy, 'ФОП_Этаж', position.floor)
