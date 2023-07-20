@@ -477,7 +477,7 @@ class shedule_position:
                         if pipe_name[-1] == '.':
                             pipe_name = pipe_name[:-1]
 
-                        New_Name = ADSK_Name + ' (' + pipe_name + ')'
+                        New_Name = ADSK_Name + ' (Для: ' + pipe_name + ')'
                     else:
                         New_Name = '!Не учитывать'
 
