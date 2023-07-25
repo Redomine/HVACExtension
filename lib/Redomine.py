@@ -351,6 +351,7 @@ def new_position(calculation_elements, temporary, famName, description):
                 posGroup = str(position.group) + '_' + str(position.name) + '_' + str(position.mark)
             group = posGroup
 
+
         if description != 'Пустая строка':
             dummy = Models[0]
         else:
@@ -370,15 +371,19 @@ def new_position(calculation_elements, temporary, famName, description):
         setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
         setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
         setElement(dummy, 'ФОП_Экономическая функция', position.EF)
-        setElement(dummy, 'ФОП_ВИС_Назначение', description)
+
+        #вот этот блок внизу нужен для фильтрации шпилек под разные диаметры, да и вообще любых элементов под разные диаметры
+        #пока использую только в расчете краски и креплений
+        if description != 'Расчет краски и креплений':
+            setElement(dummy, 'ФОП_ВИС_Назначение', description)
+        else:
+            setElement(dummy, 'ФОП_ВИС_Назначение', position.local_description)
 
         if description != 'Пустая строка':
             Models.pop(0)
 
 #для прогона новых ревизий генерации немоделируемых: стирает элмент с переданным именем модели
 def remove_models(colModel, famName, description):
-
-
     try:
         for element in colModel:
             edited_by = element.LookupParameter('Редактирует').AsString()
@@ -399,7 +404,7 @@ def remove_models(colModel, famName, description):
             # print currentDescription
             # print currentDescription == description
             if  currentName == famName:
-                if currentDescription == description:
+                if description in currentDescription:
                     doc.Delete(element.Id)
 
 #класс содержащий все ячейки типовой спецификации
