@@ -80,24 +80,26 @@ def isItFamily():
     except Exception:
         pass
 
-def lookupCheck(element, paraName, isExit = True):
-    type = 'экземпляра '
+def lookupCheck(elementOrType, paraName, isExit = True):
     try:
         if element.GetTypeId():
-            type = 'типа '
+            type = 'экземпляра '
     except:
-        pass
+        type = 'типа '
 
-    parameter = getParameter(element, paraName)
+    parameter = getParameter(elementOrType, paraName)
 
     if parameter:
         return parameter
     else:
         if isExit:
-            print 'Параметр ' + type + paraName + ' не назначен для категории ' + element.Category.Name + ' (ID элемента на котором найдена ошибка ' + output.linkify(element.Id) +")"
+            print 'Параметр ' + type + paraName + ' не назначен для категории ' + elementOrType.Category.Name + ' (ID элемента на котором найдена ошибка ' + output.linkify(elementOrType.Id) +")"
             sys.exit()
         else:
             return None
+
+
+
 def getSharedParameter (element, paraName, replaceName):
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         if paraName == 'ADSK_Наименование':
