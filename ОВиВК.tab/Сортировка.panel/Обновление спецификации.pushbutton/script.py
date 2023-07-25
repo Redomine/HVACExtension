@@ -321,8 +321,9 @@ def get_fitting_name(element):
     startName = 'Не удалось определить тип фитинга '
     size = element.get_Parameter(BuiltInParameter.RBS_CALCULATED_SIZE).AsString()
     if str(element.MEPModel.PartType) != 'Transition':
-        size = size.split('-')
-        size = size[0]
+        if str(element.MEPModel.PartType) != 'Tee':
+            size = size.split('-')
+            size = size[0]
 
 
     if str(element.MEPModel.PartType) == 'Elbow':
