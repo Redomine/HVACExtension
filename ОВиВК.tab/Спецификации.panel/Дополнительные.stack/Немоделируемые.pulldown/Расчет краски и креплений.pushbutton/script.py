@@ -75,16 +75,38 @@ genList = [
     generationElement(group = '12. Расчетные элементы', name = "Изоляция для фланцев и стыков", mark = '', art = '', unit = 'м².', maker = '', method =  'ФОП_ВИС_Совместно с воздуховодом', collection= colInsul,isType= False),
     generationElement(group = '12. Расчетные элементы', name = "Краска антикоррозионная за два раза", mark = 'БТ-177', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
     generationElement(group = '12. Расчетные элементы', name = "Грунтовка для стальных труб", mark = 'ГФ-031', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Хомут трубный под шпильку М8", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False)
+    generationElement(group = '12. Расчетные элементы', name = "Хомут трубный под шпильку М8", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False),
+    generationElement(group = '12. Расчетные элементы', name = "Шпилька М8", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False)
 ]
 
 class calculation_element:
+    def pins(self, element):
+        lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
+        D = fromRevitToMilimeters(element.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM).AsDouble())
+        D = int(D)
+
+        self.local_description = self.local_description + ' ' + self.name  + ', Ду' + str(D)
+
+
+        if lenght*1000 < D:
+            return 0.2
+        if lenght < 3000:
+            return 0.4
+        if lenght < 6000:
+            return 0.6
+        if lenght < 9000:
+            return 0.8
+        if lenght < 12000:
+            return 1
+
     def collars(self, element):
         lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
         D = fromRevitToMilimeters(element.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM).AsDouble())
         D = int(D)
 
         self.name = self.name + ', Ду' + str(D)
+
+        self.local_description = self.local_description + ' ' + self.name
 
         if lenght*1000 < D:
             return 1
@@ -174,11 +196,14 @@ class calculation_element:
             Number = self.grunt(element)
         if name == "Хомут трубный под шпильку М8" and element in colPipes:
             Number = self.collars(element)
+        if name == "Шпилька М8" and element in colPipes:
+            Number = self.pins(element)
 
 
         return Number
 
     def __init__(self, element, collection, parameter, Name, Mark, Maker):
+        self.local_description = description
         self.corp = str(element.LookupParameter('ФОП_Блок СМР').AsString())
         self.sec = str(element.LookupParameter('ФОП_Секция СМР').AsString())
         self.floor = str(element.LookupParameter('ФОП_Этаж').AsString())
@@ -220,7 +245,7 @@ class calculation_element:
 
         self.key = self.corp + self.sec + self.floor + self.system + \
                    self.group + self.name + self.mark + self.art + \
-                   self.maker
+                   self.maker + self.local_description
 
 def is_object_to_generate(element, genCol, collection, parameter, genList = genList):
     if element in genCol:
@@ -264,7 +289,7 @@ def script_execute():
 
                         key = definition.corp + definition.sec + definition.floor + definition.system + \
                                           definition.group + definition.name + definition.mark + definition.art + \
-                                          definition.maker
+                                          definition.maker + definition.local_description
 
                         toAppend = True
                         for element_to_generate in elements_to_generate:
@@ -275,7 +300,17 @@ def script_execute():
                         if toAppend:
                             elements_to_generate.append(definition)
 
+        #иначе шпилек получится дробное число, а они в штуках
+        for el in elements_to_generate:
+            if el.name == 'Шпилька М8':
+                el.number = int(el.number)
+
+
+
         new_position(elements_to_generate, temporary, nameOfModel, description)
+
+        # for el in elements_to_generate:
+        #     new_position([el], temporary, nameOfModel, description)
 
 temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
 
