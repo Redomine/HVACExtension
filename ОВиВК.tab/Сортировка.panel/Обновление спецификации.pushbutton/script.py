@@ -448,10 +448,10 @@ class shedule_position:
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
             thickness = duct_thickness(element)
             try:
-                New_Name = ADSK_Name + ', с толщиной стенки  ' + thickness + ' мм,' + " " + element.GetParamValue(
+                New_Name = ADSK_Name + ', с толщиной стенки ' + thickness + ' мм,' + " " + element.GetParamValue(
                     BuiltInParameter.RBS_CALCULATED_SIZE)
             except Exception:
-                New_Name = ADSK_Name + ', с толщиной стенки  ' + thickness + ' мм,' + " " + element.GetParamValue(
+                New_Name = ADSK_Name + ', с толщиной стенки ' + thickness + ' мм,' + " " + element.GetParamValue(
                     BuiltInParameter.RBS_REFERENCE_FREESIZE)
 
             cons = getConnectors(element)

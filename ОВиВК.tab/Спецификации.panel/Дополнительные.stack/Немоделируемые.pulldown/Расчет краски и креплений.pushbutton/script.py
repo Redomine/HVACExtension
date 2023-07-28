@@ -76,7 +76,7 @@ genList = [
     generationElement(group = '12. Расчетные элементы', name = "Краска антикоррозионная за два раза", mark = 'БТ-177', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
     generationElement(group = '12. Расчетные элементы', name = "Грунтовка для стальных труб", mark = 'ГФ-031', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
     generationElement(group = '12. Расчетные элементы', name = "Хомут трубный под шпильку М8", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Шпилька М8", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False)
+    generationElement(group = '12. Расчетные элементы', name = "Шпилька М8 1м/1шт", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False)
 ]
 
 class calculation_element:
@@ -196,7 +196,7 @@ class calculation_element:
             Number = self.grunt(element)
         if name == "Хомут трубный под шпильку М8" and element in colPipes:
             Number = self.collars(element)
-        if name == "Шпилька М8" and element in colPipes:
+        if name == "Шпилька М8 1м/1шт" and element in colPipes:
             Number = self.pins(element)
 
 
@@ -302,7 +302,7 @@ def script_execute():
 
         #иначе шпилек получится дробное число, а они в штуках
         for el in elements_to_generate:
-            if el.name == 'Шпилька М8':
+            if el.name == 'Шпилька М8 1м/1шт':
                 el.number = int(el.number)
 
 
