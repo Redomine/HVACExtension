@@ -483,7 +483,7 @@ class shedule_position:
                         New_Name = '!Не учитывать'
 
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-            baseName = 'Металл для фасонных деталей воздуховодов с толщиной стенки  '
+            baseName = 'Металл для фасонных деталей воздуховодов с толщиной стенки '
             ductAround = False
             insName = ''
             thickness = get_fitting_thikness(element)
