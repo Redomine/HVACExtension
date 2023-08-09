@@ -87,28 +87,38 @@ def get_connectors(element):
 
 
 def get_type_system(element):
-	isPipeOrDuct = False
-	if not isPipeOrDuct:
-		isPipeOrDuct = True
+	#isPipeOrDuct = False
+
+	try:
 		if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
 			element = document.GetElement(element.HostElementId)
-
-	if not isPipeOrDuct:
-		isPipeOrDuct = True
 		if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
 			element = document.GetElement(element.HostElementId)
 
+		# if not isPipeOrDuct:
+		# 	isPipeOrDuct = True
+		# 	if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+		# 		element = document.GetElement(element.HostElementId)
+		#
+		# if not isPipeOrDuct:
+		# 	isPipeOrDuct = True
+		#
+		# 	if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+		# 		element = document.GetElement(element.HostElementId)
 
-	#print element
-	connectors = get_connectors(element)
-	hvac_connector = None
 
-	for connector in connectors:
-		if connector.Domain == Domain.DomainHvac or connector.Domain == Domain.DomainPiping:
-			hvac_connector = connector
-			if hvac_connector:
-				if get_type_system_name(hvac_connector) != None:
-					return get_type_system_name(hvac_connector)
+		#print element
+		connectors = get_connectors(element)
+		hvac_connector = None
+
+		for connector in connectors:
+			if connector.Domain == Domain.DomainHvac or connector.Domain == Domain.DomainPiping:
+				hvac_connector = connector
+				if hvac_connector:
+					if get_type_system_name(hvac_connector) != None:
+						return get_type_system_name(hvac_connector)
+	except:
+		return None
 
 	return None
 
