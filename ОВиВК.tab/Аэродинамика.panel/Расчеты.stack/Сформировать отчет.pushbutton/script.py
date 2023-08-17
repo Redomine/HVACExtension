@@ -188,6 +188,13 @@ for number in path:
             except Exception:
                 pass
 
+
+        if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
+            try:
+                coef = section.GetCoefficient(elementId)
+            except Exception:
+                pass
+
         flow = 0
         try:
             flow = section.Flow * 101.941317259
