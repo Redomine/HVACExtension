@@ -4,7 +4,7 @@
 __title__ = 'Формирование отчета'
 __doc__ = "Формирует отчет о расчете аэродинамики"
 
-
+import Autodesk.Revit.DB
 import clr
 
 clr.AddReference("RevitAPI")
@@ -26,7 +26,10 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 import sys
 import System
 import math
+import paraSpec
 from Autodesk.Revit.DB import *
+from Autodesk.Revit.DB.Mechanical import *
+
 from Redomine import *
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -36,6 +39,11 @@ from System.Collections.Generic import List
 from System import Guid
 from pyrevit import revit
 from pyrevit import script
+
+# parametersAdded = paraSpec.check_parameters()
+#
+# if parametersAdded:
+#     sys.exit()
 
 doc = __revit__.ActiveUIDocument.Document
 
@@ -69,8 +77,8 @@ def make_col(category):
                             .OfCategory(category)\
                             .WhereElementIsNotElementType()\
                             .ToElements()
-    return col 
-    
+    return col
+
 
 
 data = []
@@ -141,11 +149,18 @@ def getKofTap(element):
         return K
 
 
+from Autodesk.Revit.DB.Mechanical import *
+settings = DuctSettings.GetDuctSettings(doc)
+
+density = settings.AirDensity * 35.3146667215
+print 'Плотность воздушной среды: ' + str(density) + ' кг/м3'
 for number in path:
+
     section = system.GetSectionByNumber(number)
     elementsIds = section.GetElementIds()
     for elementId in elementsIds:
         element = doc.GetElement(elementId)
+
 
         name = ''
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
@@ -221,10 +236,28 @@ for number in path:
         except Exception:
             pass
 
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+
+        param = None
+        if element.LookupParameter('ФОП_ВИС_Живое сечение, м2'):
+            param = element.LookupParameter('ФОП_ВИС_Живое сечение, м2')
+        if ElemType.LookupParameter('ФОП_ВИС_Живое сечение, м2'):
+            param = ElemType.LookupParameter('ФОП_ВИС_Живое сечение, м2')
+        if param:
+            if param.AsDouble() > 0:
+                Fjs = param.AsDouble()
+                velocity = (float(flow) * 1000000)/(3600 * Fjs*1000000) #скорость в живом сечении
+                Pd = (density * velocity * velocity) / 2  # Динамическое давление
+                Z = Pd * coef
+                pressure_drop = Z
+                size = 'Fжс=' + str(Fjs) + ' м2'
+
+
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             if str(element.MEPModel.PartType) == 'TapAdjustable':
                 if element.Id not in passed_taps:
-                    Pd = (1.21 * velocity * velocity)/2 #Динамическое давление
+                    Pd = (density * velocity * velocity)/2 #Динамическое давление
                     K = getKofTap(element) #КМС
                     K = str(K).replace(',', '.')
                     K = float(K)
@@ -243,12 +276,11 @@ for number in path:
             data.append([count, name, lenght, size, flow, velocity, coef, pressure_drop, summ_pressure, output.linkify(elementId)])
 
 
-
-
-
-
 output.print_table(table_data=data,
                    title=("Отчет о расчете аэродинамики системы " + system_name),
                    columns=["Номер участка", "Наименование элемента", "Длина, м.п.","Размер", "Расход, м3/ч", "Скорость, м/с", "КМС", "Потери напора элемента, Па", "Суммарные потери напора, Па", "Id элемента"],
                    formats=['', '', ''],
                    )
+
+
+
