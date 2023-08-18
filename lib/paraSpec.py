@@ -147,6 +147,7 @@ def script_execute():
     insulandliveCatSet = get_cats([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations])
     systemsCatSet = get_cats(([BuiltInCategory.OST_DuctSystem, BuiltInCategory.OST_PipingSystem]))
     insulsCatSet = get_cats([BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations])
+    accessoryCatSet = get_cats([BuiltInCategory.OST_DuctAccessory])
 
     #получаем группу из которой выбираем параметры
     visDefinitions = check_spfile("03_ВИС")
@@ -193,6 +194,7 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Изол_Расходник 3_Расход по м.п.', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
 
+        shared_parameter('ФОП_ВИС_Живое сечение, м2', visDefinitions, accessoryCatSet, group=BuiltInParameterGroup.PG_MECHANICAL_AIRFLOW)
 
 
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
