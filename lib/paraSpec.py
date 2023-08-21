@@ -195,6 +195,8 @@ def script_execute():
                          group=BuiltInParameterGroup.PG_MATERIALS)
 
         shared_parameter('ФОП_ВИС_Живое сечение, м2', visDefinitions, accessoryCatSet, group=BuiltInParameterGroup.PG_MECHANICAL_AIRFLOW)
+        shared_parameter('ФОП_ВИС_КМС', visDefinitions, accessoryCatSet,
+                         group=BuiltInParameterGroup.PG_MECHANICAL_AIRFLOW)
 
 
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
