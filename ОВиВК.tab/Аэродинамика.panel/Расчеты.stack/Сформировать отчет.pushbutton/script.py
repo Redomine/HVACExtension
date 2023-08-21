@@ -72,6 +72,12 @@ def getKofTap(element):
         K = entity.Get[field.ValueType](field)
         return K
 
+def isZeroInTap(tap):
+    connectors = getConnectors(tap)
+    for connector in connectors:
+        if connector.Flow == 0:
+            return True
+
 
 doc = __revit__.ActiveUIDocument.Document
 
@@ -79,7 +85,6 @@ def script_execute():
     if isItFamily():
         print 'Надстройка не предназначена для работы с семействами'
         sys.exit()
-
 
     uidoc = __revit__.ActiveUIDocument
     selectedIds = uidoc.Selection.GetElementIds()
@@ -231,6 +236,10 @@ def script_execute():
                         coef = K
                         pressure_drop = Z
                         passed_taps.append(element.Id)
+
+                    if isZeroInTap(element):
+                        pressure_drop = float(0)
+
 
             pressure_drop = float('{:.2f}'.format(pressure_drop))
 
