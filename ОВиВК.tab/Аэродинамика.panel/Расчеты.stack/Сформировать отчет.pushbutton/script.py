@@ -85,7 +85,6 @@ def script_execute():
     if isItFamily():
         print 'Надстройка не предназначена для работы с семействами'
         sys.exit()
-
     uidoc = __revit__.ActiveUIDocument
     selectedIds = uidoc.Selection.GetElementIds()
     if 0 == selectedIds.Count:
@@ -237,8 +236,8 @@ def script_execute():
                         pressure_drop = Z
                         passed_taps.append(element.Id)
 
-                    if isZeroInTap(element):
-                        pressure_drop = float(0)
+                    # if isZeroInTap(element):
+                    #     pressure_drop = float(0)
 
 
             pressure_drop = float('{:.2f}'.format(pressure_drop))
@@ -249,6 +248,8 @@ def script_execute():
                 continue
             else:
                 data.append([count, name, lenght, size, flow, velocity, coef, pressure_drop, summ_pressure, output.linkify(elementId)])
+
+
 
     output.print_table(table_data=data,
                        title=("Отчет о расчете аэродинамики системы " + system_name),
