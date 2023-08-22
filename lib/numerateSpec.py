@@ -50,12 +50,17 @@ def get_duct_area(element):
 def getSortGroupInd(definition):
     sortGroupInd = []
     posInShed = False
+    groupingInd = False
     index = 0
+
     for scheduleGroupField in definition.GetFieldOrder():
         scheduleField = definition.GetField(scheduleGroupField)
         if scheduleField.GetName() == "ФОП_ВИС_Позиция":
             posInShed = True
             FOP_pos_ind = index
+        if scheduleField.GetName() == "ФОП_ВИС_Группирование":
+            groupingInd = index
+
         index += 1
 
     index = 0
@@ -70,7 +75,7 @@ def getSortGroupInd(definition):
         print "Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации"
         print 'С добавленными параметрами "ФОП_ВИС_Позиция" и "ФОП_ВИС_Примечание"'
         sys.exit()
-    return [sortGroupInd, FOP_pos_ind]
+    return [sortGroupInd, FOP_pos_ind, groupingInd]
 
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
@@ -145,9 +150,12 @@ def numerate(doNumbers, doAreas):
 
             newIndex = 0 #Стартовый значение для номера
             with revit.Transaction("Запись номера"):
+
                 #получаем по каким столбикам мы сортируем
                 sortGroupInd = getSortGroupInd(definition)[0] #список параметров с сортировкой
                 FOP_pos_ind = getSortGroupInd(definition)[1] #индекс столбика с позицией
+                groupingInd = getSortGroupInd(definition)[2] #индекс столбика с группированием
+
                 row = sectionData.FirstRowNumber
                 column = sectionData.FirstColumnNumber
                 oldSheduleString = None
@@ -159,25 +167,29 @@ def numerate(doNumbers, doAreas):
                     #получаем элемент по записанному айди
                     elId = vs.GetCellText(SectionType.Body, row, FOP_pos_ind)
 
-                    group = vs.GetCellText(SectionType.Body, row, sortGroupInd[1])
+                    #print sortGroupInd[1]
 
-                    if newSheduleString != oldSheduleString:
-                        if elId:
-                            try:
-                                if int(elId) and '_Узел_' not in group:
-                                    newIndex += 1
-                                    oldIndex = startIndex
-                            except Exception: #если вместо айди прилетает текст, пропускаем
-                                pass
+                    #group = vs.GetCellText(SectionType.Body, row, groupingInd)
 
-                    try:
-                        pos = doc.GetElement(ElementId(int(elId)))
-                        if '_Узел_' not in group:
-                            pos.LookupParameter('ФОП_ВИС_Позиция').Set(str(newIndex))
-                        else:
-                            pos.LookupParameter('ФОП_ВИС_Позиция').Set('')
-                    except Exception:
-                        pass
+                    if groupingInd:
+                        group = vs.GetCellText(SectionType.Body, row, groupingInd)
+                        if newSheduleString != oldSheduleString:
+                            if elId:
+                                try:
+                                    if int(elId) and '_Узел_' not in group:
+                                        newIndex += 1
+                                        oldIndex = startIndex
+                                except Exception: #если вместо айди прилетает текст, пропускаем
+                                    pass
+
+                        try:
+                            pos = doc.GetElement(ElementId(int(elId)))
+                            if '_Узел_' not in group:
+                                pos.LookupParameter('ФОП_ВИС_Позиция').Set(str(newIndex))
+                            else:
+                                pos.LookupParameter('ФОП_ВИС_Позиция').Set('')
+                        except Exception:
+                            pass
 
                     row += 1
 
