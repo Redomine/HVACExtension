@@ -464,7 +464,7 @@ class shedule_position:
                             if insName == 'None':
                                 insName = 'None_Изоляция'
                             if insName not in New_Name:
-                                New_Name = New_Name + " в изоляции " + insName
+                                New_Name = New_Name + " (В изоляции: " + insName + ")"
 
         if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
             New_Name = ADSK_Name
@@ -497,7 +497,8 @@ class shedule_position:
                         insType = doc.GetElement(el.Owner.GetTypeId())
                         try:
                             if lookupCheck(insType, 'ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-                                insName = insName + " в изоляции " + get_ADSK_Name(el.Owner)
+                                if insName == '':
+                                    insName = insName + get_ADSK_Name(el.Owner)
                         except:
                             pass
 
@@ -505,7 +506,10 @@ class shedule_position:
 
 
             if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() != 1:
-                New_Name = baseName + str(thickness) + ' мм' + insName
+                if insName != '':
+                    New_Name = baseName + str(thickness) + ' мм (В изоляции: ' + insName + ')'
+                else:
+                    New_Name = baseName + str(thickness)
 
 
             if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() == 1:

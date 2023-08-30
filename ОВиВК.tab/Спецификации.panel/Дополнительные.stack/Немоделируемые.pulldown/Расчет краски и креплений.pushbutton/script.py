@@ -241,7 +241,7 @@ class calculation_element:
 
         elemType = doc.GetElement(element.GetTypeId())
         if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-            self.name = 'Изоляция ' + get_ADSK_Name(element) + ' для фланцев и стыков'
+            self.name = 'Изоляция для фланцев и стыков (' + get_ADSK_Name(element) + ')'
 
         self.key = self.corp + self.sec + self.floor + self.system + \
                    self.group + self.name + self.mark + self.art + \
