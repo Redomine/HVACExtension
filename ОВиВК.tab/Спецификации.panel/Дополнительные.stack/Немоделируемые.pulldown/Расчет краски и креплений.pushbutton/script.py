@@ -122,11 +122,10 @@ class calculation_element:
     def duct_material(self, element):
         area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
 
-        if element.GetParamValue(BuiltInParameter.RBS_EQ_DIAMETER_PARAM) == element.GetParamValue(
-                BuiltInParameter.RBS_HYDRAULIC_DIAMETER_PARAM):
+        if str(element.DuctType.Shape) == "Round":
             D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
             P = 3.14 * D
-        else:
+        if str(element.DuctType.Shape) == "Rectangular":
             A = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM)
             B = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)
             P = 2 * (A + B)
