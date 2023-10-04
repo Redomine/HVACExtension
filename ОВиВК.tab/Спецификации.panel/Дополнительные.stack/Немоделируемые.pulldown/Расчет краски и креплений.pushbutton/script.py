@@ -163,6 +163,7 @@ class calculation_element:
             kg = 1.16 * lenght
         else:
             kg = 0.96 * lenght
+
         return kg
 
     def insul_stock(self, element):
@@ -287,7 +288,8 @@ def script_execute():
                     if is_object_to_generate(element, genCol, collection, parameter):
                         definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
-                        key = definition.corp + definition.sec + definition.floor + definition.system + \
+
+                        key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
                                           definition.group + definition.name + definition.mark + definition.art + \
                                           definition.maker + definition.local_description
 
@@ -304,6 +306,7 @@ def script_execute():
         for el in elements_to_generate:
             if el.name == 'Шпилька М8 1м/1шт':
                 el.number = int(el.number)
+
 
 
 
