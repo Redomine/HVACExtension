@@ -1,25 +1,25 @@
-# [Вкладка ОВиВК](https://kb.a101.ru/pages/viewpage.action?pageId=67850426)
+# [Р’РєР»Р°РґРєР° РћР’РёР’Рљ](https://kb.a101.ru/pages/viewpage.action?pageId=67850426)
 
 [![JetBrains PyCharm](https://img.shields.io/badge/JetBrains-PyCharm-blue.svg)](https://www.jetbrains.com/pycharm)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 [![Revit 2020-2024](https://img.shields.io/badge/Revit-2020--2024-blue.svg)](https://www.autodesk.com/products/revit/overview)
 
-Данная вкладка содержит инструменты, 
-необходимые при проектировании разделов ОВ и ВК.
+Р”Р°РЅРЅР°СЏ РІРєР»Р°РґРєР° СЃРѕРґРµСЂР¶РёС‚ РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹, 
+РЅРµРѕР±С…РѕРґРёРјС‹Рµ РїСЂРё РїСЂРѕРµРєС‚РёСЂРѕРІР°РЅРёРё СЂР°Р·РґРµР»РѕРІ РћР’ Рё Р’Рљ.
 
-## Установка платформы
+## РЈСЃС‚Р°РЅРѕРІРєР° РїР»Р°С‚С„РѕСЂРјС‹
 
-Скачать файл [Bim4Everyone.msi](https://github.com/Bim4Everyone/Bim4EveryoneSetup/releases/latest) 
-и далее следовать инструкциям установщика.
+РЎРєР°С‡Р°С‚СЊ С„Р°Р№Р» [Bim4Everyone.msi](https://github.com/Bim4Everyone/Bim4EveryoneSetup/releases/latest) 
+Рё РґР°Р»РµРµ СЃР»РµРґРѕРІР°С‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЏРј СѓСЃС‚Р°РЅРѕРІС‰РёРєР°.
 
-## Лицензия
+## Р›РёС†РµРЅР·РёСЏ
 
-Данный репозиторий под [лицензией MIT](https://en.wikipedia.org/wiki/MIT_License).
-
----
-
-Понравился репозиторий? Пожалуйста, [оцените проект на GitHub](../../stargazers)!
+Р”Р°РЅРЅС‹Р№ СЂРµРїРѕР·РёС‚РѕСЂРёР№ РїРѕРґ [Р»РёС†РµРЅР·РёРµР№ MIT](https://en.wikipedia.org/wiki/MIT_License).
 
 ---
 
-Copyright © 2023 Bim4Everyone, Mankaev Roman(Redomine)
+РџРѕРЅСЂР°РІРёР»СЃСЏ СЂРµРїРѕР·РёС‚РѕСЂРёР№? РџРѕР¶Р°Р»СѓР№СЃС‚Р°, [РѕС†РµРЅРёС‚Рµ РїСЂРѕРµРєС‚ РЅР° GitHub](../../stargazers)!
+
+---
+
+Copyright В© 2023 Bim4Everyone, Mankaev Roman(Redomine)
