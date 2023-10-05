@@ -244,7 +244,7 @@ class calculation_element:
         if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
             self.name = 'Изоляция для фланцев и стыков (' + get_ADSK_Name(element) + ')'
 
-        self.key = self.corp + self.sec + self.floor + self.system + \
+        self.key = self.EF + self.corp + self.sec + self.floor + self.system + \
                    self.group + self.name + self.mark + self.art + \
                    self.maker + self.local_description
 
@@ -274,28 +274,27 @@ def script_execute():
         collections = [colInsul, colPipes, colCurves]
 
         elements_to_generate = []
+
         #перебираем элементы и выясняем какие из них подлежат генерации
         for collection in collections:
             for element in collection:
-                elemType = doc.GetElement(element.GetTypeId())
                 for gen in genList:
                     binding_name = gen.name
                     binding_mark = gen.mark
                     binding_maker = gen.maker
-
                     parameter = gen.method
                     genCol = gen.collection
                     if is_object_to_generate(element, genCol, collection, parameter):
                         definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
                         #
-                        # key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
-                        #                   definition.group + definition.name + definition.mark + definition.art + \
-                        #                   definition.maker + definition.local_description
-
-                        key = definition.corp + definition.sec + definition.floor + definition.system + \
+                        key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
                                           definition.group + definition.name + definition.mark + definition.art + \
                                           definition.maker + definition.local_description
+
+                        # key = definition.corp + definition.sec + definition.floor + definition.system + \
+                        #                   definition.group + definition.name + definition.mark + definition.art + \
+                        #                   definition.maker + definition.local_description
 
 
                         toAppend = True
