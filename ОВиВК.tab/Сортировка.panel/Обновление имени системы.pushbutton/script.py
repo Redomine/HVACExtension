@@ -231,11 +231,11 @@ def update_element(elements):
 
 def script_execute():
 	# настройка атрибутов
-	project_parameters = ProjectParameters.Create(__revit__.Application)
-	project_parameters.SetupRevitParams(document, SharedParamsConfig.Instance.MechanicalSystemName,
-										SharedParamsConfig.Instance.VISSystemShortName,
-										SharedParamsConfig.Instance.VISOutSystemName
-										)
+	# project_parameters = ProjectParameters.Create(__revit__.Application)
+	# project_parameters.SetupRevitParams(document, SharedParamsConfig.Instance.MechanicalSystemName,
+	# 									SharedParamsConfig.Instance.VISSystemShortName,
+	# 									SharedParamsConfig.Instance.VISOutSystemName
+	# 									)
 
 	with Transaction(document) as transaction:
 		transaction.Start("Обновление атрибута \"{}\"".format(SharedParamsConfig.Instance.MechanicalSystemName.Name))
