@@ -130,6 +130,7 @@ class calculation_element:
             B = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)
             P = 2 * (A + B)
 
+
         if P < 1001:
             kg = area * 65
         elif P < 1801:
@@ -287,10 +288,15 @@ def script_execute():
                     if is_object_to_generate(element, genCol, collection, parameter):
                         definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
+                        #
+                        # key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
+                        #                   definition.group + definition.name + definition.mark + definition.art + \
+                        #                   definition.maker + definition.local_description
 
-                        key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
+                        key = definition.corp + definition.sec + definition.floor + definition.system + \
                                           definition.group + definition.name + definition.mark + definition.art + \
                                           definition.maker + definition.local_description
+
 
                         toAppend = True
                         for element_to_generate in elements_to_generate:
