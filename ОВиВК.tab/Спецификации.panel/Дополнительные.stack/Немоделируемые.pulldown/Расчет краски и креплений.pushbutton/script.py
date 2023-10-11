@@ -79,6 +79,17 @@ genList = [
     generationElement(group = '12. Расчетные элементы', name = "Шпилька М8 1м/1шт", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False)
 ]
 
+def roundup(divider, number):
+    x = number/divider
+    y = int(number/divider)
+    if x - y > 0.2:
+        return int(number) + 1
+    else:
+        return int(number)
+
+
+
+
 class calculation_element:
     def pins(self, element):
         lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
@@ -87,17 +98,22 @@ class calculation_element:
 
         self.local_description = self.local_description + ' ' + self.name  + ', Ду' + str(D)
 
-
         if lenght*1000 < D:
             return 0.2
-        if lenght < 3000:
+        if lenght < 3:
             return 0.4
-        if lenght < 6000:
+        if lenght < 6:
             return 0.6
-        if lenght < 9000:
+        if lenght < 9:
             return 0.8
-        if lenght < 12000:
+        if lenght < 12:
             return 1
+        if lenght > 12:
+            num = lenght / 12
+            num = roundup(int(num), num)
+            return num
+
+
 
     def collars(self, element):
         lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
@@ -110,14 +126,18 @@ class calculation_element:
 
         if lenght*1000 < D:
             return 1
-        if lenght < 3000:
+        if lenght < 3:
             return 2
-        if lenght < 6000:
+        if lenght < 6:
             return 3
-        if lenght < 9000:
+        if lenght < 9:
             return 4
-        if lenght < 12000:
+        if lenght < 12:
             return 5
+        if lenght > 12:
+            num = lenght/12 * 5
+            num = roundup(int(num), num)
+            return num
 
     def duct_material(self, element):
         area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
