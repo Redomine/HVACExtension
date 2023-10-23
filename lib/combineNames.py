@@ -6,6 +6,9 @@ __doc__ = "Генерирует имена и марки арматуры воз
 
 import os.path as op
 import clr
+
+import Redomine
+
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference("RevitAPI")
@@ -62,14 +65,10 @@ def check_mask(paraName, element, elemType):
 def script_execute():
     for element in colAccessory:
         if not isElementEditedBy(element):
-            if element.LookupParameter("ADSK_Наименование"):
-                name_para = element.LookupParameter("ADSK_Наименование")
-            else:
-                name_para = None
-            if element.LookupParameter("ADSK_Марка"):
-                mark_para = element.LookupParameter("ADSK_Марка")
-            else:
-                mark_para = None
+            name_para = Redomine.get_ADSK_Name(element, return_para=True)
+
+            mark_para = Redomine.get_ADSK_Mark(element, return_para=True)
+
             if element.LookupParameter("ADSK_Размер_Ширина"):
                 width_para = element.LookupParameter("ADSK_Размер_Ширина")
             else:
@@ -86,6 +85,7 @@ def script_execute():
                 diameter_para = element.LookupParameter("ADSK_Размер_Диаметр")
             else:
                 diameter_para = None
+
 
             if name_para and mark_para and width_para and height_para and length_para or \
                     name_para and mark_para and diameter_para and length_para:
