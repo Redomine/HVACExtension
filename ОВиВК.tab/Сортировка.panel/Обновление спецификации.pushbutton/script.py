@@ -24,6 +24,7 @@ from System import Guid
 from itertools import groupby
 from pyrevit import revit
 from pyrevit.script import output
+import combineNames
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 view = doc.ActiveView
@@ -819,6 +820,8 @@ parametersAdded = paraSpec.check_parameters()
 
 
 if not parametersAdded:
+    combineNames.solo_combine()
+
     information = doc.ProjectInformation
     with revit.Transaction("Обновление девятиграфной формы"):
         #список элементов для перебора в вид узлов:
