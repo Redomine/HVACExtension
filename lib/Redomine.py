@@ -100,7 +100,7 @@ def lookupCheck(elementOrType, paraName, isExit = True):
 
 
 
-def getSharedParameter (element, paraName, replaceName):
+def getSharedParameter (element, paraName, replaceName, return_para = False):
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         if paraName == 'ADSK_Наименование':
             ElemTypeId = element.GetTypeId()
@@ -117,6 +117,9 @@ def getSharedParameter (element, paraName, replaceName):
             name = replaceIsValid(element, paraName, replaceName)
     try:
         parameter = element.LookupParameter(name).AsString()
+        if return_para:
+            parameter = element.LookupParameter(name)
+            return parameter
         if parameter == None:
             parameter = 'None'
     except Exception:
@@ -124,6 +127,10 @@ def getSharedParameter (element, paraName, replaceName):
 
         ElemTypeId = element.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
+
+        if return_para:
+            parameter = ElemType.LookupParameter(name)
+            return parameter
 
         if ElemType.LookupParameter(name) == None:
             parameter = "None"
@@ -194,10 +201,10 @@ def get_ADSK_Izm(element):
     ADSK_Izm = getSharedParameter(element, paraName, replaceName)
     return ADSK_Izm
 
-def get_ADSK_Name(element):
+def get_ADSK_Name(element, return_para = False):
     paraName = 'ADSK_Наименование'
     replaceName = 'ФОП_ВИС_Замена параметра_Наименование'
-    ADSK_Name = getSharedParameter(element, paraName, replaceName)
+    ADSK_Name = getSharedParameter(element, paraName, replaceName, return_para)
     return ADSK_Name
 
 def get_ADSK_Maker(element):
@@ -206,10 +213,10 @@ def get_ADSK_Maker(element):
     ADSK_Maker = getSharedParameter(element, paraName, replaceName)
     return ADSK_Maker
 
-def get_ADSK_Mark(element):
+def get_ADSK_Mark(element, return_para = False):
     paraName = 'ADSK_Марка'
     replaceName = 'ФОП_ВИС_Замена параметра_Марка'
-    ADSK_Mark = getSharedParameter(element, paraName, replaceName)
+    ADSK_Mark = getSharedParameter(element, paraName, replaceName, return_para)
     return ADSK_Mark
 
 def get_ADSK_Code(element):
