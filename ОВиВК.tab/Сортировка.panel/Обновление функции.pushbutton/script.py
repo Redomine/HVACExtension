@@ -37,7 +37,8 @@ def make_col(category):
     return col
 
 collections = getDefCols()
-
+colGeneric = make_col(BuiltInCategory.OST_GenericModel)
+collections.append(colGeneric)
 
 colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
@@ -58,11 +59,15 @@ def isElementEditedBy(element):
 
 
 def getEFsystem(element):
-
-    sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+    if element not in colGeneric:
+        sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
+    else:
+        sys_name = None
     EF = None
+
     if sys_name != None:
-        if element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
+        if element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment) or element.Category.IsId(BuiltInCategory.OST_PipeAccessory)\
+                or element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
             sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
             sys_name = sys_name.split(',')
             sys_name = sys_name[0]
@@ -102,19 +107,25 @@ def copyEF(collection):
                         EF = typeEF
 
                 parameter = lookupCheck(element, 'ФОП_Экономическая функция')
-                setIfNotRO(parameter, EF)
+
+                if element not in colGeneric:
+                    setIfNotRO(parameter, EF)
+                if element in colGeneric:
+                    if "_Якорный" not in element.Symbol.FamilyName:
+                        setIfNotRO(parameter, EF)
+
 
 
 def getDependent(collection):
     for element in collection:
         if not isElementEditedBy(element):
             EF = lookupCheck(element, 'ФОП_Экономическая функция').AsString()
-
             dependent = None
             try:
                 dependent = element.GetSubComponentIds()
             except:
                 pass
+
 
             if dependent:
                 for depend in dependent:
