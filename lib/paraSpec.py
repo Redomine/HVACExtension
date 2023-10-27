@@ -247,6 +247,7 @@ def script_execute():
 
 
         shared_parameter('ФОП_ВИС_Учитывать фитинги воздуховодов', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Имя внесистемных элементов', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Учитывать фитинги труб', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet)
