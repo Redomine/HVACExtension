@@ -122,16 +122,8 @@ def script_execute():
          BuiltInCategory.OST_PipeAccessory,
          BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctInsulations,
          BuiltInCategory.OST_PipeInsulations,
-         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers, BuiltInCategory.OST_ProjectInformation])
-
-    visEFCatSet = get_cats([BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeCurves,
-         BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_FlexDuctCurves,
-         BuiltInCategory.OST_FlexPipeCurves,
-         BuiltInCategory.OST_DuctTerminal, BuiltInCategory.OST_DuctAccessory,
-         BuiltInCategory.OST_PipeAccessory,
-         BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctInsulations,
-         BuiltInCategory.OST_PipeInsulations,
-         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers, BuiltInCategory.OST_DuctSystem, BuiltInCategory.OST_PipingSystem])
+         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers, BuiltInCategory.OST_ProjectInformation,
+         BuiltInCategory.OST_GenericModel])
 
 
     # нестандартные сеты категорий
