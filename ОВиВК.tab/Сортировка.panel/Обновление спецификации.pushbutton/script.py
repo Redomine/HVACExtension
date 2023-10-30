@@ -6,6 +6,9 @@ __doc__ = "Обновляет число подсчетных элементов
 
 import os.path as op
 import clr
+
+import Redomine
+
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference("RevitAPI")
@@ -26,7 +29,7 @@ from pyrevit import revit
 from pyrevit.script import output
 import combineNames
 
-doc = __revit__.ActiveUIDocument.Document  # type: Document
+doc = Redomine.getDocIfItsWorkshared()
 view = doc.ActiveView
 
 def get_D_type(element):

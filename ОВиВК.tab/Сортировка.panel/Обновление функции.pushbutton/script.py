@@ -7,6 +7,9 @@ __doc__ = "Обновляет экономическую функцию"
 import os.path as op
 
 import clr
+
+import Redomine
+
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
@@ -23,9 +26,8 @@ from Autodesk.Revit.DB import *
 from System import Guid
 from pyrevit import revit
 from Redomine import *
-#test
 
-doc = __revit__.ActiveUIDocument.Document  # type: Document
+Redomine.getDocIfItsWorkshared()
 view = doc.ActiveView
 
 

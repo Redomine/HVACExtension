@@ -6,6 +6,9 @@ __doc__ = "Добавление параметров в семейство дл�
 
 
 import clr
+
+import Redomine
+
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
@@ -23,7 +26,7 @@ from pyrevit import revit
 import sys
 from Autodesk.Revit.DB import FamilySource, IFamilyLoadOptions
 
-doc = __revit__.ActiveUIDocument.Document  # type: Document
+doc = Redomine.getDocIfItsWorkshared()
 
 IFamilyLoadOptions
 

@@ -17,7 +17,6 @@ from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep.Revit.Geometry import *
 import sys
-import paraSpec
 from Autodesk.Revit.DB import *
 from System import Guid
 from itertools import groupby
@@ -79,6 +78,13 @@ def isItFamily():
         return True
     except Exception:
         pass
+
+def getDocIfItsWorkshared():
+    doc = __revit__.ActiveUIDocument.Document  # type: Document
+    if not doc.IsWorkshared:
+        print "Документ не является файлом для общей работы. Сохраните его как проект и повторите процедуру."
+        sys.exit()
+    return doc
 
 def lookupCheck(elementOrType, paraName, isExit = True):
     try:
