@@ -223,7 +223,8 @@ def numerate(doNumbers, doAreas):
                         note = element.LookupParameter('ФОП_ВИС_Примечание')
                         index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
                         if note:
-                            note.Set(str(duct_dict[index])+' м²')
+
+                            note.Set(str('{:g}'.format(duct_dict[index]))+' м²')
 
 
                     if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() == 1:
@@ -242,7 +243,7 @@ def numerate(doNumbers, doAreas):
                             note = element.LookupParameter('ФОП_ВИС_Примечание')
                             index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
                             if note:
-                                note.Set(str(fitting_dict[index]) + ' м²')
+                                note.Set(str('{:g}'.format(duct_dict[index])) + ' м²')
 
 
 
