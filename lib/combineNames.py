@@ -48,8 +48,6 @@ def isElementEditedBy(element):
     return False
 
 
-def check_name_mas(element, elemType):
-    pass
 
 def check_mask(paraName, element, elemType):
     mark_mask = None
@@ -61,7 +59,10 @@ def check_mask(paraName, element, elemType):
         else:
             return mask_para.AsString()
 
-
+def getStingFromIntFromDouble(param):
+    intValue = int(fromRevitToMilimeters(param.AsDouble()))
+    strValue = str(intValue)
+    return strValue
 def script_execute():
     for element in colAccessory:
         if not isElementEditedBy(element):
@@ -95,24 +96,24 @@ def script_execute():
 
                 if mark_mask:
                     if "ВЫСОТА" in mark_mask:
-                        mark_mask = mark_mask.replace("ВЫСОТА", height_para.AsValueString())
+                        mark_mask = mark_mask.replace("ВЫСОТА", getStingFromIntFromDouble(height_para))
                     if "ДЛИНА" in mark_mask:
-                        mark_mask = mark_mask.replace("ДЛИНА", length_para.AsValueString())
+                        mark_mask = mark_mask.replace("ДЛИНА", getStingFromIntFromDouble(length_para))
                     if "ШИРИНА" in mark_mask:
-                        mark_mask = mark_mask.replace("ШИРИНА", width_para.AsValueString())
+                        mark_mask = mark_mask.replace("ШИРИНА", getStingFromIntFromDouble(width_para))
                     if "ДИАМЕТР" in mark_mask:
-                        mark_mask = mark_mask.replace("ДИАМЕТР", diameter_para.AsValueString())
+                        mark_mask = mark_mask.replace("ДИАМЕТР", getStingFromIntFromDouble(diameter_para))
                     mark_para.Set(mark_mask)
 
                 if name_mask:
                     if "ВЫСОТА" in name_mask:
-                        name_mask = name_mask.replace("ВЫСОТА", height_para.AsValueString())
+                        name_mask = name_mask.replace("ВЫСОТА", getStingFromIntFromDouble(height_para))
                     if "ДЛИНА" in name_mask:
-                        name_mask = name_mask.replace("ДЛИНА", length_para.AsValueString())
+                        name_mask = name_mask.replace("ДЛИНА", getStingFromIntFromDouble(length_para))
                     if "ШИРИНА" in name_mask:
-                        name_mask = name_mask.replace("ШИРИНА", width_para.AsValueString())
+                        name_mask = name_mask.replace("ШИРИНА", getStingFromIntFromDouble(width_para))
                     if "ДИАМЕТР" in name_mask:
-                        name_mask = name_mask.replace("ДИАМЕТР", diameter_para.AsValueString())
+                        name_mask = name_mask.replace("ДИАМЕТР", getStingFromIntFromDouble(diameter_para))
                     name_para.Set(name_mask)
 
 
