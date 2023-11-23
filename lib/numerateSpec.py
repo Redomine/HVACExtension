@@ -30,7 +30,28 @@ from dosymep.Bim4Everyone.Templates import ProjectParameters
 import Autodesk
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
+class stringNum:
+    def __init__(self):
+        value = None
+        lastCharZero = None
 
+    def format_number(self, value):
+        newValue = value[:-1]
+        return newValue
+
+
+def deleteEndingZero(num):
+    formatNum = stringNum()
+    formatNum.value = num
+    formatNum.lastCharZero = False
+    if formatNum.value[-1] == "0":
+        formatNum.lastCharZero = True
+    while formatNum.lastCharZero == True:
+        formatNum.value = formatNum.format_number(formatNum.value)
+        if formatNum.value[-1] != "0":
+            formatNum.lastCharZero = False
+
+    return formatNum.value
 
 def make_col(category):
     col = FilteredElementCollector(doc) \
@@ -223,7 +244,7 @@ def numerate(doNumbers, doAreas):
                         note = element.LookupParameter('ФОП_ВИС_Примечание')
                         index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
                         if note:
-                            note.Set(str(duct_dict[index])+' м²')
+                            note.Set(deleteEndingZero(str(duct_dict[index]))+' м²')
 
 
                     if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() == 1:
@@ -242,7 +263,7 @@ def numerate(doNumbers, doAreas):
                             note = element.LookupParameter('ФОП_ВИС_Примечание')
                             index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
                             if note:
-                                note.Set(str(fitting_dict[index]) + ' м²')
+                                note.Set(deleteEndingZero(str(fitting_dict[index])) + ' м²')
 
 
 
