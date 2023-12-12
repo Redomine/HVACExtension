@@ -55,17 +55,6 @@ class level:
         self.z = element.get_Parameter(BuiltInParameter.LEVEL_ELEV).AsValueString()
 
 report_rows = []
-def isElementEditedBy(element):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-    except Exception:
-        edited_by = __revit__.Application.Username
-
-    if edited_by and edited_by != __revit__.Application.Username:
-        if edited_by not in report_rows:
-            report_rows.append(edited_by)
-        return True
-    return False
 
 def getElementLevelName(element):
     level = element.get_Parameter(BuiltInParameter.FAMILY_LEVEL_PARAM)
@@ -129,6 +118,7 @@ def execute():
 
 
 
+
                     for projectLevel in projectLevels:
                         if projectLevel.name == elementLV:
 
@@ -150,6 +140,8 @@ def execute():
                             botParam.Set(elementBot/1000)
                     except:
                         pass
+                else:
+                    fillReportRows(element,report_rows)
 
     for report in report_rows:
         print 'Некоторые элементы не были отработаны так как заняты пользователем ' + report

@@ -787,18 +787,6 @@ parametric = [
 ]
 
 report_rows = []
-def isElementEditedBy(element):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-    except Exception:
-        edited_by = __revit__.Application.Username
-
-    if edited_by and edited_by != __revit__.Application.Username:
-        if edited_by not in report_rows:
-            report_rows.append(edited_by)
-        return True
-    return False
-
 
 def script_execute():
     for collection in collections:
@@ -806,11 +794,15 @@ def script_execute():
             if not isElementEditedBy(element):
                 data = shedule_position(element, collection, parametric)
                 data.insert()
+            else:
+                fillReportRows(element,report_rows)
 
 
         for element in inCollector:
             if not isElementEditedBy(element):
                 get_depend(element)
+            else:
+                fillReportRows(element,report_rows)
 
 
 

@@ -51,18 +51,6 @@ class projectParam:
         self.name = name
         self.unit = unit
 report_rows = []
-def isElementEditedBy(element):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-    except Exception:
-        edited_by = __revit__.Application.Username
-
-    if edited_by and edited_by != __revit__.Application.Username:
-        if edited_by not in report_rows:
-            report_rows.add(edited_by)
-        return True
-    return False
-
 
 
 
@@ -173,7 +161,7 @@ def execute():
                     position = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
                     position.Set(str(element.Id.IntegerValue))
                 else:
-                    pass
+                    fillReportRows(element,report_rows)
         except:
             print 'Не удалось обратотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
 

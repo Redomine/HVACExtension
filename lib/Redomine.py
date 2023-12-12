@@ -72,6 +72,26 @@ def getDefCols():
 
 output = script.get_output()
 
+def isElementEditedBy(element):
+    try:
+        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY).lower()
+    except Exception:
+        edited_by = __revit__.Application.Username.lower()
+
+    if edited_by and edited_by != __revit__.Application.Username.lower():
+        return True
+    return False
+
+def fillReportRows(element, report_rows):
+    try:
+        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY).lower()
+    except Exception:
+        edited_by = __revit__.Application.Username.lower()
+    if edited_by not in report_rows:
+        report_rows.append(edited_by)
+    return report_rows
+
+
 def isItFamily():
     try:
         manager = doc.FamilyManager

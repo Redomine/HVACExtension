@@ -110,12 +110,12 @@ def numerate(doNumbers, doAreas):
 
         for element in elements:
             try:
-                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
+                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY).lower()
                 if edited_by == None:
-                    edited_by = __revit__.Application.Username
+                    edited_by = __revit__.Application.Username.lower()
             except Exception:
-                edited_by = __revit__.Application.Username
-            if edited_by != __revit__.Application.Username:
+                edited_by = __revit__.Application.Username.lower()
+            if edited_by != __revit__.Application.Username.lower():
                 report_rows.add(edited_by)
                 continue
         if report_rows:

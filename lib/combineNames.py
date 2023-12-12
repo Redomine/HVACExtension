@@ -35,19 +35,6 @@ colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
 
 
 report_rows = []
-def isElementEditedBy(element):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-    except Exception:
-        edited_by = __revit__.Application.Username
-
-    if edited_by and edited_by != __revit__.Application.Username:
-        if edited_by not in report_rows:
-            report_rows.append(edited_by)
-        return True
-    return False
-
-
 
 def check_mask(paraName, element, elemType):
     mark_mask = None
@@ -115,6 +102,8 @@ def script_execute():
                     if "ДИАМЕТР" in name_mask:
                         name_mask = name_mask.replace("ДИАМЕТР", getStingFromIntFromDouble(diameter_para))
                     name_para.Set(name_mask)
+        else:
+            fillReportRows(element, report_rows)
 
 
 
