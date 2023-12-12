@@ -50,19 +50,7 @@ class projectParam:
     def __init__(self, name, unit):
         self.name = name
         self.unit = unit
-report_rows = []
-def isElementEditedBy(element):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-    except Exception:
-        edited_by = __revit__.Application.Username
-
-    if edited_by and edited_by != __revit__.Application.Username:
-        if edited_by not in report_rows:
-            report_rows.add(edited_by)
-        return True
-    return False
-
+report_rows = set()
 
 
 
@@ -175,7 +163,8 @@ def execute():
                 else:
                     pass
         except:
-            print 'Не удалось обратотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
+            print 'Не удалось обработотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
+            sys.exit()
 
         #перебираем элементы на активном виде и для начала прописываем айди в позицию
         parameters = getParamsInShed(definition)

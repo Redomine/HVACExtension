@@ -46,18 +46,8 @@ colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
 
 
-report_rows = []
-def isElementEditedBy(element):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-    except Exception:
-        edited_by = __revit__.Application.Username
+report_rows = set()
 
-    if edited_by and edited_by != __revit__.Application.Username:
-        if edited_by not in report_rows:
-            report_rows.append(edited_by)
-        return True
-    return False
 
 
 def getEFsystem(element):
@@ -115,6 +105,9 @@ def copyEF(collection):
                 if element in colGeneric:
                     if "_Якорный" not in element.Symbol.FamilyName:
                         setIfNotRO(parameter, EF)
+
+        else:
+            fillReportRows(element, report_rows)
 
 
 

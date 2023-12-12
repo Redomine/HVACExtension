@@ -207,16 +207,15 @@ def update_system_name(element):
 def update_element(elements):
 	report_rows = set()
 	for element in elements:
-		edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
-		if edited_by and edited_by != __revit__.Application.Username:
-			report_rows.add(edited_by)
+		if not isElementEditedBy(element):
+			update_system_name(element)
+		else:
+			fillReportRows(element, report_rows)
 			continue
-		update_system_name(element)
 
 	#отдельно проходимся по суб-элементам, чтоб не перекрыть имена случайно основной проверкой
 	for element in elements:
-		edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
-		if edited_by and edited_by != __revit__.Application.Username:
+		if isElementEditedBy(element):
 			continue
 
 		try:

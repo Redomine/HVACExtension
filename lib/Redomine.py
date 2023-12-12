@@ -72,6 +72,18 @@ def getDefCols():
 
 output = script.get_output()
 
+def isElementEditedBy(element):
+    user_name = __revit__.Application.Username
+    edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+    return edited_by and edited_by.lower() != user_name.lower()
+
+def fillReportRows(element, report_rows):
+    edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+    if edited_by:
+        report_rows.add(edited_by.lower())
+    return report_rows
+
+
 def isItFamily():
     try:
         manager = doc.FamilyManager

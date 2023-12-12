@@ -230,7 +230,7 @@ def getBorders(element):
     return [z_min, z_max]
 
 
-report_rows = []
+report_rows = set()
 def isElementEditedBy(element):
     try:
         edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)

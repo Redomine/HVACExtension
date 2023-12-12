@@ -23,6 +23,7 @@ from System import Guid
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 import dosymep
+from Redomine import *
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
@@ -109,14 +110,8 @@ def numerate(doNumbers, doAreas):
         #если что-то из элементов занято, то дальнейшая обработка не имеет смысла, нужно освобождать спеку
 
         for element in elements:
-            try:
-                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-                if edited_by == None:
-                    edited_by = __revit__.Application.Username
-            except Exception:
-                edited_by = __revit__.Application.Username
-            if edited_by != __revit__.Application.Username:
-                report_rows.add(edited_by)
+            if isElementEditedBy(element):
+                fillReportRows(element, report_rows)
                 continue
         if report_rows:
             print "Нумерация/заполнение примечаний не были выполнены, так как часть элементов спецификации занята пользователями:"
