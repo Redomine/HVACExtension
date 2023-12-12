@@ -161,9 +161,10 @@ def execute():
                     position = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
                     position.Set(str(element.Id.IntegerValue))
                 else:
-                    fillReportRows(element,report_rows)
+                    pass
         except:
-            print 'Не удалось обратотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
+            print 'Не удалось обработотать параметр ФОП_ВИС_Позиция для элементов в спецификации. Проверьте, назначен ли он для них'
+            sys.exit()
 
         #перебираем элементы на активном виде и для начала прописываем айди в позицию
         parameters = getParamsInShed(definition)
