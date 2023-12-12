@@ -104,7 +104,7 @@ def numerate(doNumbers, doAreas):
         sortColumnHeaders = []
         sortGroupNamesInds = []
         headerIndexes = []
-        report_rows = []
+        report_rows = set()
 
         elements = FilteredElementCollector(doc, doc.ActiveView.Id)
         #если что-то из элементов занято, то дальнейшая обработка не имеет смысла, нужно освобождать спеку

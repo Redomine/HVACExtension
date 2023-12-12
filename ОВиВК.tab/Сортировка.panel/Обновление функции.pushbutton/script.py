@@ -46,7 +46,7 @@ colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
 colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
 
 
-report_rows = []
+report_rows = set()
 
 
 

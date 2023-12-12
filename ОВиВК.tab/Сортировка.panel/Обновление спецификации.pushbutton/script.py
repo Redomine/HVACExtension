@@ -786,7 +786,7 @@ parametric = [
     settings(colPipeInsulations, '11. Материалы трубопроводной изоляции', False)
 ]
 
-report_rows = []
+report_rows = set()
 
 def script_execute():
     for collection in collections:

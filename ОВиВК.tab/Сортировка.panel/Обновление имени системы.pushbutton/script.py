@@ -205,7 +205,7 @@ def update_system_name(element):
 
 
 def update_element(elements):
-	report_rows = []
+	report_rows = set()
 	for element in elements:
 		if not isElementEditedBy(element):
 			update_system_name(element)

@@ -34,7 +34,7 @@ colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
 
 
 
-report_rows = []
+report_rows = set()
 
 def check_mask(paraName, element, elemType):
     mark_mask = None

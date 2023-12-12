@@ -480,12 +480,8 @@ def script_execute():
     report_rows = set()
     with revit.Transaction("Пересчет потерь напора"):
         for element in colFittings:
-            try:
-                edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY)
-            except Exception:
-                print element.Id
-            if edited_by and edited_by != __revit__.Application.Username:
-                report_rows.add(edited_by)
+            if isElementEditedBy(element):
+                fillReportRows(element, report_rows)
                 continue
 
             K = 0

@@ -54,7 +54,7 @@ class level:
         self.name = element.Name
         self.z = element.get_Parameter(BuiltInParameter.LEVEL_ELEV).AsValueString()
 
-report_rows = []
+report_rows = set()
 
 def getElementLevelName(element):
     level = element.get_Parameter(BuiltInParameter.FAMILY_LEVEL_PARAM)

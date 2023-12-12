@@ -50,7 +50,7 @@ class projectParam:
     def __init__(self, name, unit):
         self.name = name
         self.unit = unit
-report_rows = []
+report_rows = set()
 
 
 

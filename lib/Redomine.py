@@ -73,22 +73,14 @@ def getDefCols():
 output = script.get_output()
 
 def isElementEditedBy(element):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY).lower()
-    except Exception:
-        edited_by = __revit__.Application.Username.lower()
-
-    if edited_by and edited_by != __revit__.Application.Username.lower():
-        return True
-    return False
+    user_name = __revit__.Application.Username
+    edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+    return edited_by and edited_by.lower() != user_name.lower()
 
 def fillReportRows(element, report_rows):
-    try:
-        edited_by = element.GetParamValue(BuiltInParameter.EDITED_BY).lower()
-    except Exception:
-        edited_by = __revit__.Application.Username.lower()
-    if edited_by not in report_rows:
-        report_rows.append(edited_by)
+    edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+    if edited_by:
+        report_rows.add(edited_by.lower())
     return report_rows
 
 
