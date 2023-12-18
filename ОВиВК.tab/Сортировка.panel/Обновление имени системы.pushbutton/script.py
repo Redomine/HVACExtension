@@ -159,7 +159,12 @@ def rename_sub_sub(element, system_name):
 
 def update_system_name(element):
 	#test
-	forced_name = element.LookupParameter('ФОП_ВИС_Имя системы принудительное')
+	forced_name = lookupCheck(element, 'ФОП_ВИС_Имя системы принудительное', isExit = False)
+
+	if not forced_name:
+		ElemTypeId = element.GetTypeId()
+		ElemType = doc.GetElement(ElemTypeId)
+		forced_name = lookupCheck(ElemType, 'ФОП_ВИС_Имя системы принудительное', isExit = True)
 	system_name = None
 
 	#print forced_name.AsString()
