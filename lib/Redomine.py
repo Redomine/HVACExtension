@@ -411,8 +411,8 @@ def new_position(calculation_elements, temporary, famName, description):
 def remove_models(colModel, famName, description):
     try:
         for element in colModel:
-            edited_by = element.LookupParameter('Редактирует').AsString()
-            if edited_by and edited_by != __revit__.Application.Username:
+            edited_by = isElementEditedBy(element)
+            if edited_by:
                 print "Якорные элементы не были обработаны, так как были заняты пользователями:"
                 print edited_by
                 sys.exit()
