@@ -157,7 +157,6 @@ def rename_sub_sub(element, system_name):
 		element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 		rename_sub_sub(element, system_name)
 
-
 def check_forced_name(element):
 	forced_name = lookupCheck(element, 'ФОП_ВИС_Имя системы принудительное', isExit = False)
 
@@ -165,6 +164,7 @@ def check_forced_name(element):
 		ElemTypeId = element.GetTypeId()
 		ElemType = doc.GetElement(ElemTypeId)
 		forced_name = lookupCheck(ElemType, 'ФОП_ВИС_Имя системы принудительное', isExit = True)
+
 	return forced_name
 
 
@@ -172,7 +172,6 @@ def update_system_name(element):
 	#test
 	forced_name = check_forced_name(element)
 	system_name = None
-
 
 	#print forced_name.AsString()
 	if forced_name.AsString() != None:
