@@ -224,6 +224,7 @@ def script_execute():
 
 
         shared_parameter('ФОП_ВИС_Минимальная толщина воздуховода', visDefinitions, ductCatSet, istype=True)
+        shared_parameter('ФОП_ВИС_Максимальная толщина воздуховода', visDefinitions, ductCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Узел', visDefinitions, nodeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Исключить из узла', visDefinitions, nodeCatSet, istype=True)
 

@@ -42,7 +42,18 @@ def get_D_type(element):
     return type
 
 
+def check_minmax_thickness(ElemType, thickness):
+    if getParameter(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода'):
+        min_thickness = lookupCheck(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
+        if min_thickness == None: min_thickness = 0
+        if float(thickness) < min_thickness: thickness = str(min_thickness)
 
+    if getParameter(ElemType, 'ФОП_ВИС_Максимальная толщина воздуховода'):
+        max_thickness = lookupCheck(ElemType, 'ФОП_ВИС_Максимальная толщина воздуховода').AsDouble()
+        if max_thickness == None: max_thickness = 0
+        if float(thickness) > max_thickness and max_thickness != 0: thickness = str(max_thickness)
+
+    return thickness
 
 def duct_thickness(element):
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
@@ -83,18 +94,11 @@ def duct_thickness(element):
         ElemTypeId = el.GetTypeId()
         ElemType = doc.GetElement(ElemTypeId)
 
-        if getParameter(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода'):
-            min_thickness = lookupCheck(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
-            if min_thickness == None: min_thickness = 0
-            if float(thickness) < min_thickness: thickness = str(min_thickness)
+        thickness = check_minmax_thickness(ElemType, thickness)
 
     ElemTypeId = element.GetTypeId()
     ElemType = doc.GetElement(ElemTypeId)
-    if getParameter(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода'):
-        min_thickness = lookupCheck(ElemType, 'ФОП_ВИС_Минимальная толщина воздуховода').AsDouble()
-        if min_thickness == None: min_thickness = 0
-        if float(thickness) < min_thickness: thickness = str(min_thickness)
-
+    thickness = check_minmax_thickness(ElemType, thickness)
     return thickness
 
 def getDuct(connector):
