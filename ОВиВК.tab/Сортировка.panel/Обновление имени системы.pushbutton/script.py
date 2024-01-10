@@ -134,7 +134,9 @@ def get_type_system_name(element):
 
 
 def rename_sub(element):
+
 	if hasattr(element, "GetSubComponentIds"):
+
 		super_component = element.SuperComponent
 		if super_component:
 			return
@@ -142,9 +144,10 @@ def rename_sub(element):
 		system_name = element.GetParamValueOrDefault("ADSK_Имя системы")
 
 		sub_elements = [document.GetElement(element_id) for element_id in element.GetSubComponentIds()]
+
 		for sub_element in sub_elements:
-			forced_name = check_forced_name(sub_element)
-			if not forced_name:
+			forced_name = check_forced_name(sub_element).AsString()
+			if not forced_name or forced_name == "":
 				sub_element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 				rename_sub_sub(sub_element, system_name)
 				sub_element_ids.append(sub_element.Id)
@@ -157,13 +160,17 @@ def rename_sub_sub(element, system_name):
 		element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
 		rename_sub_sub(element, system_name)
 
+
 def check_forced_name(element):
+
 	forced_name = lookupCheck(element, 'ФОП_ВИС_Имя системы принудительное', isExit = False)
 
 	if not forced_name:
 		ElemTypeId = element.GetTypeId()
 		ElemType = doc.GetElement(ElemTypeId)
 		forced_name = lookupCheck(ElemType, 'ФОП_ВИС_Имя системы принудительное', isExit = True)
+
+
 
 	return forced_name
 
