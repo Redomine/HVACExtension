@@ -17,7 +17,7 @@ import System
 import dosymep
 import paraSpec
 import checkAnchor
-
+import math
 
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
@@ -329,7 +329,8 @@ def script_execute():
         #иначе шпилек получится дробное число, а они в штуках
         for el in elements_to_generate:
             if el.name == 'Шпилька М8 1м/1шт':
-                el.number = int(el.number)
+                el.number = int(math.ceil(el.number))
+
 
 
 
