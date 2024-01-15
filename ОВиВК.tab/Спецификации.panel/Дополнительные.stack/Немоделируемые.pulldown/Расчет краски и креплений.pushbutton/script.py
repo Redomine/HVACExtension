@@ -331,10 +331,6 @@ def script_execute():
             if el.name == 'Шпилька М8 1м/1шт':
                 el.number = int(math.ceil(el.number))
 
-
-
-
-
         new_position(elements_to_generate, temporary, nameOfModel, description)
 
         # for el in elements_to_generate:
