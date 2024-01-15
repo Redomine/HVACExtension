@@ -333,8 +333,7 @@ def script_execute():
 
         new_position(elements_to_generate, temporary, nameOfModel, description)
 
-        # for el in elements_to_generate:
-        #     new_position([el], temporary, nameOfModel, description)
+
 
 temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
 
