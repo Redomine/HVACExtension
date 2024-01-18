@@ -410,7 +410,7 @@ def getDpTapAdjustable(element):
     for ductCon in ductCons:
         Flow.append(ductCon.Flow*101.94)
         try:
-            Fc = conSet[0].Height * 0.3048 * ductCon.Width * 0.3048
+            Fc = ductCon.Height * 0.3048 * ductCon.Width * 0.3048
             Fp = Fc
         except:
             Fc = 3.14 * 0.3048 * 0.3048 * ductCon.Radius ** 2
@@ -428,12 +428,12 @@ def getDpTapAdjustable(element):
 
     if str(conSet[0].DuctSystemType) == "ExhaustAir" or str(conSet[0].DuctSystemType) == "ReturnAir":
         if form == "Круглый отвод":
-            if Lc > Lo * 2:
+            if Lc >= Lo * 2:
                 K = ((1-fp**0.5)+0.5*l0+0.05)*(1.7+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)*(fp/(1-l0))**2
             else:
                 K = (-0.7-6.05*(1-fp)**3)*(f0/l0)**2+(1.32+3.23*(1-fp)**2)*f0/l0+(0.5+0.42*fp)-0.167*l0/f0
         else:
-            if Lc > Lo * 2:
+            if Lc >= Lo * 2:
                 K = (fp/(1-l0))**2*((1-fp)+0.5*l0+0.05)*(1.5+(1/(2*f0)-1)*l0-((fp+f0)*l0)**0.5)
             else:
                 K = (f0/l0)**2*(4.1*(fp/f0)**1.25*l0**1.5*(fp+f0)**(0.3*(f0/fp)**0.5/l0-2)-0.5*fp/f0)
@@ -442,12 +442,12 @@ def getDpTapAdjustable(element):
 
     if str(conSet[0].DuctSystemType) == "SupplyAir":
         if form == "Круглый отвод":
-            if Lc > Lo * 2:
+            if Lc >= Lo * 2:
                 K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
             else:
                 K = (f0/l0)**2-0.58*f0/l0+0.54+0.025*l0/f0
         else:
-            if Lc > Lo * 2:
+            if Lc >= Lo * 2:
                 K = 0.45*(fp/(1-l0))**2+(0.6-1.7*fp)*fp/(1-l0)-(0.25-0.9*fp**2)+0.19*(1-l0)/fp
             else:
                 K = (f0/l0)**2-0.42*f0/l0+0.81-0.06*l0/f0
