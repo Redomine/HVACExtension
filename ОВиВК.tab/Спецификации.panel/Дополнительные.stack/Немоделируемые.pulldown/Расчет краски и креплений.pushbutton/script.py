@@ -26,6 +26,7 @@ clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from Autodesk.Revit.DB import *
+
 from Autodesk.Revit.UI import TaskDialog
 
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -92,11 +93,11 @@ def roundup(divider, number):
 
 class calculation_element:
     def pins(self, element):
+
         lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
         D = fromRevitToMilimeters(element.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM).AsDouble())
-        D = int(D)
 
-        self.local_description = self.local_description + ' ' + self.name  + ', Ду' + str(D)
+        self.local_description = self.local_description + ' ' + self.name  + ', Ду' + '{:g}'.format(D)
 
         if lenght*1000 < D:
             return 0.2
@@ -118,9 +119,8 @@ class calculation_element:
     def collars(self, element):
         lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
         D = fromRevitToMilimeters(element.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM).AsDouble())
-        D = int(D)
 
-        self.name = self.name + ', Ду' + str(D)
+        self.name = self.name + ', Ду' + '{:g}'.format(D)
 
         self.local_description = self.local_description + ' ' + self.name
 
@@ -308,6 +308,7 @@ def script_execute():
                         definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
                         #
+
                         key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
                                           definition.group + definition.name + definition.mark + definition.art + \
                                           definition.maker + definition.local_description
