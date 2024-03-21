@@ -388,18 +388,31 @@ def get_fitting_name(element):
     name = startName + size
     return name
 
-def get_fitting_thikness(element):
-    connectors = getConnectors(element)
-    thcs = []
+
+def get_fitting_thikness_from_duct(connectors):
+    thicknesses = []
     for con in connectors:
         for el in con.AllRefs:
             if el.Owner.Category.IsId(BuiltInCategory.OST_DuctCurves):
-                thc = duct_thickness(el.Owner)
-                thcs.append(thc)
+                thickness = duct_thickness(el.Owner)
+                thicknesses.append(thickness)
+    return thicknesses
 
-    if len(thcs) == 0:
+
+def get_fitting_thikness(element):
+    connectors = getConnectors(element)
+    thicknesses = get_fitting_thikness_from_duct(connectors)
+
+    if len(thicknesses) == 0:
+        for con in connectors:
+            for el in con.AllRefs:
+                if el.Owner.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                    sub_connectors = getConnectors(el.Owner)
+                    thicknesses = get_fitting_thikness_from_duct(sub_connectors)
+
+    if len(thicknesses) == 0:
         return None
-    return max(thcs)
+    return max(thicknesses)
 
 def get_pipe_name(element, ADSK_Name):
     external_size = element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER) * 304.8
@@ -433,6 +446,10 @@ class shedule_position:
         ADSK_Name = self.ADSK_name
         New_Name = ADSK_Name
         information = doc.ProjectInformation
+
+        forced_name = element.GetParamValueOrDefault('ФОП_ВИС_Наименование принудительное')
+        if forced_name:
+            return forced_name
 
         if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
             if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
