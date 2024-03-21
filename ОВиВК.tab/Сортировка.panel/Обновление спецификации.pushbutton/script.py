@@ -446,10 +446,10 @@ class shedule_position:
         ADSK_Name = self.ADSK_name
         New_Name = ADSK_Name
         information = doc.ProjectInformation
-        if element.LookupParameter('ФОП_ВИС_Наименование принудительное'):
-            forced_name = element.GetParamValueOrDefault('ФОП_ВИС_Наименование принудительное')
-            if forced_name:
-                return forced_name
+
+        forced_name = element.GetParamValueOrDefault('ФОП_ВИС_Наименование принудительное')
+        if forced_name:
+            return forced_name
 
         if element.Category.IsId(BuiltInCategory.OST_PipeFitting):
             if lookupCheck(information, 'ФОП_ВИС_Учитывать фитинги труб').AsInteger() != 1:
