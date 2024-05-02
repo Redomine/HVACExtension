@@ -636,11 +636,9 @@ class shedule_position:
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             return get_fitting_area(element)
         if FOP_izm == 'м.п.':
-            length = element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)
-            if length == None:
-                length = 0
-            else:
-                length = fromRevitToMeters(length)
+            length = element.GetParamValueOrDefault[float](BuiltInParameter.CURVE_ELEM_LENGTH, 0)
+            length = fromRevitToMeters(length)
+
             if element.Category.IsId(BuiltInCategory.OST_PipeInsulations) or element.Category.IsId(
                     BuiltInCategory.OST_DuctInsulations):
                 length = round((length * isol_reserve), 2)
