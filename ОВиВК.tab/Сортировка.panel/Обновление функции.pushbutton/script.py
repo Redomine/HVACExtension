@@ -102,7 +102,7 @@ def copyEF(collection):
 
                 if element not in colGeneric:
                     setIfNotRO(parameter, EF)
-                if element in colGeneric:
+                if element in colGeneric and hasattr(element, "Symbol"):
                     if "_Якорный" not in element.Symbol.FamilyName:
                         setIfNotRO(parameter, EF)
 
