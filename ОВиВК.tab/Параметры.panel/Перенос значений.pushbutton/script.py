@@ -32,6 +32,7 @@ clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Revit import ParamExtensions
 from Redomine import *
+from pyrevit import forms
 
 import Autodesk
 from Autodesk.Revit.DB import *
@@ -170,8 +171,8 @@ def execute():
         parameters = getParamsInShed(definition)
         #for element in elementsOnView:
 
-        startParamName = SelectFromList('Выберите исходный параметр', parameters)
-        endParamName = SelectFromList('Выберите целевой параметр', parameters)
+        startParamName = forms.SelectFromList.show(parameters, title="Выберите исходный параметр", button_name='Применить')
+        endParamName = forms.SelectFromList.show(parameters, title="Выберите целевой параметр", button_name='Применить')
 
         if startParamName == endParamName:
             print 'Имя исходного и целевого параметра одинаковое'
