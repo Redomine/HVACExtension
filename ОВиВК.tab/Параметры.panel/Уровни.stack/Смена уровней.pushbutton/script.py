@@ -14,6 +14,7 @@ import RevitServices
 from RevitServices.Persistence import DocumentManager
 from RevitServices.Transactions import TransactionManager
 from pyrevit import revit
+from pyrevit import forms
 from rpw.ui.forms import SelectFromList
 from Redomine import *
 
@@ -132,9 +133,11 @@ def change_level(element, new_level, new_offset, offset_param, height_param):
     offset_param.Set(new_offset)
     return element
 
-method = SelectFromList('Выберите метод привязки', ['Все элементы на активном виде к ближайшим уровням',
-                                                    'Все элементы на активном виде к выбранному уровню',
-                                                    'Выбранные элементы к выбранному уровню'])
+method = forms.SelectFromList.show(["Все элементы на активном виде к ближайшим уровням",
+                                    "Все элементы на активном виде к выбранному уровню",
+                                    "Выбранные элементы к выбранному уровню"],
+                                    title="Выберите метод привязки",
+                                    button_name="Применить")
 
 if method != 'Все элементы на активном виде к ближайшим уровням':
     selected_view = True
@@ -146,7 +149,9 @@ if method != 'Все элементы на активном виде к ближ
     for levelEl in levelCol:
         levels.append(levelEl.Name)
 
-    level_name = SelectFromList('Выберите уровень', levels)
+    level_name = forms.SelectFromList.show(levels,
+                                      title="Выберите уровень",
+                                      button_name="Применить")
 
     for levelEl in levelCol:
         if levelEl.Name == level_name:
