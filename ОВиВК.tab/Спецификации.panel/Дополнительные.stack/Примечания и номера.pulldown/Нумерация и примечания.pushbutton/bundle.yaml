@@ -1,0 +1,13 @@
+title:
+  ru: Нумерация и примечания
+  en_us: Numerate&Notes
+
+tooltip:
+  ru: Заполнение площадей воздуховодов в примечания и нумерация позиций.
+  en_us: Filling duct areas to notes and filling out a position in the specification..
+
+author: Redomine
+help_url: "https://kb.a101.ru/pages/viewpage.action?pageId=110562607"
+
+min_revit_version: 2020
+max_revit_version: 2024

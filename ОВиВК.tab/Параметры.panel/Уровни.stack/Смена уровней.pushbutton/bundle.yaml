@@ -1,0 +1,14 @@
+title:
+  ru: Смена уровней
+  en_us: Change level
+
+tooltip:
+  ru: Меняет базовый уровень выбранных элементов.
+  en_us: Changes the base level of selected elements.
+
+author: Redomine
+help_url: "https://kb.a101.ru/pages/viewpage.action?pageId=110562611"
+
+min_revit_version: 2020
+max_revit_version: 2024
+
