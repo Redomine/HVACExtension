@@ -96,8 +96,7 @@ def copyEF(collection):
                         pass
 
                     if typeEF:
-                        if str(typeEF) != 'None' or typeEF != "":
-                            EF = typeEF
+                        EF = typeEF
 
                     parameter = lookupCheck(element, 'ФОП_Экономическая функция')
 
@@ -147,10 +146,8 @@ def getSystemDict(collection):
             typeEF = lookupCheck(ElemType, 'ФОП_ВИС_ЭФ для системы', isExit = False)
 
             if typeEF:
-                if typeEF != None:
-                    if typeEF.AsString() != "":
-                        EF = typeEF.AsString()
-                        Dict[system.Name] = EF
+                    EF = typeEF.AsString()
+                    Dict[system.Name] = EF
             else:
                 systemEF = lookupCheck(system, 'ФОП_ВИС_Экономическая функция')
                 if systemEF.AsString() != None:
