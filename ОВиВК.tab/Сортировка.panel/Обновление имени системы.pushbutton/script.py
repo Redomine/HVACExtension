@@ -162,7 +162,9 @@ def rename_sub_sub(element, system_name):
 
 
 def check_forced_name(element):
-
+	if (element.Category.IsId(BuiltInCategory.OST_PipeInsulations)
+			or element.Category.IsId(BuiltInCategory.OST_DuctInsulations)):
+		element = document.GetElement(element.HostElementId)
 	forced_name = lookupCheck(element, 'ФОП_ВИС_Имя системы принудительное', isExit = False)
 
 	if not forced_name:
