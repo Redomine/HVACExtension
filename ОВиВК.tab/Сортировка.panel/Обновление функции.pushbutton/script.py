@@ -58,8 +58,11 @@ def getEFsystem(element):
     EF = None
 
     if sys_name != None:
-        if element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment) or element.Category.IsId(BuiltInCategory.OST_PipeAccessory)\
-                or element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
+        if element.InAnyCategory([
+            BuiltInCategory.OST_MechanicalEquipment,
+            BuiltInCategory.OST_PipeAccessory,
+            BuiltInCategory.OST_DuctAccessory,
+            BuiltInCategory.OST_PlumbingFixtures]):
             sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
             sys_name = sys_name.split(',')
             sys_name = sys_name[0]
