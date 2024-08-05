@@ -1,0 +1,17 @@
+title:
+  ru: Полное обновление
+  en_us: Full refresh
+
+tooltip:
+  ru: >- 
+    Test
+  en_us: >- 
+    Please Write Description
+
+assembly: RevitMechanicalSpecification.dll
+command_class: RevitMechanicalFullRefreshCmd
+
+author: Redomine
+
+min_revit_version: 2022
+max_revit_version: 2024

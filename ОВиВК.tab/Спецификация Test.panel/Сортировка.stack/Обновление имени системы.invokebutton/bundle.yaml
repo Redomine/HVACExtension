@@ -1,15 +1,15 @@
 title:
-  ru: Обновить спецификацию
-  en_us: Обновить спецификацию
+  ru: Обновление имени системы
+  en_us: System name refresh
 
 tooltip:
   ru: >- 
-    Please Write Description
+    Test
   en_us: >- 
     Please Write Description
 
 assembly: RevitMechanicalSpecification.dll
-command_class: RevitMechanicalSpecificationCommand
+command_class: RevitMechanicalSystemRefreshCmd
 
 author: Redomine
 
