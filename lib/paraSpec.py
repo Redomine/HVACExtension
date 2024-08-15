@@ -112,7 +112,8 @@ def script_execute():
          BuiltInCategory.OST_PipeAccessory,
          BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctInsulations,
          BuiltInCategory.OST_PipeInsulations,
-         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers])
+         BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_Sprinklers,
+         BuiltInCategory.OST_GenericModel])
 
     EFCatSet = get_cats(
         [BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeCurves,
@@ -147,6 +148,13 @@ def script_execute():
     genDefinitions  = check_spfile("00_Общие")
 
     with revit.Transaction("Добавление параметров"):
+        # Параметры выводим из работы
+        #shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True)
+        # shared_parameter('ФОП_Код работы', genDefinitions, defaultCatSet)
+        # shared_parameter('ФОП_Привязка к помещениям', genDefinitions, projectCatSet)
+        # shared_parameter('ФОП_Помещение', arDefinitions, defaultCatSet)
+
+
         shared_parameter('ФОП_ВИС_Изол_Расходник 1_Наименование', visDefinitions, insulsCatSet, istype=True,
                          group=BuiltInParameterGroup.PG_MATERIALS)
         shared_parameter('ФОП_ВИС_Изол_Расходник 1_Марка', visDefinitions, insulsCatSet, istype=True,
@@ -194,14 +202,12 @@ def script_execute():
         shared_parameter('ФОП_Экономическая функция', genDefinitions, EFCatSet)
         shared_parameter('ФОП_ВИС_Экономическая функция', visDefinitions, defaultCatSet, istype=True)
         shared_parameter('ФОП_ВИС_ЭФ для системы', visDefinitions, systemsCatSet, istype=True)
-
         shared_parameter('ФОП_Блок СМР', genDefinitions, defaultCatSet)
 
-        shared_parameter('ФОП_Код работы', genDefinitions, defaultCatSet)
-        shared_parameter('ФОП_Помещение', arDefinitions, defaultCatSet)
+
         shared_parameter('ФОП_Секция СМР', genDefinitions, defaultCatSet)
         shared_parameter('ФОП_Этаж', genDefinitions, defaultCatSet)
-        #shared_parameter('ФОП_Привязка к помещениям', genDefinitions, projectCatSet)
+
         shared_parameter('ФОП_ВИС_Имя системы', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Имя системы принудительное', visDefinitions, defaultCatSet)
         shared_parameter('ФОП_ВИС_Код изделия', visDefinitions, defaultCatSet)
@@ -237,9 +243,8 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Расчет хомутов', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Расчет металла для креплений', visDefinitions, ductandpipeCatSet, istype=True)
 
-        shared_parameter('ФОП_ВИС_Совместно с воздуховодом', visDefinitions, ductInsCatSet, istype=True)
 
-
+        shared_parameter('ФОП_ВИС_Учитывать фитинги труб по типу трубы', visDefinitions, pipeCatSet, istype=True)
         shared_parameter('ФОП_ВИС_Учитывать фитинги воздуховодов', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Имя внесистемных элементов', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Учитывать фитинги труб', visDefinitions, projectCatSet)
