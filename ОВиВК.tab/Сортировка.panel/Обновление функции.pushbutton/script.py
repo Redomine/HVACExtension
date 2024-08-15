@@ -58,8 +58,11 @@ def getEFsystem(element):
     EF = None
 
     if sys_name != None:
-        if element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment) or element.Category.IsId(BuiltInCategory.OST_PipeAccessory)\
-                or element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
+        if element.InAnyCategory([
+            BuiltInCategory.OST_MechanicalEquipment,
+            BuiltInCategory.OST_PipeAccessory,
+            BuiltInCategory.OST_DuctAccessory,
+            BuiltInCategory.OST_PlumbingFixtures]):
             sys_name = element.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
             sys_name = sys_name.split(',')
             sys_name = sys_name[0]
@@ -81,39 +84,40 @@ def getEFsystem(element):
 
 def copyEF(collection):
     for element in collection:
-        if not isElementEditedBy(element):
-            EF = getEFsystem(element)
-            if EF != None:
-                ElemTypeId = element.GetTypeId()
-                ElemType = doc.GetElement(ElemTypeId)
 
-                typeEF = None
+            if not isElementEditedBy(element) and element.GroupId.IntegerValue == -1:
+                EF = getEFsystem(element)
+                if EF != None:
+                    ElemTypeId = element.GetTypeId()
+                    ElemType = doc.GetElement(ElemTypeId)
 
-                try:
-                    typeEF = ElemType.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
-                except:
-                    pass
+                    typeEF = None
 
-                if typeEF:
-                    if str(typeEF) != 'None' or typeEF != "":
+                    try:
+                        typeEF = ElemType.LookupParameter('ФОП_ВИС_Экономическая функция').AsString()
+                    except:
+                        pass
+
+                    if typeEF:
                         EF = typeEF
 
-                parameter = lookupCheck(element, 'ФОП_Экономическая функция')
+                    parameter = lookupCheck(element, 'ФОП_Экономическая функция')
 
-                if element not in colGeneric:
-                    setIfNotRO(parameter, EF)
-                if element in colGeneric and hasattr(element, "Symbol"):
-                    if "_Якорный" not in element.Symbol.FamilyName:
+                    if element not in colGeneric:
                         setIfNotRO(parameter, EF)
+                    if element in colGeneric and hasattr(element, "Symbol"):
+                        if "_Якорный" not in element.Symbol.FamilyName:
+                            setIfNotRO(parameter, EF)
 
-        else:
-            fillReportRows(element, report_rows)
+            else:
+                fillReportRows(element, report_rows)
+
 
 
 
 def getDependent(collection):
     for element in collection:
-        if not isElementEditedBy(element):
+        if not isElementEditedBy(element) and element.GroupId.IntegerValue == -1:
             EF = lookupCheck(element, 'ФОП_Экономическая функция').AsString()
             dependent = None
             try:
@@ -145,10 +149,8 @@ def getSystemDict(collection):
             typeEF = lookupCheck(ElemType, 'ФОП_ВИС_ЭФ для системы', isExit = False)
 
             if typeEF:
-                if typeEF != None:
-                    if typeEF.AsString() != "":
-                        EF = typeEF.AsString()
-                        Dict[system.Name] = EF
+                    EF = typeEF.AsString()
+                    Dict[system.Name] = EF
             else:
                 systemEF = lookupCheck(system, 'ФОП_ВИС_Экономическая функция')
                 if systemEF.AsString() != None:
