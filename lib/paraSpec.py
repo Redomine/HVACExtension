@@ -57,6 +57,14 @@ class shared_parameter:
             inf = doc.ProjectInformation.LookupParameter(name)
             inf.Set(15)
 
+        if name == 'ФОП_ВИС_Запас изоляции воздуховодов':
+            inf = doc.ProjectInformation.LookupParameter(name)
+            inf.Set(20)
+
+        if name == 'ФОП_ВИС_Запас изоляции труб':
+            inf = doc.ProjectInformation.LookupParameter(name)
+            inf.Set(8)
+
 
     def __init__(self, name, definition, set, istype = False, group = BuiltInParameterGroup.PG_DATA):
         if not is_exists_params(name):
@@ -249,6 +257,10 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Имя внесистемных элементов', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Учитывать фитинги труб', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Запас изоляции воздуховодов', visDefinitions, projectCatSet)
+        shared_parameter('ФОП_ВИС_Запас изоляции труб', visDefinitions, projectCatSet)
+
+
         shared_parameter('ФОП_ВИС_Запас воздуховодов/труб', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Замена параметра_Единица измерения', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Замена параметра_Завод-изготовитель', visDefinitions, projectCatSet)
