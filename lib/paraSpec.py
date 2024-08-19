@@ -256,6 +256,7 @@ def script_execute():
         shared_parameter('ФОП_ВИС_Учитывать фитинги воздуховодов', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Имя внесистемных элементов', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Учитывать фитинги труб', visDefinitions, projectCatSet)
+        #Запас изоляции нужно удалить после перехода на новую спеку
         shared_parameter('ФОП_ВИС_Запас изоляции', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Запас изоляции воздуховодов', visDefinitions, projectCatSet)
         shared_parameter('ФОП_ВИС_Запас изоляции труб', visDefinitions, projectCatSet)
