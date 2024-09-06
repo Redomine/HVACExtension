@@ -1,0 +1,30 @@
+title:
+  ru: Создать схемы
+  en_us: Create schematics
+
+tooltip:
+  ru: >-
+    Копирует виды с применением фильтров по имени системы или ФОП_ВИС_Имени системы
+    
+    1. Создайте шаблон вида.
+    
+    2. Запустите скрипт.
+    
+    3. Выберите необходимые системы.
+  en_us: >-
+    Copies views using filters by system name or FOP_VIS_System name
+    
+    1. Create a view template.
+    
+    2. Run the script.
+    
+    3. Select the required systems.
+
+assembly: RevitAxonometryViews.dll
+command_class: RevitAxonometryViewsCommand
+
+author: Redomine
+help_url: "https://kb.a101.ru/pages/viewpage.action?pageId=134095731"
+
+min_revit_version: 2022
+max_revit_version: 2024
