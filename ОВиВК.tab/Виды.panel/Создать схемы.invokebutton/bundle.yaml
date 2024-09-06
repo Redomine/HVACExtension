@@ -4,9 +4,9 @@ title:
 
 tooltip:
   ru: >- 
-    Please Write Description
+    Создать схемы
   en_us: >- 
-    Please Write Description
+    Create schematics
 
 assembly: RevitAxonometryViews.dll
 command_class: RevitAxonometryViewsCommand
