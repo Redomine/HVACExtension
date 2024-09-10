@@ -221,7 +221,11 @@ def update_system_name(element):
 			system_name = type_system_name
 
 	element.SetParamValue(SharedParamsConfig.Instance.MechanicalSystemName, str(system_name))
-	element.LookupParameter('ФОП_ВИС_Имя системы').Set(str(system_name))
+
+	sharedVisName = element.GetSharedParam(SharedParamsConfig.Instance.VISSystemName.Name)
+
+	if not sharedVisName.IsReadOnly:
+		sharedVisName.Set(str(system_name))
 
 
 def update_element(elements):
