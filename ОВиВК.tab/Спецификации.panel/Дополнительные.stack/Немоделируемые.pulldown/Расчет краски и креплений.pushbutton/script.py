@@ -92,50 +92,303 @@ def roundup(divider, number):
 
 
 class calculation_element:
+    def is_pipe_insulated(self, element):
+        pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
+        dependent_elements = element.GetDependentElements(pipe_insulation_filter)
+        return len(dependent_elements) > 0
+
     def pins(self, element):
 
-        lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
-        pipe_diameter = fromRevitToMilimeters(element.GetParamValueOrDefault(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+        lenght = 304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH) / 1000  ## длина в м
+        D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
 
-        self.local_description = self.local_description + ' ' + self.name  + ', Ду' + '{:g}'.format(pipe_diameter)
+        self.local_description = self.local_description + ' ' + self.name  + ', Ду' + '{:g}'.format(D)
 
-        if lenght*1000 < pipe_diameter:
-            return 0.2
-        if lenght < 3:
-            return 0.4
-        if lenght < 6:
-            return 0.6
-        if lenght < 9:
-            return 0.8
-        if lenght < 12:
-            return 1
-        if lenght > 12:
-            num = lenght / 12
-            num = roundup(int(num), num)
-            return num
+        if self.is_pipe_insulated(element):
+            if D < 17:
+                num = lenght / 2
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 21:
+                num = lenght / 3
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 26:
+                num = lenght / 3.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 33:
+                num = lenght / 4
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 41:
+                num = lenght / 4.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 51:
+                num = lenght / 5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 101:
+                num = lenght / 6
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 126:
+                num = lenght / 7
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            else:
+                num = lenght / 8
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+        else:
+            if D < 17:
+                num = lenght / 1.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 26:
+                num = lenght / 2
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 33:
+                num = lenght / 2.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 51:
+                num = lenght / 3
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 81:
+                num = lenght / 4
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 101:
+                num = lenght / 4.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 126:
+                num = lenght / 5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            else:
+                num = lenght / 6
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num) + 1, num + 1)
+                else:
+                    return 1
 
     def collars(self, element):
-        lenght = fromRevitToMeters(element.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble())
-        pipe_diameter = fromRevitToMilimeters(element.GetParamValueOrDefault(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+        lenght = 304.8 * element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH)/1000 ## длина в м
+        D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
 
-        self.name = self.name + ', Ду' + '{:g}'.format(pipe_diameter)
+        self.name = self.name + ', Ду' + '{:g}'.format(D)
 
         self.local_description = self.local_description + ' ' + self.name
-
-        if lenght*1000 < pipe_diameter:
-            return 1
-        if lenght < 3:
-            return 2
-        if lenght < 6:
-            return 3
-        if lenght < 9:
-            return 4
-        if lenght < 12:
-            return 5
-        if lenght > 12:
-            num = lenght/12 * 5
-            num = roundup(int(num), num)
-            return num
+# свич кейс
+        if self.is_pipe_insulated(element):
+            if D < 17:
+                num = lenght / 2
+                if lenght <0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 21:
+                num = lenght / 3
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 26:
+                num = lenght / 3.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 33:
+                num = lenght / 4
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 41:
+                num = lenght / 4.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 51:
+                num = lenght / 5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 101:
+                num = lenght / 6
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 126:
+                num = lenght / 7
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            else:
+                num = lenght / 8
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+        else:
+            if D < 17:
+                num = lenght / 1.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 26:
+                num = lenght / 2
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 33:
+                num = lenght / 2.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 51:
+                num = lenght / 3
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 81:
+                num = lenght / 4
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 101:
+                num = lenght / 4.5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            elif D < 126:
+                num = lenght / 5
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num), num)
+                else:
+                    return 1
+            else:
+                num = lenght / 6
+                if lenght < 0.5:
+                    return 0
+                elif num > 1:
+                    return roundup(int(num)+1, num+1)
+                else:
+                    return 1
 
     def duct_material(self, element):
         area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
@@ -163,25 +416,44 @@ class calculation_element:
 
         D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
 
-        if D < 25:
-            kg = 0.9 * lenght
-        elif D < 33:
-            kg = 0.73 * lenght
-        elif D < 41:
-            kg = 0.64 * lenght
-        elif D < 51:
-            kg = 0.67 * lenght
-        elif D < 66:
-            kg = 0.53 * lenght
-        elif D < 81:
-            kg = 0.7 * lenght
-        elif D < 101:
-            kg = 0.64 * lenght
-        elif D < 126:
-            kg = 1.16 * lenght
+        if self.is_pipe_insulated(element):
+            if D < 26:
+                kg = 0.36 * lenght
+            elif D < 48:
+                kg = 0.297 * lenght
+            elif D < 51:
+                kg = 0.33 * lenght
+            elif D < 67:
+                kg = 0.275 * lenght
+            elif D < 81:
+                kg = 0.375 * lenght
+            elif D < 101:
+                kg = 0.352 * lenght
+            elif D < 126:
+                kg = 0.58 * lenght
+            elif D < 151:
+                kg = 0.528 * lenght
+            else:
+                kg = 2.189 * lenght
         else:
-            kg = 0.96 * lenght
-
+            if D < 26:
+                kg = 0.225 * lenght
+            elif D < 48:
+                kg = 0.198 * lenght
+            elif D < 51:
+                kg = 0.2 * lenght
+            elif D < 67:
+                kg = 0.176 * lenght
+            elif D < 81:
+                kg = 0.24 * lenght
+            elif D < 101:
+                kg = 0.256 * lenght
+            elif D < 126:
+                kg = 0.106 * lenght
+            elif D < 151:
+                kg = 0.396 * lenght
+            else:
+                kg = 2.189 * lenght
         return kg
 
     def insul_stock(self, element):
