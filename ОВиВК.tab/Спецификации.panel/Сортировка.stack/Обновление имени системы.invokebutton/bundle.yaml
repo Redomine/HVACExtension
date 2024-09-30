@@ -4,14 +4,15 @@ title:
 
 tooltip:
   ru: >- 
-    Test
+    Заполняет параметр "ФОП_ВИС_Имя системы" элементов именем системы или ее сокращением.
   en_us: >- 
-    Please Write Description
+    Fills the VISSystemName parameter of elements with the system name or its abbreviation.
 
 assembly: RevitMechanicalSpecification.dll
 command_class: RevitMechanicalSystemRefreshCmd
 
 author: Redomine
+help_url: "https://kb.a101.ru/pages/viewpage.action?pageId=67848643"
 
 min_revit_version: 2022
 max_revit_version: 2024

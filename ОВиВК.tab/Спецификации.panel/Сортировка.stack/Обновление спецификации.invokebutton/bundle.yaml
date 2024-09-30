@@ -4,14 +4,15 @@ title:
 
 tooltip:
   ru: >- 
-    Test
+    Обновляет содержимое параметров, по которым строится спецификация на выпуск.
   en_us: >- 
-    Please Write Description
+    Updates the contents of the parameters on which the release specification is built.
 
 assembly: RevitMechanicalSpecification.dll
 command_class: RevitMechanicalSpecificationRefreshCmd
 
 author: Redomine
+help_url: "https://kb.a101.ru/pages/viewpage.action?pageId=67848643"
 
 min_revit_version: 2022
 max_revit_version: 2024
