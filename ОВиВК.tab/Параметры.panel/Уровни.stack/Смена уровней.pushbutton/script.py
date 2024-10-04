@@ -20,6 +20,21 @@ from Redomine import *
 
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
+clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+import dosymep
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
+from dosymep.Bim4Everyone.Templates import ProjectParameters
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+import sys
+import paraSpec
+from Autodesk.Revit.DB import *
+from System import Guid
+from pyrevit import revit
+
+
 
 import Autodesk
 from Autodesk.Revit.DB import *
@@ -30,6 +45,17 @@ doc = __revit__.ActiveUIDocument.Document  # type: Document
 uiapp = DocumentManager.Instance.CurrentUIApplication
 #app = uiapp.Application
 uidoc = __revit__.ActiveUIDocument
+
+# типы параметров отвечающих за уровень
+built_in_level_params = [BuiltInParameter.INSTANCE_SCHEDULE_ONLY_LEVEL_PARAM,
+                         BuiltInParameter.RBS_START_LEVEL_PARAM,
+                         BuiltInParameter.FAMILY_LEVEL_PARAM,
+                         BuiltInParameter.GROUP_LEVEL]
+
+# типы параметров отвечающих за смещение от уровня
+built_in_offset_params = [BuiltInParameter.INSTANCE_ELEVATION_PARAM,
+                          BuiltInParameter.RBS_OFFSET_PARAM,
+                          BuiltInParameter.GROUP_OFFSET_FROM_LEVEL]
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
@@ -68,13 +94,35 @@ def check_is_nested(element):
         return True
     return False
 
+def get_parameter_if_exist_not_ro(element, built_in_parameters):
+    for built_in_parameter in built_in_parameters:
+        parameter = element.get_Parameter(built_in_parameter)
+        if parameter is not None and not parameter.IsReadOnly:
+            return built_in_parameter
+
+    return None
 
 def filter_elements(elements):
+    """Возвращает фильтрованный от вложений и от свободных от групп список элементов"""
+
     result = []
     for element in elements:
-        if str(element.GroupId) == "-1":
+        if element.GroupId == ElementId.InvalidElementId:
+            level_param_name = get_parameter_if_exist_not_ro(element, built_in_level_params)
+            offset_param_name = get_parameter_if_exist_not_ro(element, built_in_offset_params)
+            if level_param_name is None or offset_param_name is None:
+                continue
+
+            if element.GetParamValueOrDefault(level_param_name, None) is None:
+                continue
+
+            if element.GetParamValueOrDefault(offset_param_name, None) is None:
+                continue
+
+            # проверяем вложение или нет
             if not check_is_nested(element):
                 result.append(element)
+
     return result
 
 
@@ -160,28 +208,23 @@ if method != 'Все элементы на активном виде к ближ
 else:
     selected_view = False
 
+if method == 'Выбранные элементы к выбранному уровню':
+    elements = pick_elements(uidoc)
+if method == 'Все элементы на активном виде к выбранному уровню' or method == 'Все элементы на активном виде к ближайшим уровням':
+    elements = FilteredElementCollector(doc, doc.ActiveView.Id)
 
 
-
-try:
-    if method == 'Выбранные элементы к выбранному уровню':
-        elements = pick_elements(uidoc)
-    if method == 'Все элементы на активном виде к выбранному уровню' or method == 'Все элементы на активном виде к ближайшим уровням':
-        elements = FilteredElementCollector(doc, doc.ActiveView.Id)
-except Exception:
-    print "Элементы не выбраны"
-    sys.exit()
 
 filtered = filter_elements(elements)
+
+if len(filtered) == 0:
+    print "Элементы не выбраны"
+    sys.exit()
 
 result = []
 result_error = []
 result_ok = []
 
-
-
-# with Transaction(doc, "Change level") as t:
-#     t.Start()
 with revit.Transaction("Смена уровней"):
     try:
         for element in filtered:
@@ -209,7 +252,5 @@ with revit.Transaction("Смена уровней"):
         print element.Id
 
 
-#
-# result.append(result_ok)
-# result.append(result_error)
+
 
