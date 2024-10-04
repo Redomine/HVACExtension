@@ -49,15 +49,17 @@ uidoc = __revit__.ActiveUIDocument
 
 
 # типы параметров отвечающих за уровень
-built_in_level_params = [BuiltInParameter.INSTANCE_SCHEDULE_ONLY_LEVEL_PARAM,
+built_in_level_params = [
                          BuiltInParameter.RBS_START_LEVEL_PARAM,
                          BuiltInParameter.FAMILY_LEVEL_PARAM,
                          BuiltInParameter.GROUP_LEVEL]
+# BuiltInParameter.INSTANCE_SCHEDULE_ONLY_LEVEL_PARAM,
 
 # типы параметров отвечающих за смещение от уровня
 built_in_offset_params = [BuiltInParameter.INSTANCE_ELEVATION_PARAM,
                           BuiltInParameter.RBS_OFFSET_PARAM,
-                          BuiltInParameter.GROUP_OFFSET_FROM_LEVEL]
+                          BuiltInParameter.GROUP_OFFSET_FROM_LEVEL,
+                          BuiltInParameter.INSTANCE_FREE_HOST_OFFSET_PARAM]
 
 if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
@@ -110,16 +112,18 @@ def filter_elements(elements):
     result = []
     for element in elements:
         if element.GroupId == ElementId.InvalidElementId:
-            level_param_name = get_parameter_if_exist_not_ro(element, built_in_level_params)
-            offset_param_name = get_parameter_if_exist_not_ro(element, built_in_offset_params)
-            if level_param_name is None or offset_param_name is None:
+            builtin_level_param = get_parameter_if_exist_not_ro(element, built_in_level_params)
+            builtin_offset_param = get_parameter_if_exist_not_ro(element, built_in_offset_params)
+            if builtin_level_param is None or builtin_offset_param is None:
                 continue
 
-            if element.GetParamValueOrDefault(level_param_name, None) is None:
+            if element.GetParamValueOrDefault(builtin_level_param, None) is None:
                 continue
 
-            if element.GetParamValueOrDefault(offset_param_name, None) is None:
+
+            if element.GetParamValueOrDefault(builtin_offset_param, None) is None:
                 continue
+
 
             # проверяем вложение или нет
             if not check_is_nested(element):
@@ -239,6 +243,7 @@ def main():
     with revit.Transaction("Смена уровней"):
             for element in elements:
                 height_result = get_height_by_element(doc, element)
+
                 if height_result:
                     real_height = height_result[0]
                     offset_param = height_result[1]
