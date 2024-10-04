@@ -213,44 +213,33 @@ if method == 'Выбранные элементы к выбранному уро
 if method == 'Все элементы на активном виде к выбранному уровню' or method == 'Все элементы на активном виде к ближайшим уровням':
     elements = FilteredElementCollector(doc, doc.ActiveView.Id)
 
-
-
 filtered = filter_elements(elements)
 
 if len(filtered) == 0:
     print "Элементы не выбраны"
     sys.exit()
 
-result = []
-result_error = []
-result_ok = []
+def main():
+    result = []
+    result_error = []
+    result_ok = []
 
-with revit.Transaction("Смена уровней"):
-    try:
-        for element in filtered:
-            height_result = get_height_by_element(doc, element)
-            if height_result:
-                real_height = height_result[0]
-                offset_param = height_result[1]
-                height_param = height_result[2]
-                new_level, new_offset = find_new_level(real_height)
-                if selected_view:
-                    new_offset = real_height - level.Elevation
-                    change_level(element, level, new_offset, offset_param, height_param)
+    with revit.Transaction("Смена уровней"):
+            for element in filtered:
+                height_result = get_height_by_element(doc, element)
+                if height_result:
+                    real_height = height_result[0]
+                    offset_param = height_result[1]
+                    height_param = height_result[2]
+                    new_level, new_offset = find_new_level(real_height)
+                    if selected_view:
+                        new_offset = real_height - level.Elevation
+                        change_level(element, level, new_offset, offset_param, height_param)
+                    else:
+                        change_level(element, new_level, new_offset, offset_param, height_param)
+                    result_ok.append(element)
                 else:
-                    change_level(element, new_level, new_offset, offset_param, height_param)
-                result_ok.append(element)
-                # result_ok.append(convert(real_height)
-                # result_ok.append(new_level)
-                # result_ok.append(convert(new_offset))
-            else:
-                # result_error.append("Error with:")
-                result_error.append(element)
-            # t.Commit()
-    except Exception:
-        print 'Ошибка переноса для элементов с айди'
-        print element.Id
+                    result_error.append(element)
 
 
-
-
+main()
