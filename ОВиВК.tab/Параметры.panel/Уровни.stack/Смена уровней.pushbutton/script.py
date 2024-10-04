@@ -46,6 +46,8 @@ uiapp = DocumentManager.Instance.CurrentUIApplication
 #app = uiapp.Application
 uidoc = __revit__.ActiveUIDocument
 
+
+
 # типы параметров отвечающих за уровень
 built_in_level_params = [BuiltInParameter.INSTANCE_SCHEDULE_ONLY_LEVEL_PARAM,
                          BuiltInParameter.RBS_START_LEVEL_PARAM,
@@ -181,58 +183,68 @@ def change_level(element, new_level, new_offset, offset_param, height_param):
     offset_param.Set(new_offset)
     return element
 
-method = forms.SelectFromList.show(["Все элементы на активном виде к ближайшим уровням",
-                                    "Все элементы на активном виде к выбранному уровню",
-                                    "Выбранные элементы к выбранному уровню"],
-                                    title="Выберите метод привязки",
-                                    button_name="Применить")
+def get_selected_mode():
+    method = forms.SelectFromList.show(["Все элементы на активном виде к ближайшим уровням",
+                                        "Все элементы на активном виде к выбранному уровню",
+                                        "Выбранные элементы к выбранному уровню"],
+                                       title="Выберите метод привязки",
+                                       button_name="Применить")
+    return method
 
-if method != 'Все элементы на активном виде к ближайшим уровням':
-    selected_view = True
+def get_selected_level(method):
+    if method != 'Все элементы на активном виде к ближайшим уровням':
+        selected_view = True
 
-    levelCol = make_col(BuiltInCategory.OST_Levels)
+        levelCol = make_col(BuiltInCategory.OST_Levels)
 
-    levels = []
+        levels = []
 
-    for levelEl in levelCol:
-        levels.append(levelEl.Name)
+        for levelEl in levelCol:
+            levels.append(levelEl.Name)
 
-    level_name = forms.SelectFromList.show(levels,
-                                      title="Выберите уровень",
-                                      button_name="Применить")
+        level_name = forms.SelectFromList.show(levels,
+                                               title="Выберите уровень",
+                                               button_name="Применить")
 
-    for levelEl in levelCol:
-        if levelEl.Name == level_name:
-            level = levelEl
+        for levelEl in levelCol:
+            if levelEl.Name == level_name:
+                level = levelEl
+                return level
 
-else:
-    selected_view = False
+    return False
 
-if method == 'Выбранные элементы к выбранному уровню':
-    elements = pick_elements(uidoc)
-if method == 'Все элементы на активном виде к выбранному уровню' or method == 'Все элементы на активном виде к ближайшим уровням':
-    elements = FilteredElementCollector(doc, doc.ActiveView.Id)
+def get_list_of_elements(method):
+    if method == 'Выбранные элементы к выбранному уровню':
+        elements = pick_elements(uidoc)
+    if method == 'Все элементы на активном виде к выбранному уровню' or method == 'Все элементы на активном виде к ближайшим уровням':
+        elements = FilteredElementCollector(doc, doc.ActiveView.Id)
 
-filtered = filter_elements(elements)
+    filtered = filter_elements(elements)
 
-if len(filtered) == 0:
-    print "Элементы не выбраны"
-    sys.exit()
+    if len(filtered) == 0:
+        print "Элементы не выбраны"
+        sys.exit()
+
+    return filtered
 
 def main():
     result = []
     result_error = []
     result_ok = []
 
+    method = get_selected_mode()
+    elements = get_list_of_elements(method)
+    level = get_selected_level(method)
+
     with revit.Transaction("Смена уровней"):
-            for element in filtered:
+            for element in elements:
                 height_result = get_height_by_element(doc, element)
                 if height_result:
                     real_height = height_result[0]
                     offset_param = height_result[1]
                     height_param = height_result[2]
                     new_level, new_offset = find_new_level(real_height)
-                    if selected_view:
+                    if level:
                         new_offset = real_height - level.Elevation
                         change_level(element, level, new_offset, offset_param, height_param)
                     else:
