@@ -65,7 +65,6 @@ if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
-
 def make_col(category):
     col = FilteredElementCollector(doc)\
                             .OfCategory(category)\
@@ -78,7 +77,6 @@ def convert(value):
     new_v = UnitUtils.ConvertFromInternalUnits(value, unit_type)
     return new_v
 
-
 def pick_elements(uidoc):
     result = []
     message = "Выберите элементы"
@@ -86,7 +84,6 @@ def pick_elements(uidoc):
     for ref in uidoc.Selection.PickObjects(ob_type, message):
         result.append(doc.GetElement(ref))
     return result
-
 
 def check_is_nested(element):
     if hasattr(element, "SuperComponent"):
@@ -131,7 +128,6 @@ def filter_elements(elements):
 
     return result
 
-
 def get_real_height(doc, element, height, height_offset):
     level_id = element.LookupParameter(height).AsElementId()
     level = doc.GetElement(level_id)
@@ -140,12 +136,10 @@ def get_real_height(doc, element, height, height_offset):
     real_height = height_value + height_offset_value
     return real_height
 
-
 def find_parameter(element, parameter_name):
     for parameter in element.GetParameters(parameter_name):
         if not parameter.IsReadOnly:
             return parameter
-
 
 def get_height_by_element(doc, element):
     parameters = {
@@ -169,18 +163,31 @@ def get_height_by_element(doc, element):
                 real_height = get_real_height(doc, element, height_param_name, offset_param_name)
                 return [real_height, offset_param, param_height]
 
-
 def find_new_level(height):
-    all_levels = FilteredElementCollector(doc).OfClass(Level)
-    new_offset = 10000
-    for level in all_levels:
-        level_height = level.Elevation
-        offset = height - level_height
-        if offset < new_offset and offset >= 0:
-            new_level = level
-            new_offset = offset
-    return new_level, new_offset
+    """ Ищем новый уровень. Здесь мы собираем лист из всех уровней, вычисляем у какого из них минимальное неотрцицательное(при наличии) смещение
+    от нашей точки. Он и будет целевым """
+    all_levels = FilteredElementCollector(doc).OfClass(Level).ToElements()
 
+    sorted_levels = sorted(all_levels, key=lambda level: level.get_Parameter(BuiltInParameter.LEVEL_ELEV).AsDouble())
+
+    offsets = []
+    for level in sorted_levels:
+        offsets.append(height - level.Elevation)
+
+    target_ind = -1
+    # мы проходим по всем смещениям и ищем первое не отрицательное, т.к. просто минимальное смещение будет для уровней которые сильно выше реальной отметки(отрицательное)
+    for offset in offsets:
+        if offset > 0:
+            target_ind = offsets.index(offset)
+
+    # если целевой индекс остался -1 - значит мы не нашли нормальных уровней с верным смещением. Берем просто минимальный
+    if target_ind == -1:
+        target_ind = offsets.index(min(offsets))
+
+    level = sorted_levels[target_ind]
+    offset_from_new_level = offsets[target_ind]
+
+    return level, offset_from_new_level
 
 def change_level(element, new_level, new_offset, offset_param, height_param):
     height_param.Set(new_level.Id)
@@ -220,7 +227,8 @@ def get_selected_level(method):
 def get_list_of_elements(method):
     if method == 'Выбранные элементы к выбранному уровню':
         elements = pick_elements(uidoc)
-    if method == 'Все элементы на активном виде к выбранному уровню' or method == 'Все элементы на активном виде к ближайшим уровням':
+    if (method == 'Все элементы на активном виде к выбранному уровню'
+            or method == 'Все элементы на активном виде к ближайшим уровням'):
         elements = FilteredElementCollector(doc, doc.ActiveView.Id)
 
     filtered = filter_elements(elements)
@@ -248,15 +256,14 @@ def main():
                     real_height = height_result[0]
                     offset_param = height_result[1]
                     height_param = height_result[2]
-                    new_level, new_offset = find_new_level(real_height)
+
                     if level:
                         new_offset = real_height - level.Elevation
                         change_level(element, level, new_offset, offset_param, height_param)
                     else:
+                        new_level, new_offset = find_new_level(real_height)
                         change_level(element, new_level, new_offset, offset_param, height_param)
                     result_ok.append(element)
                 else:
                     result_error.append(element)
-
-
 main()
