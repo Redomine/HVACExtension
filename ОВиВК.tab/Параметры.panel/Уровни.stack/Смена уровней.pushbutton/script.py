@@ -128,11 +128,12 @@ def filter_elements(elements):
 
     return result
 
-def get_real_height(doc, element, height, height_offset):
-    level_id = element.LookupParameter(height).AsElementId()
+def get_real_height(doc, element, level_param_name, offset_param_name):
+    """ Возвращает реальную абсолютную отметку элемента """
+    level_id = element.GetParam(level_param_name).AsElementId()
     level = doc.GetElement(level_id)
     height_value = level.Elevation
-    height_offset_value = element.LookupParameter(height_offset).AsDouble()
+    height_offset_value = element.GetParam(offset_param_name).AsDouble()
     real_height = height_value + height_offset_value
     return real_height
 
@@ -148,7 +149,7 @@ def get_height_by_element(doc, element):
         'Отметка посередине': "Базовый уровень",
         }
     for offset_param_name in parameters.keys():
-        if element.LookupParameter(offset_param_name):
+        if element.GetParam(offset_param_name):
             height_param_name = parameters[offset_param_name]
             offset_param = find_parameter(element, offset_param_name)
             if isinstance(height_param_name, list):
