@@ -122,11 +122,6 @@ def get_real_height(doc, element, level_param_name, offset_param_name):
     real_height = height_value + height_offset_value
     return real_height
 
-def find_parameter(element, parameter_name):
-    for parameter in element.GetParameters(parameter_name):
-        if not parameter.IsReadOnly:
-            return parameter
-
 def get_height_by_element(doc, element):
     """ Возвращает абсолютную отметку, параметр смещения и параметр уровня """
 
