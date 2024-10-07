@@ -54,7 +54,7 @@ built_in_offset_params = [BuiltInParameter.INSTANCE_ELEVATION_PARAM,
                           BuiltInParameter.GROUP_OFFSET_FROM_LEVEL,
                           BuiltInParameter.INSTANCE_FREE_HOST_OFFSET_PARAM]
 
-def get_collection(category):
+def get_elements_by_category(category):
     """ Возвращает коллекцию элементов по категории """
     col = FilteredElementCollector(doc)\
                             .OfCategory(category)\
@@ -68,7 +68,7 @@ def convert(value):
     new_v = UnitUtils.ConvertFromInternalUnits(value, unit_type)
     return new_v
 
-def pick_elements(uidoc):
+def get_selected_elements(uidoc):
     """ Возвращает выбранные элементы """
     selected_elements = [doc.GetElement(elem_id) for elem_id in uidoc.Selection.GetElementIds()]
     return selected_elements
@@ -185,7 +185,7 @@ def get_selected_level(method):
     if method != 'Все элементы на активном виде к ближайшим уровням':
         selected_view = True
 
-        levelCol = get_collection(BuiltInCategory.OST_Levels)
+        levelCol = get_elements_by_category(BuiltInCategory.OST_Levels)
 
         levels = []
 
@@ -208,7 +208,7 @@ def get_selected_level(method):
 def get_list_of_elements(method):
     """ Возвращаем лист элементов в зависимости от выбранного режима работы """
     if method == 'Выбранные элементы к выбранному уровню':
-        elements = pick_elements(uidoc)
+        elements = get_selected_elements(uidoc)
     if (method == 'Все элементы на активном виде к выбранному уровню'
             or method == 'Все элементы на активном виде к ближайшим уровням'):
         elements = FilteredElementCollector(doc, doc.ActiveView.Id)
@@ -221,7 +221,7 @@ def get_list_of_elements(method):
 
     return filtered
 
-def main():
+def execute():
     result_error = []
     result_ok = []
 
@@ -252,4 +252,4 @@ if doc.IsFamilyDocument:
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
-main()
+execute()
