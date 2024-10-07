@@ -125,6 +125,8 @@ def filter_elements(elements):
             if element.GetParamValueOrDefault(builtin_offset_param, None) is None:
                 continue
 
+            if element.InAnyCategory([BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations]):
+                continue
 
             # проверяем вложение или нет
             if not check_is_nested(element):
@@ -147,26 +149,18 @@ def find_parameter(element, parameter_name):
             return parameter
 
 def get_height_by_element(doc, element):
-    parameters = {
-        'Смещение начала от уровня': "Базовый уровень",
-        'Отметка от уровня': ["Уровень спецификации", "Уровень"],
-        'Отметка посередине': "Базовый уровень",
-        }
-    for offset_param_name in parameters.keys():
-        if element.GetParam(offset_param_name):
-            height_param_name = parameters[offset_param_name]
-            offset_param = find_parameter(element, offset_param_name)
-            if isinstance(height_param_name, list):
-                for var_param_height_name in height_param_name:
-                    var_param_height = find_parameter(element, var_param_height_name)
-                    if var_param_height:
-                            real_height = get_real_height(doc, element, var_param_height_name, offset_param_name)
-                            return [real_height, offset_param, var_param_height]
-                return False
-            else:
-                param_height = find_parameter(element, height_param_name)
-                real_height = get_real_height(doc, element, height_param_name, offset_param_name)
-                return [real_height, offset_param, param_height]
+    """ Возвращает абсолютную отметку, параметр смещения и параметр уровня """
+
+    level_builtin_param = get_parameter_if_exist_not_ro(element, built_in_level_params)
+    offset_builtin_param = get_parameter_if_exist_not_ro(element, built_in_offset_params)
+
+    #print element.Id
+    real_height = get_real_height(doc, element, level_builtin_param, offset_builtin_param)
+    level_param = element.GetParam(level_builtin_param)
+    offset_param = element.GetParam(offset_builtin_param)
+
+    return [real_height, offset_param, level_param]
+
 
 def find_new_level(height):
     """ Ищем новый уровень. Здесь мы собираем лист из всех уровней, вычисляем у какого из них минимальное неотрцицательное(при наличии) смещение
@@ -262,6 +256,7 @@ def main():
                     offset_param = height_result[1]
                     height_param = height_result[2]
 
+
                     if level:
                         new_offset = real_height - level.Elevation
                         change_level(element, level, new_offset, offset_param, height_param)
@@ -271,4 +266,5 @@ def main():
                     result_ok.append(element)
                 else:
                     result_error.append(element)
+
 main()
