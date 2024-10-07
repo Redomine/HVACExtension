@@ -1,36 +1,40 @@
 # -*- coding: utf-8 -*-
-import clr
 import sys
-import System
-from System.Collections.Generic import *
+import clr
+
 clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
 clr.AddReference("RevitNodes")
-import Revit
-clr.ImportExtensions(Revit.Elements)
-clr.ImportExtensions(Revit.GeometryConversion)
 clr.AddReference("RevitServices")
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from pyrevit import revit
-from pyrevit import forms
-from rpw.ui.forms import SelectFromList
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
-clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+
+import System
+from System.Collections.Generic import *
+from System import Guid
+
+import Revit
+from Autodesk.Revit.DB import *
+from Autodesk.Revit.UI.Selection import Selection
+from Autodesk.DesignScript.Geometry import *
+
+clr.ImportExtensions(Revit.Elements)
+clr.ImportExtensions(Revit.GeometryConversion)
+
+import RevitServices
+from RevitServices.Persistence import DocumentManager
+from RevitServices.Transactions import TransactionManager
+
+from pyrevit import revit
+from pyrevit import forms
+from rpw.ui.forms import SelectFromList
+
 import dosymep
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
-from Autodesk.Revit.UI.Selection import Selection
-import sys
-from Autodesk.Revit.DB import *
-from System import Guid
-from pyrevit import revit
 
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
