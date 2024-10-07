@@ -224,7 +224,6 @@ def get_list_of_elements(method):
     return filtered
 
 def main():
-    result = []
     result_error = []
     result_ok = []
 
