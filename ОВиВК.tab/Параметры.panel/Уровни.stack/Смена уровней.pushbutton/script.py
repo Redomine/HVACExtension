@@ -17,7 +17,6 @@ from pyrevit import revit
 from pyrevit import forms
 from rpw.ui.forms import SelectFromList
 from Redomine import *
-
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
@@ -33,20 +32,14 @@ import paraSpec
 from Autodesk.Revit.DB import *
 from System import Guid
 from pyrevit import revit
-
-
-
 import Autodesk
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
-
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 uiapp = DocumentManager.Instance.CurrentUIApplication
 #app = uiapp.Application
 uidoc = __revit__.ActiveUIDocument
-
-
 
 # типы параметров отвечающих за уровень
 built_in_level_params = [
@@ -115,17 +108,15 @@ def filter_elements(elements):
         if element.GroupId == ElementId.InvalidElementId:
             builtin_level_param = get_parameter_if_exist_not_ro(element, built_in_level_params)
             builtin_offset_param = get_parameter_if_exist_not_ro(element, built_in_offset_params)
+
             if builtin_level_param is None or builtin_offset_param is None:
                 continue
 
-            if element.GetParamValueOrDefault(builtin_level_param, None) is None:
+            # Даже если у элемента нашелся builtin - все равно просто параметра может и не быть.
+            if not element.IsExistsParam(LabelUtils.GetLabelFor(builtin_level_param)):
                 continue
 
-
-            if element.GetParamValueOrDefault(builtin_offset_param, None) is None:
-                continue
-
-            if element.InAnyCategory([BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations]):
+            if not element.IsExistsParam(LabelUtils.GetLabelFor(builtin_offset_param)):
                 continue
 
             # проверяем вложение или нет
@@ -160,7 +151,6 @@ def get_height_by_element(doc, element):
     offset_param = element.GetParam(offset_builtin_param)
 
     return [real_height, offset_param, level_param]
-
 
 def find_new_level(height):
     """ Ищем новый уровень. Здесь мы собираем лист из всех уровней, вычисляем у какого из них минимальное неотрцицательное(при наличии) смещение
@@ -255,7 +245,6 @@ def main():
                     real_height = height_result[0]
                     offset_param = height_result[1]
                     height_param = height_result[2]
-
 
                     if level:
                         new_offset = real_height - level.Elevation
