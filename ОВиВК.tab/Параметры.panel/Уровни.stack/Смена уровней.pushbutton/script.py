@@ -65,7 +65,8 @@ if isItFamily():
     print 'Надстройка не предназначена для работы с семействами'
     sys.exit()
 
-def make_col(category):
+def get_collection(category):
+    """ Возвращает коллекцию элементов по категории """
     col = FilteredElementCollector(doc)\
                             .OfCategory(category)\
                             .WhereElementIsNotElementType()\
@@ -73,11 +74,13 @@ def make_col(category):
     return col
 
 def convert(value):
+    """ Преобразует дабл в миллиметры """
     unit_type = DisplayUnitType.DUT_MILLIMETERS
     new_v = UnitUtils.ConvertFromInternalUnits(value, unit_type)
     return new_v
 
 def pick_elements(uidoc):
+    """ Возвращает выбранные элементы """
     result = []
     message = "Выберите элементы"
     ob_type = Selection.ObjectType.Element
@@ -86,6 +89,7 @@ def pick_elements(uidoc):
     return result
 
 def check_is_nested(element):
+    """ Проверяет, является ли вложением """
     if hasattr(element, "SuperComponent"):
         if not element.SuperComponent:
             return False
@@ -96,6 +100,7 @@ def check_is_nested(element):
     return False
 
 def get_parameter_if_exist_not_ro(element, built_in_parameters):
+    """ Получает параметр, если он существует и если он не ReadOnly """
     for built_in_parameter in built_in_parameters:
         parameter = element.get_Parameter(built_in_parameter)
         if parameter is not None and not parameter.IsReadOnly:
@@ -105,7 +110,6 @@ def get_parameter_if_exist_not_ro(element, built_in_parameters):
 
 def filter_elements(elements):
     """Возвращает фильтрованный от вложений и от свободных от групп список элементов"""
-
     result = []
     for element in elements:
         if element.GroupId == ElementId.InvalidElementId:
@@ -207,7 +211,7 @@ def get_selected_level(method):
     if method != 'Все элементы на активном виде к ближайшим уровням':
         selected_view = True
 
-        levelCol = make_col(BuiltInCategory.OST_Levels)
+        levelCol = get_collection(BuiltInCategory.OST_Levels)
 
         levels = []
 
