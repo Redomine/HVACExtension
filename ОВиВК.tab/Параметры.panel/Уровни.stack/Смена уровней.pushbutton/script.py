@@ -16,7 +16,6 @@ from RevitServices.Transactions import TransactionManager
 from pyrevit import revit
 from pyrevit import forms
 from rpw.ui.forms import SelectFromList
-from Redomine import *
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
@@ -27,14 +26,12 @@ clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from Autodesk.Revit.UI.Selection import Selection
 import sys
-import paraSpec
 from Autodesk.Revit.DB import *
 from System import Guid
 from pyrevit import revit
-import Autodesk
-from Autodesk.Revit.DB import *
-from Autodesk.Revit.UI import *
+
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 uiapp = DocumentManager.Instance.CurrentUIApplication
@@ -54,10 +51,6 @@ built_in_offset_params = [BuiltInParameter.INSTANCE_ELEVATION_PARAM,
                           BuiltInParameter.GROUP_OFFSET_FROM_LEVEL,
                           BuiltInParameter.INSTANCE_FREE_HOST_OFFSET_PARAM]
 
-if isItFamily():
-    print 'Надстройка не предназначена для работы с семействами'
-    sys.exit()
-
 def get_collection(category):
     """ Возвращает коллекцию элементов по категории """
     col = FilteredElementCollector(doc)\
@@ -74,12 +67,8 @@ def convert(value):
 
 def pick_elements(uidoc):
     """ Возвращает выбранные элементы """
-    result = []
-    message = "Выберите элементы"
-    ob_type = Selection.ObjectType.Element
-    for ref in uidoc.Selection.PickObjects(ob_type, message):
-        result.append(doc.GetElement(ref))
-    return result
+    selected_elements = [doc.GetElement(elem_id) for elem_id in uidoc.Selection.GetElementIds()]
+    return selected_elements
 
 def check_is_nested(element):
     """ Проверяет, является ли вложением """
@@ -189,9 +178,12 @@ def get_selected_mode():
                                         "Выбранные элементы к выбранному уровню"],
                                        title="Выберите метод привязки",
                                        button_name="Применить")
+    if method is None:
+        sys.exit()
     return method
 
 def get_selected_level(method):
+    """ Возвращаем выбранный уровень или False, если режим работы не подразумевает такого """
     if method != 'Все элементы на активном виде к ближайшим уровням':
         selected_view = True
 
@@ -205,6 +197,8 @@ def get_selected_level(method):
         level_name = forms.SelectFromList.show(levels,
                                                title="Выберите уровень",
                                                button_name="Применить")
+        if level_name is None:
+            sys.exit()
 
         for levelEl in levelCol:
             if levelEl.Name == level_name:
@@ -214,6 +208,7 @@ def get_selected_level(method):
     return False
 
 def get_list_of_elements(method):
+    """ Возвращаем лист элементов в зависимости от выбранного режима работы """
     if method == 'Выбранные элементы к выбранному уровню':
         elements = pick_elements(uidoc)
     if (method == 'Все элементы на активном виде к выбранному уровню'
@@ -255,5 +250,9 @@ def main():
                     result_ok.append(element)
                 else:
                     result_error.append(element)
+
+if doc.IsFamilyDocument:
+    print 'Надстройка не предназначена для работы с семействами'
+    sys.exit()
 
 main()
