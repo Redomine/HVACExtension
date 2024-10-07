@@ -43,7 +43,6 @@ built_in_level_params = [
                          BuiltInParameter.RBS_START_LEVEL_PARAM,
                          BuiltInParameter.FAMILY_LEVEL_PARAM,
                          BuiltInParameter.GROUP_LEVEL]
-# BuiltInParameter.INSTANCE_SCHEDULE_ONLY_LEVEL_PARAM,
 
 # типы параметров отвечающих за смещение от уровня
 built_in_offset_params = [BuiltInParameter.INSTANCE_ELEVATION_PARAM,
