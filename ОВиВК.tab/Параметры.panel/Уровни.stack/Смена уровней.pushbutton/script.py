@@ -17,6 +17,7 @@ import Revit
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI.Selection import Selection
 from Autodesk.DesignScript.Geometry import *
+from Autodesk.Revit.UI import TaskDialog
 
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
@@ -247,7 +248,7 @@ def execute():
                     result_error.append(element)
 
 if doc.IsFamilyDocument:
-    print 'Надстройка не предназначена для работы с семействами'
+    TaskDialog.Show("Ошибка", "Надстройка не предназначена для работы с семействами")
     sys.exit()
 
 execute()
