@@ -12,7 +12,6 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import System
 from System.Collections.Generic import *
-from System import Guid
 
 import Revit
 from Autodesk.Revit.DB import *
@@ -34,7 +33,6 @@ import dosymep
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
-from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
@@ -43,8 +41,7 @@ uiapp = DocumentManager.Instance.CurrentUIApplication
 uidoc = __revit__.ActiveUIDocument
 
 # типы параметров отвечающих за уровень
-built_in_level_params = [
-                         BuiltInParameter.RBS_START_LEVEL_PARAM,
+built_in_level_params = [BuiltInParameter.RBS_START_LEVEL_PARAM,
                          BuiltInParameter.FAMILY_LEVEL_PARAM,
                          BuiltInParameter.GROUP_LEVEL]
 
@@ -70,8 +67,7 @@ def convert(value):
 
 def get_selected_elements(uidoc):
     """ Возвращает выбранные элементы """
-    selected_elements = [doc.GetElement(elem_id) for elem_id in uidoc.Selection.GetElementIds()]
-    return selected_elements
+    return [uidoc.Document.GetElement(elem_id) for elem_id in uidoc.Selection.GetElementIds()]
 
 def check_is_nested(element):
     """ Проверяет, является ли вложением """
@@ -105,6 +101,9 @@ def filter_elements(elements):
                 continue
 
             # Даже если у элемента нашелся builtin - все равно просто параметра может и не быть.
+            # Дело в том что для материалов изоляции мы находим RBS_START_LEVEL_PARAM и RBS_OFFSET_PARAM
+            # Хотя таких параметров у них не существует
+            # IsExistsParam по BuiltIn вернет будто параметр существует
             if not element.IsExistsParam(LabelUtils.GetLabelFor(builtin_level_param)):
                 continue
 
@@ -119,10 +118,10 @@ def filter_elements(elements):
 
 def get_real_height(doc, element, level_param_name, offset_param_name):
     """ Возвращает реальную абсолютную отметку элемента """
-    level_id = element.GetParam(level_param_name).AsElementId()
+    level_id = element.GetParamValue(level_param_name)
     level = doc.GetElement(level_id)
     height_value = level.Elevation
-    height_offset_value = element.GetParam(offset_param_name).AsDouble()
+    height_offset_value = element.GetParamValue(offset_param_name)
     real_height = height_value + height_offset_value
     return real_height
 
@@ -132,7 +131,6 @@ def get_height_by_element(doc, element):
     level_builtin_param = get_parameter_if_exist_not_ro(element, built_in_level_params)
     offset_builtin_param = get_parameter_if_exist_not_ro(element, built_in_offset_params)
 
-    #print element.Id
     real_height = get_real_height(doc, element, level_builtin_param, offset_builtin_param)
     level_param = element.GetParam(level_builtin_param)
     offset_param = element.GetParam(offset_builtin_param)
@@ -144,7 +142,7 @@ def find_new_level(height):
     от нашей точки. Он и будет целевым """
     all_levels = FilteredElementCollector(doc).OfClass(Level).ToElements()
 
-    sorted_levels = sorted(all_levels, key=lambda level: level.get_Parameter(BuiltInParameter.LEVEL_ELEV).AsDouble())
+    sorted_levels = sorted(all_levels, key=lambda level: level.GetParamValue(BuiltInParameter.LEVEL_ELEV))
 
     offsets = []
     for level in sorted_levels:
