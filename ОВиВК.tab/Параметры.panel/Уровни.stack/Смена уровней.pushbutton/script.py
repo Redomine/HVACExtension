@@ -52,6 +52,16 @@ built_in_offset_params = [BuiltInParameter.INSTANCE_ELEVATION_PARAM,
                           BuiltInParameter.GROUP_OFFSET_FROM_LEVEL,
                           BuiltInParameter.INSTANCE_FREE_HOST_OFFSET_PARAM]
 
+class TargetLevel:
+    level_element = None
+    level_elevation = None
+    level_top_elevation = None
+
+    def __init__(self, element, elevation, top_elevation):
+        self.level_elevation = elevation
+        self.level_element = element
+        self.level_top_elevation = top_elevation
+
 def get_elements_by_category(category):
     """ Возвращает коллекцию элементов по категории """
     col = FilteredElementCollector(doc)\
@@ -214,16 +224,6 @@ def get_list_of_elements(method):
         sys.exit()
 
     return filtered
-
-class TargetLevel:
-    level_element = None
-    level_elevation = None
-    level_top_elevation = None
-
-    def __init__(self, element, elevation, top_elevation):
-        self.level_elevation = elevation
-        self.level_element = element
-        self.level_top_elevation = top_elevation
 
 def get_target_levels_list():
     """ возвращает список целевых уровней, с отметками их низа и верха. Если верха нет - возвращает с None вместо отметки """
