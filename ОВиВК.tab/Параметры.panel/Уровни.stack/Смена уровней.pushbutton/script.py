@@ -222,7 +222,7 @@ def get_list_of_elements(method):
     filtered = filter_elements(elements)
 
     if len(filtered) == 0:
-        print "Элементы не выбраны"
+        TaskDialog.Show("Ошибка", "Элементы не выбраны")
         sys.exit()
 
     return filtered
