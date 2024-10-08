@@ -98,7 +98,14 @@ def filter_elements(elements):
             builtin_level_param = get_parameter_if_exist_not_ro(element, built_in_level_params)
             builtin_offset_param = get_parameter_if_exist_not_ro(element, built_in_offset_params)
 
-            if builtin_level_param is None or builtin_offset_param is None:
+            if builtin_offset_param is None:
+                continue
+
+            # у гибких элементов есть только базовый уровень, никакой отметки, поэтому дальнейшие фильтры они иначе не пройдут
+            if element.InAnyCategory([BuiltInCategory.OST_FlexDuctCurves, BuiltInCategory.OST_FlexPipeCurves]):
+                result.append(element)
+
+            if builtin_level_param is None:
                 continue
 
             # Даже если у элемента нашелся builtin - все равно просто параметра может и не быть.
