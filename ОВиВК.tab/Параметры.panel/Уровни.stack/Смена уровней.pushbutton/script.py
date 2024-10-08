@@ -145,31 +145,19 @@ def get_height_by_element(doc, element):
 
     return [real_height, offset_param, level_param]
 
-def find_new_level(height):
-    """ Ищем новый уровень. Здесь мы собираем лист из всех уровней, вычисляем у какого из них минимальное неотрцицательное(при наличии) смещение
-    от нашей точки. Он и будет целевым """
-    all_levels = FilteredElementCollector(doc).OfClass(Level).ToElements()
+def find_new_level(height, target_levels):
+    """ Ищем новый уровень. Здесь мы принимаем целевые уровни и смотрим в промежуток между отметками какого из них попадает
+     наша отметка. Если дошли до самого верхнего - принимаем его"""
 
-    sorted_levels = sorted(all_levels, key=lambda level: level.GetParamValue(BuiltInParameter.LEVEL_ELEV))
+    for target_level in target_levels:
+        element_offset = height - target_level.level_elevation
+        # У самого верхнего уровня отметка верха - None. Он всегда будет последним из-за сортировки по отметке в методе где мы их собираем
+        if target_level.level_top_elevation is None:
+            return target_level.level_element, element_offset
 
-    offsets = []
-    for level in sorted_levels:
-        offsets.append(height - level.Elevation)
+        if target_level.level_elevation < height < target_level.level_top_elevation:
+            return target_level.level_element, element_offset
 
-    target_ind = -1
-    # мы проходим по всем смещениям и ищем первое не отрицательное, т.к. просто минимальное смещение будет для уровней которые сильно выше реальной отметки(отрицательное)
-    for offset in offsets:
-        if offset > 0:
-            target_ind = offsets.index(offset)
-
-    # если целевой индекс остался -1 - значит мы не нашли нормальных уровней с верным смещением. Берем просто минимальный
-    if target_ind == -1:
-        target_ind = offsets.index(min(offsets))
-
-    level = sorted_levels[target_ind]
-    offset_from_new_level = offsets[target_ind]
-
-    return level, offset_from_new_level
 
 def change_level(element, new_level, new_offset, offset_param, height_param):
     height_param.Set(new_level.Id)
@@ -227,14 +215,43 @@ def get_list_of_elements(method):
 
     return filtered
 
+class TargetLevel:
+    level_element = None
+    level_elevation = None
+    level_top_elevation = None
+
+    def __init__(self, element, elevation, top_elevation):
+        self.level_elevation = elevation
+        self.level_element = element
+        self.level_top_elevation = top_elevation
+
+def get_target_levels_list():
+    """ возвращает список целевых уровней, с отметками их низа и верха. Если верха нет - возвращает с None вместо отметки """
+    all_levels = FilteredElementCollector(doc).OfClass(Level).ToElements()
+    sorted_levels = sorted(all_levels, key=lambda level: level.GetParamValue(BuiltInParameter.LEVEL_ELEV))
+    result = []
+
+    for index, level in enumerate(sorted_levels):
+        if index + 1 < len(sorted_levels):
+            next_level_elevation = sorted_levels[index + 1].Elevation
+        else:
+            next_level_elevation = None
+
+        result.append(TargetLevel(level, level.Elevation, next_level_elevation))
+
+    return result
+
+
 def execute():
     result_error = []
     result_ok = []
+    target_levels = []
 
     method = get_selected_mode()
     elements = get_list_of_elements(method)
     level = get_selected_level(method)
-
+    if not level:
+        target_levels = get_target_levels_list()
     with revit.Transaction("Смена уровней"):
             for element in elements:
                 height_result = get_height_by_element(doc, element)
@@ -248,7 +265,7 @@ def execute():
                         new_offset = real_height - level.Elevation
                         change_level(element, level, new_offset, offset_param, height_param)
                     else:
-                        new_level, new_offset = find_new_level(real_height)
+                        new_level, new_offset = find_new_level(real_height, target_levels)
                         change_level(element, new_level, new_offset, offset_param, height_param)
                     result_ok.append(element)
                 else:
