@@ -89,13 +89,6 @@ def roundup(divider, number):
         return int(number)
 
 
-class collar_variant:
-    def __init__(self, diameter, isInsulated):
-        self.diameter = diameter
-        self.isInsulated = isInsulated
-
-
-
 class calculation_element:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
     def __init__(self, element, collection, parameter, Name, Mark, Maker):
@@ -105,8 +98,12 @@ class calculation_element:
         self.floor = str(element.LookupParameter('ФОП_Этаж').AsString())
         self.length = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
                                                          UnitTypeId.Meters)
-        self.diametr = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
-                                                     UnitTypeId.Millimeters)
+        if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+            self.pipe_diametr = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
+                UnitTypeId.Millimeters)
+        if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and str(element.DuctType.Shape) == "Round":
+            self.duct_diametr = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
+                UnitTypeId.Millimeters)
 
         if element.LookupParameter('ФОП_ВИС_Имя системы'):
             self.system = str(element.LookupParameter('ФОП_ВИС_Имя системы').AsString())
@@ -158,7 +155,7 @@ class calculation_element:
         return int(num)
 
     def pins(self, element):
-        self.local_description = '{0} {1}, Ду{2}'.format(self.local_description, self.name,self.diametr)
+        self.local_description = '{0} {1}, Ду{2}'.format(self.local_description, self.name,self.pipe_diametr)
         dict_var_pins = {15: [2, 1.5], 20: [3, 2], 25: [3.5, 2], 32: [4, 2.5], 40: [4.5, 3], 50: [5, 3], 65: [6, 4],
                             80: [6, 4], 100: [6, 4.5], 125: [7, 5]}
 
@@ -167,18 +164,18 @@ class calculation_element:
             return 0
 
         if self.is_pipe_insulated(element):
-            if self.diametr in dict_var_pins:
-                return self.mid_calculation_fix(dict_var_pins[self.diametr][0])
+            if self.pipe_diametr in dict_var_pins:
+                return self.mid_calculation_fix(dict_var_pins[self.pipe_diametr][0])
             else:
                 return self.mid_calculation_fix(7)
         else:
-            if self.diametr in dict_var_pins:
-                return self.mid_calculation_fix(dict_var_pins[self.diametr][1])
+            if self.pipe_diametr in dict_var_pins:
+                return self.mid_calculation_fix(dict_var_pins[self.pipe_diametr][1])
             else:
                 return self.mid_calculation_fix(5)
 
     def collars(self, element):
-        self.name = '{0}, Ду{1}'.format(self.name, int(self.diametr))
+        self.name = '{0}, Ду{1}'.format(self.name, int(self.pipe_diametr))
         self.local_description = '{0} {1}'.format(self.local_description, self.name)
         dict_var_collars = {15:[2, 1.5], 20:[3, 2], 25:[3.5, 2], 32:[4, 2.5], 40:[4.5, 3], 50:[5, 3], 65:[6, 4],
                             80:[6, 4], 100:[6, 4.5], 125:[7, 5]}
@@ -187,13 +184,13 @@ class calculation_element:
             return 0
 
         if self.is_pipe_insulated(element):
-            if self.diametr in dict_var_collars:
-                return self.mid_calculation_fix(dict_var_collars[self.diametr][0])
+            if self.pipe_diametr in dict_var_collars:
+                return self.mid_calculation_fix(dict_var_collars[self.pipe_diametr][0])
             else:
                 return self.mid_calculation_fix(7)
         else:
-            if self.diametr in dict_var_collars:
-                return self.mid_calculation_fix(dict_var_collars[self.diametr][1])
+            if self.pipe_diametr in dict_var_collars:
+                return self.mid_calculation_fix(dict_var_collars[self.pipe_diametr][1])
             else:
                 return self.mid_calculation_fix(5)
 
@@ -201,7 +198,7 @@ class calculation_element:
         area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
 
         if str(element.DuctType.Shape) == "Round":
-            D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
+            D = self.duct_diametr
             P = 3.14 * D
         if str(element.DuctType.Shape) == "Rectangular":
             A = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM)
@@ -223,8 +220,8 @@ class calculation_element:
                             80: 0.233, 100: 0.37, 125: 0.53}
         up_coeff = 1.7
         # Запас 70% задан по согласованию.
-        if self.diametr in dict_var_p_mat:
-            key_up = dict_var_p_mat[self.diametr] * up_coeff
+        if self.pipe_diametr in dict_var_p_mat:
+            key_up = dict_var_p_mat[self.pipe_diametr] * up_coeff
             return key_up*self.length
         else:
             return 0.62*up_coeff*self.length
