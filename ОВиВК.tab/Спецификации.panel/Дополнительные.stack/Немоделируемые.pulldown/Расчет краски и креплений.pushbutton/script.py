@@ -333,7 +333,7 @@ def is_object_to_generate(element, genCol, collection, parameter, genList = genL
 @notification()
 # @log_plugin(EXEC_PARAMS.command_name)
 # На STLB-OK1_PD_OV_VN развернутой на сервере почему-то начало погибать
-# "C:\Users\mankaev_r\AppData\Roaming\pyRevit\Extensions\BIM4Everyone.lib\dosymep_libs\bim4everyone\__init__.py", line 14, in wrapper
+# "...\AppData\Roaming\pyRevit\Extensions\BIM4Everyone.lib\dosymep_libs\bim4everyone\__init__.py", line 14, in wrapper
 # TypeError: script_execute() takes no arguments (1 given)
 # Нам вообще нужно пытаться сейчас логгировать, или оно падает?
 
