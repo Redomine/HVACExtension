@@ -58,6 +58,9 @@ col_insulation = get_elements_by_category(BuiltInCategory.OST_DuctInsulations)
 name_of_model = "_Якорный элемент"
 description = "Расчет краски и креплений"
 
+# Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
+col_model = [elem for elem in col_model if elem.GetElementType().GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
+
 class generationElement:
     def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
         self.group = group
@@ -145,16 +148,21 @@ class calculation_element:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
     def __init__(self, element, collection, parameter, name, mark, maker):
         self.local_description = description
-        self.block = element.GetSharedParamValueOrDefault("ФОП_Блок СМР", "")
-        self.section = element.GetSharedParamValueOrDefault("ФОП_Секция СМР", "")
+        self.corp = element.GetSharedParamValueOrDefault("ФОП_Блок СМР", "")
+        self.sec = element.GetSharedParamValueOrDefault("ФОП_Секция СМР", "")
         self.floor = element.GetSharedParamValueOrDefault("ФОП_Этаж", "")
+
         self.length = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
                                                          UnitTypeId.Meters)
+
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-            self.pipe_diametr = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
+            self.pipe_diametr = UnitUtils.ConvertFromInternalUnits(
+                element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
                 UnitTypeId.Millimeters)
+
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Round:
-            self.duct_diametr = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
+            self.duct_diametr = UnitUtils.ConvertFromInternalUnits(
+                element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
                 UnitTypeId.Millimeters)
 
         if element.IsExistsParam("ФОП_ВИС_Имя системы"):
@@ -166,13 +174,13 @@ class calculation_element:
         self.group ="12. Расчетные элементы"
         self.name = name
         self.mark = mark
-        self.code = ""
+        self.art = ""
         self.maker = maker
         self.unit = "None"
         self.number = self.get_number(element, self.name)
         self.mass = ""
         self.comment = ""
-        self.economical_function = element.GetSharedParamValueOrDefault("ФОП_Экономическая функция", "")
+        self.EF = element.GetSharedParamValueOrDefault("ФОП_Экономическая функция", "")
         self.parentId = element.Id.IntegerValue
 
         for gen in genList:
@@ -180,12 +188,8 @@ class calculation_element:
                 self.unit = gen.unit
                 isType = gen.isType
 
-
-        elemType = doc.GetElement(element.GetTypeId())
-
-
-        self.key = self.economical_function + self.block + self.section + self.floor + self.system + \
-                   self.group + self.name + self.mark + self.code + \
+        self.key = self.EF + self.corp + self.sec + self.floor + self.system + \
+                   self.group + self.name + self.mark + self.art + \
                    self.maker + self.local_description
 
     def is_pipe_insulated(self, element):
@@ -240,31 +244,31 @@ class calculation_element:
 
     def duct_material(self, element):
         area = UnitUtils.ConvertFromInternalUnits(
-            element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
-            UnitTypeId.SquareMeters)
-        #area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
+            element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
+            UnitTypeId.SquareMeters)  # Преобразование в квадратные метры
 
         if element.DuctType.Shape == ConnectorProfileType.Round:
             diameter = self.duct_diametr
             perimeter = 3.14 * diameter
+
         if element.DuctType.Shape == ConnectorProfileType.Rectangular:
             width = UnitUtils.ConvertFromInternalUnits(
-                element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
-                UnitTypeId.Millimeters)
-            #width = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM)
+                element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM),
+                UnitTypeId.Millimeters)  # Преобразование в метры
+
             height = UnitUtils.ConvertFromInternalUnits(
-                element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
-                UnitTypeId.Millimeters)
-            #height = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)
+                element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM),
+                UnitTypeId.Millimeters)  # Преобразование в метры
+
             perimeter = 2 * (width + height)
 
 
         if perimeter < 1001:
-            kg = area * 65
+            kg = area * 0.65
         elif perimeter < 1801:
-            kg = area * 122
+            kg = area * 1.22
         else:
-            kg = area * 225
+            kg = area * 2.25
 
         return kg
 
@@ -273,10 +277,18 @@ class calculation_element:
                             80: 0.233, 100: 0.37, 125: 0.53}
         up_coeff = 1.7
         # Запас 70% задан по согласованию.
-        if self.pipe_diametr in dict_var_p_mat:
-            key_up = dict_var_p_mat[self.pipe_diametr] * up_coeff
-            return key_up*self.length
+
+        # Сортируем ключи словаря
+        sorted_keys = sorted(dict_var_p_mat.keys())
+
+        # Ищем первый ключ, который больше или равен self.pipe_diametr
+        for key in sorted_keys:
+            if self.pipe_diametr <= key:
+                key_up = dict_var_p_mat[key] * up_coeff
+                return key_up * self.length
+
         else:
+
             return 0.62*up_coeff*self.length
 
     def grunt(self, element):
@@ -303,8 +315,8 @@ class calculation_element:
             number = self.collars(element)
         if name == "Шпилька М8 1м/1шт" and element in col_pipes:
             number = self.pins(element)
-
         return number
+
 
 def is_object_to_generate(element, gen_col, collection, parameter, gen_list = genList):
     if element in gen_col:
@@ -347,9 +359,10 @@ def script_execute():
                     if is_object_to_generate(element, genCol, collection, parameter):
                         definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
-                        key = definition.economical_function + definition.block + definition.section + definition.floor + definition.system + \
-                              definition.group + definition.name + definition.mark + definition.code + \
+                        key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
+                              definition.group + definition.name + definition.mark + definition.art + \
                               definition.maker + definition.local_description
+
 
                         toAppend = True
                         for element_to_generate in elements_to_generate:
