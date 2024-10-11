@@ -85,16 +85,6 @@ genList = [
         isType= False),
     generationElement(
         group = "12. Расчетные элементы",
-        name = "Изоляция для фланцев и стыков",
-        mark = "",
-        art = "",
-        unit = "м².",
-        maker = "",
-        method =  "ФОП_ВИС_Совместно с воздуховодом",
-        collection= colInsul,
-        isType= False),
-    generationElement(
-        group = "12. Расчетные элементы",
         name = "Краска антикоррозионная за два раза",
         mark = "БТ-177",
         art = "",
@@ -182,12 +172,9 @@ class calculation_element:
                 self.unit = gen.unit
                 isType = gen.isType
 
-        if parameter == "ФОП_ВИС_Совместно с воздуховодом":
-            pass
 
         elemType = doc.GetElement(element.GetTypeId())
-        if element in colInsul and elemType.GetSharedParamValueOrDefault("ФОП_ВИС_Совместно с воздуховодом").AsInteger() == 1:
-            self.name = "Изоляция для фланцев и стыков (" + get_ADSK_Name(element) + ")"
+
 
         self.key = self.economical_function + self.block + self.section + self.floor + self.system + \
                    self.group + self.name + self.mark + self.code + \
@@ -284,13 +271,6 @@ class calculation_element:
         else:
             return 0.62*up_coeff*self.length
 
-    def insul_stock(self, element):
-        area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
-        if area == None:
-            area = 0
-        area = area * 0.092903 * 0.03
-        return area
-
     def grunt(self, element):
         area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
         number = area / 10
@@ -307,8 +287,6 @@ class calculation_element:
             number = self.pipe_material(element)
         if name == "Металлические крепления для воздуховодов" and element in colCurves:
             number = self.duct_material(element)
-        if name == "Изоляция для фланцев и стыков" and element in colInsul:
-            number = self.insul_stock(element)
         if name == "Краска антикоррозионная за два раза" and element in colPipes:
             number = self.colorBT(element)
         if name == "Грунтовка для стальных труб" and element in colPipes:
