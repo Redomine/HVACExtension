@@ -41,11 +41,19 @@ from dosymep_libs.bim4everyone import *
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
-colPipes = make_col(BuiltInCategory.OST_PipeCurves)
-colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-col_model = make_col(BuiltInCategory.OST_GenericModel)
-colSystems = make_col(BuiltInCategory.OST_DuctSystem)
-colInsul = make_col(BuiltInCategory.OST_DuctInsulations)
+
+def get_elements_by_category(category):
+    col = FilteredElementCollector(doc) \
+        .OfCategory(category) \
+        .WhereElementIsNotElementType() \
+        .ToElements()
+    return col
+
+col_pipes = get_elements_by_category(BuiltInCategory.OST_PipeCurves)
+col_curves = get_elements_by_category(BuiltInCategory.OST_DuctCurves)
+col_model = get_elements_by_category(BuiltInCategory.OST_GenericModel)
+col_systems = get_elements_by_category(BuiltInCategory.OST_DuctSystem)
+col_insulation = get_elements_by_category(BuiltInCategory.OST_DuctInsulations)
 
 name_of_model = "_Якорный элемент"
 description = "Расчет краски и креплений"
@@ -71,7 +79,7 @@ genList = [
         unit = "кг.",
         maker = "",
         method = "ФОП_ВИС_Расчет металла для креплений",
-        collection=colCurves,
+        collection=col_curves,
         isType= False),
     generationElement(
         group = "12. Расчетные элементы",
@@ -81,7 +89,7 @@ genList = [
         unit = "кг.",
         maker = "",
         method =  "ФОП_ВИС_Расчет металла для креплений",
-        collection= colPipes,
+        collection= col_pipes,
         isType= False),
     generationElement(
         group = "12. Расчетные элементы",
@@ -91,7 +99,7 @@ genList = [
         unit = "кг.",
         maker = "",
         method =  "ФОП_ВИС_Расчет краски и грунтовки",
-        collection= colPipes,
+        collection= col_pipes,
         isType= False),
     generationElement(
         group = "12. Расчетные элементы",
@@ -101,7 +109,7 @@ genList = [
         unit = "кг.",
         maker = "",
         method =  "ФОП_ВИС_Расчет краски и грунтовки",
-        collection= colPipes,
+        collection= col_pipes,
         isType= False),
     generationElement(
         group = "12. Расчетные элементы",
@@ -111,7 +119,7 @@ genList = [
         unit = "шт.",
         maker = "",
         method =  "ФОП_ВИС_Расчет хомутов",
-        collection= colPipes,
+        collection= col_pipes,
         isType= False),
     generationElement(
         group = "12. Расчетные элементы",
@@ -121,7 +129,7 @@ genList = [
         unit = "шт.",
         maker = "",
         method =  "ФОП_ВИС_Расчет хомутов",
-        collection= colPipes,
+        collection= col_pipes,
         isType= False)
 ]
 
@@ -283,17 +291,17 @@ class calculation_element:
 
     def get_number(self, element, name):
         number = 1
-        if name == "Металлические крепления для трубопроводов" and element in colPipes:
+        if name == "Металлические крепления для трубопроводов" and element in col_pipes:
             number = self.pipe_material(element)
-        if name == "Металлические крепления для воздуховодов" and element in colCurves:
+        if name == "Металлические крепления для воздуховодов" and element in col_curves:
             number = self.duct_material(element)
-        if name == "Краска антикоррозионная за два раза" and element in colPipes:
+        if name == "Краска антикоррозионная за два раза" and element in col_pipes:
             number = self.colorBT(element)
-        if name == "Грунтовка для стальных труб" and element in colPipes:
+        if name == "Грунтовка для стальных труб" and element in col_pipes:
             number = self.grunt(element)
-        if name == "Хомут трубный под шпильку М8" and element in colPipes:
+        if name == "Хомут трубный под шпильку М8" and element in col_pipes:
             number = self.collars(element)
-        if name == "Шпилька М8 1м/1шт" and element in colPipes:
+        if name == "Шпилька М8 1м/1шт" and element in col_pipes:
             number = self.pins(element)
 
         return number
@@ -323,12 +331,7 @@ def script_execute():
         # при каждом повторе расчета удаляем старые версии
         remove_models(col_model, name_of_model, description)
 
-        #список элементов которые будут сгенерированы
-        calculation_elements = []
-
-        collpasing_objects = []
-
-        collections = [colInsul, colPipes, colCurves]
+        collections = [col_insulation, col_pipes, col_curves]
 
         elements_to_generate = []
 
