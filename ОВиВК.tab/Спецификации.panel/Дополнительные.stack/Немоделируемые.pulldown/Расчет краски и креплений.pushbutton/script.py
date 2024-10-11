@@ -337,8 +337,6 @@ def is_object_to_generate(element, gen_col, collection, parameter, gen_list = ge
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
-
-
 def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
         # при каждом повторе расчета удаляем старые версии
