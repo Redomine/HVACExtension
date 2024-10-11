@@ -2,6 +2,7 @@
 import sys
 import clr
 
+
 clr.AddReference('ProtoGeometry')
 clr.AddReference("RevitNodes")
 clr.AddReference("RevitServices")
@@ -10,30 +11,38 @@ clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
+import Revit
+import dosymep
+clr.ImportExtensions(Revit.Elements)
+clr.ImportExtensions(Revit.GeometryConversion)
+
 import System
 from System.Collections.Generic import *
 
-import Revit
+
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI.Selection import Selection
 from Autodesk.DesignScript.Geometry import *
 from Autodesk.Revit.UI import TaskDialog
 
-clr.ImportExtensions(Revit.Elements)
-clr.ImportExtensions(Revit.GeometryConversion)
 
 import RevitServices
 from RevitServices.Persistence import DocumentManager
 from RevitServices.Transactions import TransactionManager
 
-from pyrevit import revit
 from pyrevit import forms
+from pyrevit import revit
+from pyrevit import script
+from pyrevit import HOST_APP
+from pyrevit import EXEC_PARAMS
 from rpw.ui.forms import SelectFromList
 
-import dosymep
+
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.Templates import ProjectParameters
+from dosymep_libs.bim4everyone import *
+
 
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
@@ -241,8 +250,9 @@ def get_target_levels_list():
 
     return result
 
-
-def execute():
+@notification()
+@log_plugin(EXEC_PARAMS.command_name)
+def script_execute(plugin_logger):
     result_error = []
     result_ok = []
     target_levels = []
@@ -275,4 +285,4 @@ if doc.IsFamilyDocument:
     TaskDialog.Show("Ошибка", "Надстройка не предназначена для работы с семействами")
     sys.exit()
 
-execute()
+script_execute()
