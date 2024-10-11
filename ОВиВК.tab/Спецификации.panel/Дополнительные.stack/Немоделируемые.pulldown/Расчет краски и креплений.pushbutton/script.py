@@ -81,7 +81,7 @@ genList = [
         art = "",
         unit = "кг.",
         maker = "",
-        method = "ФОП_ВИС_Расчет металла для креплений",
+        method = SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
         collection=col_curves,
         isType= False),
     generationElement(
@@ -91,9 +91,10 @@ genList = [
         art = "",
         unit = "кг.",
         maker = "",
-        method =  "ФОП_ВИС_Расчет металла для креплений",
+        method =  SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
         collection= col_pipes,
         isType= False),
+
     generationElement(
         group = "12. Расчетные элементы",
         name = "Краска антикоррозионная за два раза",
@@ -101,7 +102,7 @@ genList = [
         art = "",
         unit = "кг.",
         maker = "",
-        method =  "ФОП_ВИС_Расчет краски и грунтовки",
+        method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
         collection= col_pipes,
         isType= False),
     generationElement(
@@ -111,17 +112,18 @@ genList = [
         art = "",
         unit = "кг.",
         maker = "",
-        method =  "ФОП_ВИС_Расчет краски и грунтовки",
+        method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
         collection= col_pipes,
         isType= False),
     generationElement(
+
         group = "12. Расчетные элементы",
         name = "Хомут трубный под шпильку М8",
         mark = "",
         art = "",
         unit = "шт.",
         maker = "",
-        method =  "ФОП_ВИС_Расчет хомутов",
+        method =  SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
         collection= col_pipes,
         isType= False),
     generationElement(
@@ -131,7 +133,7 @@ genList = [
         art = "",
         unit = "шт.",
         maker = "",
-        method =  "ФОП_ВИС_Расчет хомутов",
+        method =  SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
         collection= col_pipes,
         isType= False)
 ]
@@ -148,9 +150,10 @@ class calculation_element:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
     def __init__(self, element, collection, parameter, name, mark, maker):
         self.local_description = description
-        self.corp = element.GetSharedParamValueOrDefault("ФОП_Блок СМР", "")
-        self.sec = element.GetSharedParamValueOrDefault("ФОП_Секция СМР", "")
-        self.floor = element.GetSharedParamValueOrDefault("ФОП_Этаж", "")
+
+        self.corp = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksBlock.Name, "")
+        self.sec = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksSection.Name, "")
+        self.floor = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.Level.Name, "")
 
         self.length = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
                                                          UnitTypeId.Meters)
@@ -165,9 +168,10 @@ class calculation_element:
                 element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
                 UnitTypeId.Millimeters)
 
-        if element.IsExistsParam("ФОП_ВИС_Имя системы"):
-            self.system = element.GetSharedParamValueOrDefault("ФОП_ВИС_Имя системы", "")
+        if element.IsExistsParam(SharedParamsConfig.Instance.VISSystemName.Name):
+            self.system = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName.Name, "")
 
+        # Этот параметр не вызываем с платформы и удаляем из всех шаблонов
         if element.IsExistsParam("ADSK_Имя системы"):
             self.system = element.GetSharedParamValueOrDefault("ADSK_Имя системы", "")
 
@@ -180,7 +184,7 @@ class calculation_element:
         self.number = self.get_number(element, self.name)
         self.mass = ""
         self.comment = ""
-        self.EF = element.GetSharedParamValueOrDefault("ФОП_Экономическая функция", "")
+        self.EF = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISEconomicFunction.Name, "")
         self.parentId = element.Id.IntegerValue
 
         for gen in genList:
