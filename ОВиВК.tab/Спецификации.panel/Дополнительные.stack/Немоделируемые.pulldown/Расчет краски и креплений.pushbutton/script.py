@@ -382,16 +382,16 @@ temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, name_of_model)
 if isItFamily():
     forms.alert(
         "Надстройка не предназначена для работы с семействами",
-        "Ошибка"
+        "Ошибка",
+        exitscript=True
         )
-    sys.exit()
 
 if temporary is None:
     forms.alert(
         "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
-        "Ошибка"
+        "Ошибка",
+        exitscript=True
         )
-    sys.exit()
 
 status = paraSpec.check_parameters()
 if not status:
