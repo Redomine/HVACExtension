@@ -57,7 +57,9 @@ name_of_model = "_Якорный элемент"
 description = "Расчет краски и креплений"
 
 # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
-col_model = [elem for elem in col_model if elem.GetElementType().GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
+col_model = \
+    [elem for elem in col_model if elem.GetElementType()
+    .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
 
 class generationElement:
     def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
@@ -288,9 +290,7 @@ class calculation_element:
             if self.pipe_diametr <= key:
                 key_up = dict_var_p_mat[key] * up_coeff
                 return key_up * self.length
-
         else:
-
             return 0.62*up_coeff*self.length
 
     def grunt(self, element):
@@ -318,7 +318,6 @@ class calculation_element:
         if name == "Шпилька М8 1м/1шт" and element in col_pipes:
             number = self.pins(element)
         return number
-
 
 def is_object_to_generate(element, gen_col, collection, parameter, gen_list = genList):
     if element in gen_col:
@@ -359,7 +358,6 @@ def script_execute(plugin_logger):
                         key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
                               definition.group + definition.name + definition.mark + definition.art + \
                               definition.maker + definition.local_description
-
 
                         toAppend = True
                         for element_to_generate in elements_to_generate:
