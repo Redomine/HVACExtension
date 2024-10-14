@@ -151,9 +151,9 @@ class CalculationElement:
     def __init__(self, element, collection, parameter, name, mark, maker):
         self.local_description = description
 
-        self.corp = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksBlock.Name, "")
-        self.sec = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksSection.Name, "")
-        self.floor = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.Level.Name, "")
+        self.corp = element.GetParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksBlock)
+        self.sec = element.GetParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksSection)
+        self.floor = element.GetParamValueOrDefault(SharedParamsConfig.Instance.Level)
 
         self.length = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
                                                          UnitTypeId.Meters)
@@ -169,11 +169,11 @@ class CalculationElement:
                 UnitTypeId.Millimeters)
 
         if element.IsExistsParam(SharedParamsConfig.Instance.VISSystemName.Name):
-            self.system = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName.Name, "")
+            self.system = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName)
 
         # Этот параметр не вызываем с платформы и удаляем из всех шаблонов
         if element.IsExistsParam("ADSK_Имя системы"):
-            self.system = element.GetSharedParamValueOrDefault("ADSK_Имя системы", "")
+            self.system = element.GetParamValueOrDefault("ADSK_Имя системы")
 
         self.group ="12. Расчетные элементы"
         self.name = name
@@ -184,7 +184,7 @@ class CalculationElement:
         self.number = self.get_number(element, self.name)
         self.mass = ""
         self.comment = ""
-        self.EF = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISEconomicFunction.Name, "")
+        self.EF = element.GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction)
         self.parentId = element.Id.IntegerValue
 
         for gen in genList:
@@ -192,9 +192,11 @@ class CalculationElement:
                 self.unit = gen.unit
                 isType = gen.isType
 
-        self.key = self.EF + self.corp + self.sec + self.floor + self.system + \
-                   self.group + self.name + self.mark + self.art + \
-                   self.maker + self.local_description
+        parts = [part for part in [self.EF, self.corp, self.sec, self.floor, self.system,
+                                   self.group, self.name, self.mark, self.art,
+                                   self.maker, self.local_description] if part is not None]
+        self.key = ''.join(parts)
+
 
     def is_pipe_insulated(self, element):
         dependent_elements = element.GetDependentElements(self.pipe_insulation_filter)
@@ -325,11 +327,11 @@ def is_object_to_generate(element, gen_col, collection, parameter, gen_list = ge
             if gen.collection == collection and parameter == gen.method:
                 try:
                     elem_type = doc.GetElement(element.GetTypeId())
-                    if elem_type.GetSharedParamValueOrDefault(parameter) == 1:
+                    if elem_type.GetParamValueOrDefault(parameter) == 1:
                         return True
                 except Exception:
                     print parameter
-                    if element.GetSharedParamValueOrDefault(parameter) == 1:
+                    if element.GetParamValueOrDefault(parameter) == 1:
                         return True
 
 @notification()
@@ -355,9 +357,12 @@ def script_execute(plugin_logger):
                     if is_object_to_generate(element, genCol, collection, parameter):
                         definition = CalculationElement(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
-                        key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
-                              definition.group + definition.name + definition.mark + definition.art + \
-                              definition.maker + definition.local_description
+                        parts = [part for part in [definition.EF, definition.corp, definition.sec, definition.floor,
+                                                   definition.system,definition.group, definition.name, definition.mark,
+                                                   definition.art, definition.maker, definition.local_description]
+                                 if part is not None]
+                        key = ''.join(parts)
+
 
                         toAppend = True
                         for element_to_generate in elements_to_generate:
