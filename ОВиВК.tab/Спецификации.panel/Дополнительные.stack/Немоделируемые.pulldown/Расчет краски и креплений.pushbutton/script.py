@@ -1,20 +1,19 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Расчет краски и креплений'
+__title__ = "Расчет краски и креплений"
 __doc__ = "Генерирует в модели элементы с расчетом количества соответствующих материалов"
 
-
 import clr
+
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
-
+import dosymep
 import sys
 import System
-import dosymep
 import paraSpec
 import checkAnchor
 import math
@@ -22,42 +21,47 @@ import math
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
-
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from Autodesk.Revit.DB import *
 
-from Autodesk.Revit.UI import TaskDialog
-
-from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 from System import Guid
+from pyrevit import forms
 from pyrevit import revit
+from pyrevit import script
+from pyrevit import HOST_APP
+from pyrevit import EXEC_PARAMS
 from Redomine import *
 
-
-from System.Runtime.InteropServices import Marshal
-from rpw.ui.forms import select_file
-from rpw.ui.forms import TextInput
-from rpw.ui.forms import SelectFromList
-from rpw.ui.forms import Alert
-
-
-
+from dosymep_libs.bim4everyone import *
 
 #Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
-colPipes = make_col(BuiltInCategory.OST_PipeCurves)
-colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-colModel = make_col(BuiltInCategory.OST_GenericModel)
-colSystems = make_col(BuiltInCategory.OST_DuctSystem)
-colInsul = make_col(BuiltInCategory.OST_DuctInsulations)
-nameOfModel = '_Якорный элемент'
-description = 'Расчет краски и креплений'
 
+def get_elements_by_category(category):
+    col = FilteredElementCollector(doc) \
+        .OfCategory(category) \
+        .WhereElementIsNotElementType() \
+        .ToElements()
+    return col
 
-class generationElement:
+col_pipes = get_elements_by_category(BuiltInCategory.OST_PipeCurves)
+col_curves = get_elements_by_category(BuiltInCategory.OST_DuctCurves)
+col_model = get_elements_by_category(BuiltInCategory.OST_GenericModel)
+col_systems = get_elements_by_category(BuiltInCategory.OST_DuctSystem)
+col_insulation = get_elements_by_category(BuiltInCategory.OST_DuctInsulations)
+
+name_of_model = "_Якорный элемент"
+description = "Расчет краски и креплений"
+
+# Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
+col_model = \
+    [elem for elem in col_model if elem.GetElementType()
+    .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
+
+class GenerationElement:
     def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
         self.group = group
         self.name = name
@@ -69,15 +73,69 @@ class generationElement:
         self.isType = isType
         self.art = art
 
-
 genList = [
-    generationElement(group = '12. Расчетные элементы', name = "Металлические крепления для воздуховодов", mark = '', art = '', unit = 'кг.', maker = '',method = 'ФОП_ВИС_Расчет металла для креплений', collection=colCurves,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Металлические крепления для трубопроводов", mark = '', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет металла для креплений', collection= colPipes,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Изоляция для фланцев и стыков", mark = '', art = '', unit = 'м².', maker = '', method =  'ФОП_ВИС_Совместно с воздуховодом', collection= colInsul,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Краска антикоррозионная за два раза", mark = 'БТ-177', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Грунтовка для стальных труб", mark = 'ГФ-031', art = '', unit = 'кг.', maker = '', method =  'ФОП_ВИС_Расчет краски и грунтовки', collection= colPipes,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Хомут трубный под шпильку М8", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False),
-    generationElement(group = '12. Расчетные элементы', name = "Шпилька М8 1м/1шт", mark = '', art = '', unit = 'шт.', maker = '', method =  'ФОП_ВИС_Расчет хомутов', collection= colPipes,isType= False)
+    GenerationElement(
+        group = "12. Расчетные элементы",
+        name = "Металлические крепления для воздуховодов",
+        mark = "",
+        art = "",
+        unit = "кг.",
+        maker = "",
+        method = SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
+        collection=col_curves,
+        isType= False),
+    GenerationElement(
+        group = "12. Расчетные элементы",
+        name = "Металлические крепления для трубопроводов",
+        mark = "",
+        art = "",
+        unit = "кг.",
+        maker = "",
+        method =  SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
+        collection= col_pipes,
+        isType= False),
+
+    GenerationElement(
+        group = "12. Расчетные элементы",
+        name = "Краска антикоррозионная за два раза",
+        mark = "БТ-177",
+        art = "",
+        unit = "кг.",
+        maker = "",
+        method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
+        collection= col_pipes,
+        isType= False),
+    GenerationElement(
+        group = "12. Расчетные элементы",
+        name = "Грунтовка для стальных труб",
+        mark = "ГФ-031",
+        art = "",
+        unit = "кг.",
+        maker = "",
+        method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
+        collection= col_pipes,
+        isType= False),
+    GenerationElement(
+
+        group = "12. Расчетные элементы",
+        name = "Хомут трубный под шпильку М8",
+        mark = "",
+        art = "",
+        unit = "шт.",
+        maker = "",
+        method =  SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
+        collection= col_pipes,
+        isType= False),
+    GenerationElement(
+        group = "12. Расчетные элементы",
+        name = "Шпилька М8 1м/1шт",
+        mark = "",
+        art = "",
+        unit = "шт.",
+        maker = "",
+        method =  SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
+        collection= col_pipes,
+        isType= False)
 ]
 
 def roundup(divider, number):
@@ -88,60 +146,51 @@ def roundup(divider, number):
     else:
         return int(number)
 
-
-class collar_variant:
-    def __init__(self, diameter, isInsulated):
-        self.diameter = diameter
-        self.isInsulated = isInsulated
-
-
-
-class calculation_element:
+class CalculationElement:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
-    def __init__(self, element, collection, parameter, Name, Mark, Maker):
+    def __init__(self, element, collection, parameter, name, mark, maker):
         self.local_description = description
-        self.corp = str(element.LookupParameter('ФОП_Блок СМР').AsString())
-        self.sec = str(element.LookupParameter('ФОП_Секция СМР').AsString())
-        self.floor = str(element.LookupParameter('ФОП_Этаж').AsString())
+
+        self.corp = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksBlock.Name, "")
+        self.sec = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.BuildingWorksSection.Name, "")
+        self.floor = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.Level.Name, "")
+
         self.length = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
                                                          UnitTypeId.Meters)
-        self.diametr = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
-                                                     UnitTypeId.Millimeters)
 
-        if element.LookupParameter('ФОП_ВИС_Имя системы'):
-            self.system = str(element.LookupParameter('ФОП_ВИС_Имя системы').AsString())
-        else:
-            try:
-                self.system = str(element.LookupParameter('ADSK_Имя системы').AsString())
-            except:
-                self.system = 'None'
-        self.group ='12. Расчетные элементы'
-        self.name = Name
-        self.mark = Mark
-        self.art = ''
-        self.maker = Maker
-        self.unit = 'None'
+        if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+            self.pipe_diametr = UnitUtils.ConvertFromInternalUnits(
+                element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
+                UnitTypeId.Millimeters)
+
+        if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Round:
+            self.duct_diametr = UnitUtils.ConvertFromInternalUnits(
+                element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
+                UnitTypeId.Millimeters)
+
+        if element.IsExistsParam(SharedParamsConfig.Instance.VISSystemName.Name):
+            self.system = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName.Name, "")
+
+        # Этот параметр не вызываем с платформы и удаляем из всех шаблонов
+        if element.IsExistsParam("ADSK_Имя системы"):
+            self.system = element.GetSharedParamValueOrDefault("ADSK_Имя системы", "")
+
+        self.group ="12. Расчетные элементы"
+        self.name = name
+        self.mark = mark
+        self.art = ""
+        self.maker = maker
+        self.unit = "None"
         self.number = self.get_number(element, self.name)
-        self.mass = ''
-        self.comment = ''
-        self.EF = str(element.LookupParameter('ФОП_Экономическая функция').AsString())
+        self.mass = ""
+        self.comment = ""
+        self.EF = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISEconomicFunction.Name, "")
         self.parentId = element.Id.IntegerValue
-
 
         for gen in genList:
             if gen.collection == collection and parameter == gen.method:
                 self.unit = gen.unit
                 isType = gen.isType
-
-
-        if parameter == 'ФОП_ВИС_Совместно с воздуховодом':
-            pass
-
-        #self.number = self.get_number(element, self.name)
-
-        elemType = doc.GetElement(element.GetTypeId())
-        if element in colInsul and elemType.LookupParameter('ФОП_ВИС_Совместно с воздуховодом').AsInteger() == 1:
-            self.name = 'Изоляция для фланцев и стыков (' + get_ADSK_Name(element) + ')'
 
         self.key = self.EF + self.corp + self.sec + self.floor + self.system + \
                    self.group + self.name + self.mark + self.art + \
@@ -152,13 +201,13 @@ class calculation_element:
         return len(dependent_elements) > 0
 
     def mid_calculation_fix(self, coeff):
-        num = self.length / coeff
-        if num < 1:
-            num = 1
-        return int(num)
+        number = self.length / coeff
+        if number < 1:
+            number = 1
+        return int(number)
 
     def pins(self, element):
-        self.local_description = '{0} {1}, Ду{2}'.format(self.local_description, self.name,self.diametr)
+        self.local_description = "{0} {1}, Ду{2}".format(self.local_description, self.name,self.pipe_diametr)
         dict_var_pins = {15: [2, 1.5], 20: [3, 2], 25: [3.5, 2], 32: [4, 2.5], 40: [4.5, 3], 50: [5, 3], 65: [6, 4],
                             80: [6, 4], 100: [6, 4.5], 125: [7, 5]}
 
@@ -167,19 +216,19 @@ class calculation_element:
             return 0
 
         if self.is_pipe_insulated(element):
-            if self.diametr in dict_var_pins:
-                return self.mid_calculation_fix(dict_var_pins[self.diametr][0])
+            if self.pipe_diametr in dict_var_pins:
+                return self.mid_calculation_fix(dict_var_pins[self.pipe_diametr][0])
             else:
                 return self.mid_calculation_fix(7)
         else:
-            if self.diametr in dict_var_pins:
-                return self.mid_calculation_fix(dict_var_pins[self.diametr][1])
+            if self.pipe_diametr in dict_var_pins:
+                return self.mid_calculation_fix(dict_var_pins[self.pipe_diametr][1])
             else:
                 return self.mid_calculation_fix(5)
 
     def collars(self, element):
-        self.name = '{0}, Ду{1}'.format(self.name, int(self.diametr))
-        self.local_description = '{0} {1}'.format(self.local_description, self.name)
+        self.name = "{0}, Ду{1}".format(self.name, int(self.pipe_diametr))
+        self.local_description = "{0} {1}".format(self.local_description, self.name)
         dict_var_collars = {15:[2, 1.5], 20:[3, 2], 25:[3.5, 2], 32:[4, 2.5], 40:[4.5, 3], 50:[5, 3], 65:[6, 4],
                             80:[6, 4], 100:[6, 4.5], 125:[7, 5]}
 
@@ -187,34 +236,43 @@ class calculation_element:
             return 0
 
         if self.is_pipe_insulated(element):
-            if self.diametr in dict_var_collars:
-                return self.mid_calculation_fix(dict_var_collars[self.diametr][0])
+            if self.pipe_diametr in dict_var_collars:
+                return self.mid_calculation_fix(dict_var_collars[self.pipe_diametr][0])
             else:
                 return self.mid_calculation_fix(7)
         else:
-            if self.diametr in dict_var_collars:
-                return self.mid_calculation_fix(dict_var_collars[self.diametr][1])
+            if self.pipe_diametr in dict_var_collars:
+                return self.mid_calculation_fix(dict_var_collars[self.pipe_diametr][1])
             else:
                 return self.mid_calculation_fix(5)
 
     def duct_material(self, element):
-        area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) / 100
+        area = UnitUtils.ConvertFromInternalUnits(
+            element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
+            UnitTypeId.SquareMeters)  # Преобразование в квадратные метры
 
-        if str(element.DuctType.Shape) == "Round":
-            D = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM)
-            P = 3.14 * D
-        if str(element.DuctType.Shape) == "Rectangular":
-            A = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM)
-            B = 304.8 * element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)
-            P = 2 * (A + B)
+        if element.DuctType.Shape == ConnectorProfileType.Round:
+            diameter = self.duct_diametr
+            perimeter = 3.14 * diameter
+
+        if element.DuctType.Shape == ConnectorProfileType.Rectangular:
+            width = UnitUtils.ConvertFromInternalUnits(
+                element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM),
+                UnitTypeId.Millimeters)  # Преобразование в метры
+
+            height = UnitUtils.ConvertFromInternalUnits(
+                element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM),
+                UnitTypeId.Millimeters)  # Преобразование в метры
+
+            perimeter = 2 * (width + height)
 
 
-        if P < 1001:
-            kg = area * 65
-        elif P < 1801:
-            kg = area * 122
+        if perimeter < 1001:
+            kg = area * 0.65
+        elif perimeter < 1801:
+            kg = area * 1.22
         else:
-            kg = area * 225
+            kg = area * 2.25
 
         return kg
 
@@ -223,18 +281,17 @@ class calculation_element:
                             80: 0.233, 100: 0.37, 125: 0.53}
         up_coeff = 1.7
         # Запас 70% задан по согласованию.
-        if self.diametr in dict_var_p_mat:
-            key_up = dict_var_p_mat[self.diametr] * up_coeff
-            return key_up*self.length
+
+        # Сортируем ключи словаря
+        sorted_keys = sorted(dict_var_p_mat.keys())
+
+        # Ищем первый ключ, который больше или равен self.pipe_diametr
+        for key in sorted_keys:
+            if self.pipe_diametr <= key:
+                key_up = dict_var_p_mat[key] * up_coeff
+                return key_up * self.length
         else:
             return 0.62*up_coeff*self.length
-
-    def insul_stock(self, element):
-        area = element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
-        if area == None:
-            area = 0
-        area = area * 0.092903 * 0.03
-        return area
 
     def grunt(self, element):
         area = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
@@ -247,51 +304,42 @@ class calculation_element:
         return number
 
     def get_number(self, element, name):
-        Number = 1
-        if name == "Металлические крепления для трубопроводов" and element in colPipes:
-            Number = self.pipe_material(element)
-        if name == "Металлические крепления для воздуховодов" and element in colCurves:
-            Number = self.duct_material(element)
-        if name == "Изоляция для фланцев и стыков" and element in colInsul:
-            Number = self.insul_stock(element)
-        if name == "Краска антикоррозионная за два раза" and element in colPipes:
-            Number = self.colorBT(element)
-        if name == "Грунтовка для стальных труб" and element in colPipes:
-            Number = self.grunt(element)
-        if name == "Хомут трубный под шпильку М8" and element in colPipes:
-            Number = self.collars(element)
-        if name == "Шпилька М8 1м/1шт" and element in colPipes:
-            Number = self.pins(element)
+        number = 1
+        if name == "Металлические крепления для трубопроводов" and element in col_pipes:
+            number = self.pipe_material(element)
+        if name == "Металлические крепления для воздуховодов" and element in col_curves:
+            number = self.duct_material(element)
+        if name == "Краска антикоррозионная за два раза" and element in col_pipes:
+            number = self.colorBT(element)
+        if name == "Грунтовка для стальных труб" and element in col_pipes:
+            number = self.grunt(element)
+        if name == "Хомут трубный под шпильку М8" and element in col_pipes:
+            number = self.collars(element)
+        if name == "Шпилька М8 1м/1шт" and element in col_pipes:
+            number = self.pins(element)
+        return number
 
-
-        return Number
-
-
-
-def is_object_to_generate(element, genCol, collection, parameter, genList = genList):
-    if element in genCol:
-        for gen in genList:
+def is_object_to_generate(element, gen_col, collection, parameter, gen_list = genList):
+    if element in gen_col:
+        for gen in gen_list:
             if gen.collection == collection and parameter == gen.method:
                 try:
-                    elemType = doc.GetElement(element.GetTypeId())
-                    if elemType.LookupParameter(parameter).AsInteger() == 1:
+                    elem_type = doc.GetElement(element.GetTypeId())
+                    if elem_type.GetSharedParamValueOrDefault(parameter) == 1:
                         return True
                 except Exception:
                     print parameter
-                    if element.LookupParameter(parameter).AsInteger() == 1:
+                    if element.GetSharedParamValueOrDefault(parameter) == 1:
                         return True
 
-def script_execute():
+@notification()
+@log_plugin(EXEC_PARAMS.command_name)
+def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
         # при каждом повторе расчета удаляем старые версии
-        remove_models(colModel, nameOfModel, description)
+        remove_models(col_model, name_of_model, description)
 
-        #список элементов которые будут сгенерированы
-        calculation_elements = []
-
-        collpasing_objects = []
-
-        collections = [colInsul, colPipes, colCurves]
+        collections = [col_insulation, col_pipes, col_curves]
 
         elements_to_generate = []
 
@@ -305,18 +353,11 @@ def script_execute():
                     parameter = gen.method
                     genCol = gen.collection
                     if is_object_to_generate(element, genCol, collection, parameter):
-                        definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
-
-                        #
+                        definition = CalculationElement(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
                         key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
-                                          definition.group + definition.name + definition.mark + definition.art + \
-                                          definition.maker + definition.local_description
-
-                        # key = definition.corp + definition.sec + definition.floor + definition.system + \
-                        #                   definition.group + definition.name + definition.mark + definition.art + \
-                        #                   definition.maker + definition.local_description
-
+                              definition.group + definition.name + definition.mark + definition.art + \
+                              definition.maker + definition.local_description
 
                         toAppend = True
                         for element_to_generate in elements_to_generate:
@@ -329,24 +370,26 @@ def script_execute():
 
         #иначе шпилек получится дробное число, а они в штуках
         for el in elements_to_generate:
-            if el.name == 'Шпилька М8 1м/1шт':
+            if el.name == "Шпилька М8 1м/1шт":
                 el.number = int(math.ceil(el.number))
 
-        new_position(elements_to_generate, temporary, nameOfModel, description)
+        new_position(elements_to_generate, temporary, name_of_model, description)
 
-
-
-temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, nameOfModel)
+temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, name_of_model)
 
 if isItFamily():
-    print 'Надстройка не предназначена для работы с семействами'
-    sys.exit()
+    forms.alert(
+        "Надстройка не предназначена для работы с семействами",
+        "Ошибка",
+        exitscript=True
+        )
 
-if temporary == None:
-    print 'Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.'
-    sys.exit()
-
-
+if temporary is None:
+    forms.alert(
+        "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
+        "Ошибка",
+        exitscript=True
+        )
 
 status = paraSpec.check_parameters()
 if not status:
