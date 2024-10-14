@@ -61,7 +61,7 @@ col_model = \
     [elem for elem in col_model if elem.GetElementType()
     .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
 
-class generationElement:
+class GenerationElement:
     def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
         self.group = group
         self.name = name
@@ -74,7 +74,7 @@ class generationElement:
         self.art = art
 
 genList = [
-    generationElement(
+    GenerationElement(
         group = "12. Расчетные элементы",
         name = "Металлические крепления для воздуховодов",
         mark = "",
@@ -84,7 +84,7 @@ genList = [
         method = SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
         collection=col_curves,
         isType= False),
-    generationElement(
+    GenerationElement(
         group = "12. Расчетные элементы",
         name = "Металлические крепления для трубопроводов",
         mark = "",
@@ -95,7 +95,7 @@ genList = [
         collection= col_pipes,
         isType= False),
 
-    generationElement(
+    GenerationElement(
         group = "12. Расчетные элементы",
         name = "Краска антикоррозионная за два раза",
         mark = "БТ-177",
@@ -105,7 +105,7 @@ genList = [
         method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
         collection= col_pipes,
         isType= False),
-    generationElement(
+    GenerationElement(
         group = "12. Расчетные элементы",
         name = "Грунтовка для стальных труб",
         mark = "ГФ-031",
@@ -115,7 +115,7 @@ genList = [
         method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
         collection= col_pipes,
         isType= False),
-    generationElement(
+    GenerationElement(
 
         group = "12. Расчетные элементы",
         name = "Хомут трубный под шпильку М8",
@@ -126,7 +126,7 @@ genList = [
         method =  SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
         collection= col_pipes,
         isType= False),
-    generationElement(
+    GenerationElement(
         group = "12. Расчетные элементы",
         name = "Шпилька М8 1м/1шт",
         mark = "",
@@ -146,7 +146,7 @@ def roundup(divider, number):
     else:
         return int(number)
 
-class calculation_element:
+class CalculationElement:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
     def __init__(self, element, collection, parameter, name, mark, maker):
         self.local_description = description
@@ -353,7 +353,7 @@ def script_execute(plugin_logger):
                     parameter = gen.method
                     genCol = gen.collection
                     if is_object_to_generate(element, genCol, collection, parameter):
-                        definition = calculation_element(element, collection, parameter, binding_name, binding_mark, binding_maker)
+                        definition = CalculationElement(element, collection, parameter, binding_name, binding_mark, binding_maker)
 
                         key = definition.EF + definition.corp + definition.sec + definition.floor + definition.system + \
                               definition.group + definition.name + definition.mark + definition.art + \
