@@ -25,7 +25,6 @@ from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from Autodesk.Revit.DB import *
 
-from Autodesk.Revit.UI import TaskDialog
 from System.Collections.Generic import List
 from System import Guid
 from pyrevit import forms
@@ -40,7 +39,6 @@ from dosymep_libs.bim4everyone import *
 #Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
-
 
 def get_elements_by_category(category):
     col = FilteredElementCollector(doc) \
@@ -382,15 +380,17 @@ def script_execute(plugin_logger):
 temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, name_of_model)
 
 if isItFamily():
-    TaskDialog.Show(
-        "Ошибка",
-        "Надстройка не предназначена для работы с семействами")
+    forms.alert(
+        "Надстройка не предназначена для работы с семействами",
+        "Ошибка"
+        )
     sys.exit()
 
 if temporary is None:
-    TaskDialog.Show(
-        "Ошибка",
-        "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.")
+    forms.alert(
+        "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
+        "Ошибка"
+        )
     sys.exit()
 
 status = paraSpec.check_parameters()
