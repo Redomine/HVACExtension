@@ -23,7 +23,6 @@ from System.Collections.Generic import *
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI.Selection import Selection
 from Autodesk.DesignScript.Geometry import *
-from Autodesk.Revit.UI import TaskDialog
 
 
 import RevitServices
@@ -229,7 +228,7 @@ def get_list_of_elements(method):
     filtered = filter_elements(elements)
 
     if len(filtered) == 0:
-        TaskDialog.Show("Ошибка", "Элементы не выбраны")
+        forms.alert("Элементы не выбраны", "Ошибка")
         sys.exit()
 
     return filtered
@@ -282,7 +281,7 @@ def script_execute(plugin_logger):
                     result_error.append(element)
 
 if doc.IsFamilyDocument:
-    TaskDialog.Show("Ошибка", "Надстройка не предназначена для работы с семействами")
+    forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка" )
     sys.exit()
 
 script_execute()
