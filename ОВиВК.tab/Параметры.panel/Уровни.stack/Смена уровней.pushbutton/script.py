@@ -189,7 +189,7 @@ def get_selected_mode():
                                        title="Выберите метод привязки",
                                        button_name="Применить")
     if method is None:
-        sys.exit()
+        forms.alert("Метод не выбран", "Ошибка", exitscript=True)
     return method
 
 def get_selected_level(method):
@@ -208,7 +208,7 @@ def get_selected_level(method):
                                                title="Выберите уровень",
                                                button_name="Применить")
         if level_name is None:
-            sys.exit()
+            forms.alert("Уровень не выбран", "Ошибка", exitscript=True)
 
         for levelEl in levelCol:
             if levelEl.Name == level_name:
@@ -228,8 +228,7 @@ def get_list_of_elements(method):
     filtered = filter_elements(elements)
 
     if len(filtered) == 0:
-        forms.alert("Элементы не выбраны", "Ошибка")
-        sys.exit()
+        forms.alert("Элементы не выбраны", "Ошибка", exitscript=True)
 
     return filtered
 
@@ -281,7 +280,6 @@ def script_execute(plugin_logger):
                     result_error.append(element)
 
 if doc.IsFamilyDocument:
-    forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка" )
-    sys.exit()
+    forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True )
 
 script_execute()
