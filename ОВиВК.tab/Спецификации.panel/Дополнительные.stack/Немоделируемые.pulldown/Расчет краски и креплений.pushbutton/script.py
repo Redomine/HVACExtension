@@ -33,6 +33,7 @@ from pyrevit import script
 from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
 from Redomine import *
+from UnmodelingClassLibrary import  *
 
 from dosymep_libs.bim4everyone import *
 
@@ -61,90 +62,7 @@ col_model = \
     [elem for elem in col_model if elem.GetElementType()
     .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
 
-class GenerationElement:
-    def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
-        self.group = group
-        self.name = name
-        self.mark = mark
-        self.maker = maker
-        self.unit = unit
-        self.collection = collection
-        self.method = method
-        self.isType = isType
-        self.art = art
-
-genList = [
-    GenerationElement(
-        group = "12. Расчетные элементы",
-        name = "Металлические крепления для воздуховодов",
-        mark = "",
-        art = "",
-        unit = "кг.",
-        maker = "",
-        method = SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
-        collection=col_curves,
-        isType= False),
-    GenerationElement(
-        group = "12. Расчетные элементы",
-        name = "Металлические крепления для трубопроводов",
-        mark = "",
-        art = "",
-        unit = "кг.",
-        maker = "",
-        method =  SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
-        collection= col_pipes,
-        isType= False),
-
-    GenerationElement(
-        group = "12. Расчетные элементы",
-        name = "Краска антикоррозионная за два раза",
-        mark = "БТ-177",
-        art = "",
-        unit = "кг.",
-        maker = "",
-        method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
-        collection= col_pipes,
-        isType= False),
-    GenerationElement(
-        group = "12. Расчетные элементы",
-        name = "Грунтовка для стальных труб",
-        mark = "ГФ-031",
-        art = "",
-        unit = "кг.",
-        maker = "",
-        method =  SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
-        collection= col_pipes,
-        isType= False),
-    GenerationElement(
-
-        group = "12. Расчетные элементы",
-        name = "Хомут трубный под шпильку М8",
-        mark = "",
-        art = "",
-        unit = "шт.",
-        maker = "",
-        method =  SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
-        collection= col_pipes,
-        isType= False),
-    GenerationElement(
-        group = "12. Расчетные элементы",
-        name = "Шпилька М8 1м/1шт",
-        mark = "",
-        art = "",
-        unit = "шт.",
-        maker = "",
-        method =  SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
-        collection= col_pipes,
-        isType= False)
-]
-
-def roundup(divider, number):
-    x = number/divider
-    y = int(number/divider)
-    if x - y > 0.2:
-        return int(number) + 1
-    else:
-        return int(number)
+generation_rules_list = get_generation_element_list()
 
 class CalculationElement:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
@@ -159,12 +77,12 @@ class CalculationElement:
                                                          UnitTypeId.Meters)
 
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-            self.pipe_diametr = UnitUtils.ConvertFromInternalUnits(
+            self.pipe_diameter = UnitUtils.ConvertFromInternalUnits(
                 element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
                 UnitTypeId.Millimeters)
 
         if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Round:
-            self.duct_diametr = UnitUtils.ConvertFromInternalUnits(
+            self.duct_diameter = UnitUtils.ConvertFromInternalUnits(
                 element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
                 UnitTypeId.Millimeters)
 
@@ -187,7 +105,7 @@ class CalculationElement:
         self.EF = element.GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction)
         self.parentId = element.Id.IntegerValue
 
-        for gen in genList:
+        for gen in generation_rules_list:
             if gen.collection == collection and parameter == gen.method:
                 self.unit = gen.unit
                 isType = gen.isType
@@ -196,7 +114,6 @@ class CalculationElement:
                                    self.group, self.name, self.mark, self.art,
                                    self.maker, self.local_description] if part is not None]
         self.key = ''.join(parts)
-
 
     def is_pipe_insulated(self, element):
         dependent_elements = element.GetDependentElements(self.pipe_insulation_filter)
@@ -209,7 +126,7 @@ class CalculationElement:
         return int(number)
 
     def pins(self, element):
-        self.local_description = "{0} {1}, Ду{2}".format(self.local_description, self.name,self.pipe_diametr)
+        self.local_description = "{0} {1}, Ду{2}".format(self.local_description, self.name, self.pipe_diameter)
         dict_var_pins = {15: [2, 1.5], 20: [3, 2], 25: [3.5, 2], 32: [4, 2.5], 40: [4.5, 3], 50: [5, 3], 65: [6, 4],
                             80: [6, 4], 100: [6, 4.5], 125: [7, 5]}
 
@@ -218,18 +135,18 @@ class CalculationElement:
             return 0
 
         if self.is_pipe_insulated(element):
-            if self.pipe_diametr in dict_var_pins:
-                return self.mid_calculation_fix(dict_var_pins[self.pipe_diametr][0])
+            if self.pipe_diameter in dict_var_pins:
+                return self.mid_calculation_fix(dict_var_pins[self.pipe_diameter][0])
             else:
                 return self.mid_calculation_fix(7)
         else:
-            if self.pipe_diametr in dict_var_pins:
-                return self.mid_calculation_fix(dict_var_pins[self.pipe_diametr][1])
+            if self.pipe_diameter in dict_var_pins:
+                return self.mid_calculation_fix(dict_var_pins[self.pipe_diameter][1])
             else:
                 return self.mid_calculation_fix(5)
 
     def collars(self, element):
-        self.name = "{0}, Ду{1}".format(self.name, int(self.pipe_diametr))
+        self.name = "{0}, Ду{1}".format(self.name, int(self.pipe_diameter))
         self.local_description = "{0} {1}".format(self.local_description, self.name)
         dict_var_collars = {15:[2, 1.5], 20:[3, 2], 25:[3.5, 2], 32:[4, 2.5], 40:[4.5, 3], 50:[5, 3], 65:[6, 4],
                             80:[6, 4], 100:[6, 4.5], 125:[7, 5]}
@@ -238,13 +155,13 @@ class CalculationElement:
             return 0
 
         if self.is_pipe_insulated(element):
-            if self.pipe_diametr in dict_var_collars:
-                return self.mid_calculation_fix(dict_var_collars[self.pipe_diametr][0])
+            if self.pipe_diameter in dict_var_collars:
+                return self.mid_calculation_fix(dict_var_collars[self.pipe_diameter][0])
             else:
                 return self.mid_calculation_fix(7)
         else:
-            if self.pipe_diametr in dict_var_collars:
-                return self.mid_calculation_fix(dict_var_collars[self.pipe_diametr][1])
+            if self.pipe_diameter in dict_var_collars:
+                return self.mid_calculation_fix(dict_var_collars[self.pipe_diameter][1])
             else:
                 return self.mid_calculation_fix(5)
 
@@ -254,7 +171,7 @@ class CalculationElement:
             UnitTypeId.SquareMeters)  # Преобразование в квадратные метры
 
         if element.DuctType.Shape == ConnectorProfileType.Round:
-            diameter = self.duct_diametr
+            diameter = self.duct_diameter
             perimeter = 3.14 * diameter
 
         if element.DuctType.Shape == ConnectorProfileType.Rectangular:
@@ -289,7 +206,7 @@ class CalculationElement:
 
         # Ищем первый ключ, который больше или равен self.pipe_diametr
         for key in sorted_keys:
-            if self.pipe_diametr <= key:
+            if self.pipe_diameter <= key:
                 key_up = dict_var_p_mat[key] * up_coeff
                 return key_up * self.length
         else:
@@ -321,18 +238,14 @@ class CalculationElement:
             number = self.pins(element)
         return number
 
-def is_object_to_generate(element, gen_col, collection, parameter, gen_list = genList):
+def is_object_to_generate(element, gen_col, collection, parameter):
     if element in gen_col:
-        for gen in gen_list:
+        for gen in generation_rules_list:
             if gen.collection == collection and parameter == gen.method:
-                try:
-                    elem_type = doc.GetElement(element.GetTypeId())
-                    if elem_type.GetParamValueOrDefault(parameter) == 1:
-                        return True
-                except Exception:
-                    print parameter
-                    if element.GetParamValueOrDefault(parameter) == 1:
-                        return True
+                elem_type = doc.GetElementType()
+                if elem_type.GetParamValueOrDefault(parameter) == 1:
+                    return True
+
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -348,14 +261,14 @@ def script_execute(plugin_logger):
         #перебираем элементы и выясняем какие из них подлежат генерации
         for collection in collections:
             for element in collection:
-                for gen in genList:
-                    binding_name = gen.name
-                    binding_mark = gen.mark
-                    binding_maker = gen.maker
-                    parameter = gen.method
-                    genCol = gen.collection
-                    if is_object_to_generate(element, genCol, collection, parameter):
-                        definition = CalculationElement(element, collection, parameter, binding_name, binding_mark, binding_maker)
+                for rule_set in generation_rules_list:
+                    set_name = rule_set.name
+                    set_mark = rule_set.mark
+                    set_maker = rule_set.maker
+                    set_parameter = rule_set.method
+                    set_collection = rule_set.collection
+                    if is_object_to_generate(element, set_collection, collection, set_parameter):
+                        definition = CalculationElement(element, collection, set_parameter, set_name, set_mark, set_maker)
 
                         parts = [part for part in [definition.EF, definition.corp, definition.sec, definition.floor,
                                                    definition.system,definition.group, definition.name, definition.mark,
