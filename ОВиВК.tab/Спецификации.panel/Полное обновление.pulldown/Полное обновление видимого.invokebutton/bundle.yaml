@@ -4,9 +4,11 @@ title:
 
 tooltip:
   ru: >- 
-    Выполняет обновление спецификации, обновление имени системы, обновление функции и формирует имя для видимых элементов
+    Выполняет обновление спецификации, обновление имени системы, обновление функции и формирует имя для видимых элементов.
+    Под видимыми элементами подразумевается все, что видимо на текущем активном виде модели.
   en_us: >- 
-    Performs specification update, system name update, function update and generates name for visible elements
+    Performs specification update, system name update, function update and generates name for visible elements.
+    Visible elements refers to everything that is visible in the currently active view of the model.
 
 assembly: RevitMechanicalSpecification.dll
 command_class: RevitMechanicalVisibleFullRefreshCmd

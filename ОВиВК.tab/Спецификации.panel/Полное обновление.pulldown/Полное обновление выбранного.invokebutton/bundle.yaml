@@ -4,9 +4,11 @@ title:
 
 tooltip:
   ru: >- 
-    Выполняет обновление спецификации, обновление имени системы, обновление функции и формирует имя для выбранных элементов
+    Выполняет обновление спецификации, обновление имени системы, обновление функции и формирует имя для выбранных элементов.
+    Требуется выделить(курсором, через спецификацию или любым другим методом) элементы ВИС перед запуском команды.
   en_us: >- 
-    Performs specification update, system name update, function update and generates name for selected elements
+    Performs specification update, system name update, function update and generates name for selected elements.
+    It is required to select (with a cursor, via a specification or any other method) the elements before running the command.
 
 assembly: RevitMechanicalSpecification.dll
 command_class: RevitMechanicalSelectedFullRefreshCmd
