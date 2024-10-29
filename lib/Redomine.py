@@ -327,75 +327,75 @@ def setElement(element, name, setting):
 
 
 # Генерирует пустые элементы в рабочем наборе немоделируемых
-def new_position(calculation_elements, temporary, famName, description):
-    # Создаем заглушки по элементам, собранным из таблицы
-    loc = XYZ(0, 0, 0)
-
-    temporary.Activate()
-    col_model = []
-
-    # Находим рабочий набор "99_Немоделируемые элементы"
-    fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
-    workset_id = None
-    for ws in fws:
-        if ws.Name == '99_Немоделируемые элементы':
-            workset_id = ws.Id
-            break
-
-    if workset_id is None:
-        print('Не удалось найти рабочий набор "99_Немоделируемые элементы", проверьте список наборов')
-        return
-
-    # Создаем элементы и добавляем их в colModel
-    for _ in calculation_elements:
-        family_inst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
-        col_model.append(family_inst)
-
-    # Фильтруем элементы и присваиваем рабочий набор
-    for element in col_model:
-        try:
-            elem_type = doc.GetElement(element.GetTypeId())
-            if elem_type.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString() == famName:
-                if not element.LookupParameter('ФОП_ВИС_Назначение').AsString():
-                    ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
-                    ews.Set(workset_id.IntegerValue)
-        except Exception as e:
-            print(f'Ошибка при присвоении рабочего набора: {e}')
-
-    index = 1
-    # Для первого элемента списка заглушек присваиваем все параметры, после чего удаляем его из списка
-    for position in calculation_elements:
-        group = position.group
-        if description != 'Пустая строка':
-            posGroup = f'{position.group}_{position.name}_{position.mark}_{index}'
-            index += 1
-            if description in ['Расходники изоляции', 'Расчет краски и креплений']:
-                posGroup = f'{position.group}_{position.name}_{position.mark}'
-            group = posGroup
-
-        dummy = col_model.pop(0) if description != 'Пустая строка' else family_inst
-
-        setElement(dummy, 'ФОП_Блок СМР', position.corp)
-        setElement(dummy, 'ФОП_Секция СМР', position.sec)
-        setElement(dummy, 'ФОП_Этаж', position.floor)
-        setElement(dummy, 'ФОП_ВИС_Имя системы', position.system)
-        setElement(dummy, 'ФОП_ВИС_Группирование', group)
-        setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', position.name)
-        setElement(dummy, 'ФОП_ВИС_Марка', position.mark)
-        setElement(dummy, 'ФОП_ВИС_Код изделия', position.art)
-        setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', position.maker)
-        setElement(dummy, 'ФОП_ВИС_Единица измерения', position.unit)
-        setElement(dummy, 'ФОП_ВИС_Число', position.number)
-        setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
-        setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
-        setElement(dummy, 'ФОП_Экономическая функция', position.EF)
-
-        # Фильтрация шпилек под разные диаметры
-        setElement(dummy, 'ФОП_ВИС_Назначение',
-                   description if description != 'Расчет краски и креплений' else position.local_description)
-
-        if description != 'Пустая строка':
-            col_model.pop(0)
+# def new_position(calculation_elements, temporary, famName, description):
+#     # Создаем заглушки по элементам, собранным из таблицы
+#     loc = XYZ(0, 0, 0)
+#
+#     temporary.Activate()
+#     col_model = []
+#
+#     # Находим рабочий набор "99_Немоделируемые элементы"
+#     fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+#     workset_id = None
+#     for ws in fws:
+#         if ws.Name == '99_Немоделируемые элементы':
+#             workset_id = ws.Id
+#             break
+#
+#     if workset_id is None:
+#         print('Не удалось найти рабочий набор "99_Немоделируемые элементы", проверьте список наборов')
+#         return
+#
+#     # Создаем элементы и добавляем их в colModel
+#     for _ in calculation_elements:
+#         family_inst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
+#         col_model.append(family_inst)
+#
+#     # Фильтруем элементы и присваиваем рабочий набор
+#     for element in col_model:
+#         try:
+#             elem_type = doc.GetElement(element.GetTypeId())
+#             if elem_type.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString() == famName:
+#                 if not element.LookupParameter('ФОП_ВИС_Назначение').AsString():
+#                     ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+#                     ews.Set(workset_id.IntegerValue)
+#         except Exception as e:
+#             print 'Ошибка при присвоении рабочего набора'
+#
+#     index = 1
+#     # Для первого элемента списка заглушек присваиваем все параметры, после чего удаляем его из списка
+#     for position in calculation_elements:
+#         group = position.group
+#         if description != 'Пустая строка':
+#             posGroup = f'{position.group}_{position.name}_{position.mark}_{index}'
+#             index += 1
+#             if description in ['Расходники изоляции', 'Расчет краски и креплений']:
+#                 posGroup = f'{position.group}_{position.name}_{position.mark}'
+#             group = posGroup
+#
+#         dummy = col_model.pop(0) if description != 'Пустая строка' else family_inst
+#
+#         setElement(dummy, 'ФОП_Блок СМР', position.corp)
+#         setElement(dummy, 'ФОП_Секция СМР', position.sec)
+#         setElement(dummy, 'ФОП_Этаж', position.floor)
+#         setElement(dummy, 'ФОП_ВИС_Имя системы', position.system)
+#         setElement(dummy, 'ФОП_ВИС_Группирование', group)
+#         setElement(dummy, 'ФОП_ВИС_Наименование комбинированное', position.name)
+#         setElement(dummy, 'ФОП_ВИС_Марка', position.mark)
+#         setElement(dummy, 'ФОП_ВИС_Код изделия', position.art)
+#         setElement(dummy, 'ФОП_ВИС_Завод-изготовитель', position.maker)
+#         setElement(dummy, 'ФОП_ВИС_Единица измерения', position.unit)
+#         setElement(dummy, 'ФОП_ВИС_Число', position.number)
+#         setElement(dummy, 'ФОП_ВИС_Масса', position.mass)
+#         setElement(dummy, 'ФОП_ВИС_Примечание', position.comment)
+#         setElement(dummy, 'ФОП_Экономическая функция', position.EF)
+#
+#         # Фильтрация шпилек под разные диаметры
+#         setElement(dummy, 'ФОП_ВИС_Назначение',
+#                    description if description != 'Расчет краски и креплений' else position.local_description)
+#
+#         if description != 'Пустая строка':
+#             col_model.pop(0)
 
 #для прогона новых ревизий генерации немоделируемых: стирает элмент с переданным именем модели
 def remove_models(colModel, famName, description):

@@ -17,7 +17,7 @@ from pyrevit import revit
 from pyrevit import script
 from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
-
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep_libs.bim4everyone import *
 
 class GenerationElement:
@@ -219,7 +219,7 @@ def new_position(doc, calculation_elements, temporary, famName, description):
                     ews = element.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
                     ews.Set(workset_id.IntegerValue)
         except Exception as e:
-            print('Ошибка при присвоении рабочего набора: {}'.format(e))
+            print 'Ошибка при присвоении рабочего набора'
 
     index = 1
     # Для первого элемента списка заглушек присваиваем все параметры, после чего удаляем его из списка

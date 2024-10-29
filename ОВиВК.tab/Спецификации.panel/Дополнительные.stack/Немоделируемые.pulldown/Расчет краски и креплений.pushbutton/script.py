@@ -12,8 +12,7 @@ clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
-import sys
-import System
+
 import paraSpec
 import checkAnchor
 import math
@@ -21,17 +20,8 @@ import math
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
-from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
-from Autodesk.Revit.DB import *
 
-from System.Collections.Generic import List
-from System import Guid
-from pyrevit import forms
-from pyrevit import revit
-from pyrevit import script
-from pyrevit import HOST_APP
-from pyrevit import EXEC_PARAMS
 from Redomine import *
 from UnmodelingClassLibrary import  *
 
@@ -47,6 +37,17 @@ def get_elements_by_category(category):
         .WhereElementIsNotElementType() \
         .ToElements()
     return col
+
+def get_elements_types_by_category(category):
+    col = FilteredElementCollector(doc) \
+        .OfCategory(category) \
+        .WhereElementIsElementType() \
+        .ToElements()
+    return col
+
+test = get_elements_types_by_category(BuiltInCategory.OST_DuctCurves)
+for x in test:
+    print x.Id
 
 col_pipes = get_elements_by_category(BuiltInCategory.OST_PipeCurves)
 col_curves = get_elements_by_category(BuiltInCategory.OST_DuctCurves)
@@ -314,4 +315,3 @@ if not status:
     anchor = checkAnchor.check_anchor(showText = False)
     if anchor:
         script_execute()
-
