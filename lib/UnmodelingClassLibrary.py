@@ -21,14 +21,14 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep_libs.bim4everyone import *
 
 class GenerationElement:
-    def __init__(self, group, name, mark, art, maker, unit, method, category, isType):
+    def __init__(self, group, name, mark, art, maker, unit, method_name, category, isType):
         self.group = group
         self.name = name
         self.mark = mark
         self.maker = maker
         self.unit = unit
-        self.collection = category
-        self.method = method
+        self.category = category
+        self.method_name = method_name
         self.isType = isType
         self.art = art
 
@@ -65,7 +65,7 @@ def get_generation_element_list():
             art="",
             unit="кг.",
             maker="",
-            method=SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
+            method_name=SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
             category=BuiltInCategory.OST_DuctCurves,
             isType=False),
         GenerationElement(
@@ -75,7 +75,7 @@ def get_generation_element_list():
             art="",
             unit="кг.",
             maker="",
-            method=SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
+            method_name=SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
             category=BuiltInCategory.OST_PipeCurves,
             isType=False),
 
@@ -86,7 +86,7 @@ def get_generation_element_list():
             art="",
             unit="кг.",
             maker="",
-            method=SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
+            method_name=SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
             category=BuiltInCategory.OST_PipeCurves,
             isType=False),
         GenerationElement(
@@ -96,7 +96,7 @@ def get_generation_element_list():
             art="",
             unit="кг.",
             maker="",
-            method=SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
+            method_name=SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
             category=BuiltInCategory.OST_PipeCurves,
             isType=False),
         GenerationElement(
@@ -107,7 +107,7 @@ def get_generation_element_list():
             art="",
             unit="шт.",
             maker="",
-            method=SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
+            method_name=SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
             category=BuiltInCategory.OST_PipeCurves,
             isType=False),
         GenerationElement(
@@ -117,7 +117,7 @@ def get_generation_element_list():
             art="",
             unit="шт.",
             maker="",
-            method=SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
+            method_name=SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
             category=BuiltInCategory.OST_PipeCurves,
             isType=False)
     ]

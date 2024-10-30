@@ -22,8 +22,10 @@ clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from dosymep.Bim4Everyone import *
+from dosymep.Bim4Everyone.SharedParams import *
 
-
+from collections import defaultdict
 from UnmodelingClassLibrary import  *
 
 from dosymep_libs.bim4everyone import *
@@ -47,22 +49,44 @@ def get_elements_types_by_category(category):
         .ToElements()
     return col
 
-def get_calculation_elements(types, calculation_name):
+def get_calculation_elements(types, calculation_name, builtin_category):
+    result_list = []
+
     for type in types:
         if type.GetSharedParamValueOrDefault(calculation_name) == 1:
-            list = []
-            el_ids = type.GetSimilarTypes()
-            for el_id in el_ids:
-                list.append(doc.GetElement(el_id))
+            for el_id in type.GetDependentElements(None):
+                element = doc.GetElement(el_id)
+                category = element.Category
+                if category and category.IsId(builtin_category) and element.GetTypeId() != ElementId.InvalidElementId:
+                    result_list.append(element)
 
+    return result_list
 
+def split_calculation_elements_list(elements):
+    # Создаем словарь для группировки элементов по ключу
+    grouped_elements = defaultdict(list)
 
+    for element in elements:
 
-col_pipes = get_elements_by_category(BuiltInCategory.OST_PipeCurves)
-col_curves = get_elements_by_category(BuiltInCategory.OST_DuctCurves)
+        shared_function = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction.Name, "Нет значения")
+        shared_system = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName.Name, "Нет значения")
+        function_system_key = shared_function + "_" + shared_system
+
+        # Добавляем элемент в соответствующий список в словаре
+        grouped_elements[function_system_key].append(element)
+
+    # Преобразуем значения словаря в список списков
+    lists = list(grouped_elements.values())
+
+    print len(lists)
+    # for x in lists:
+    #     print x
+
+    return lists
+
 col_model = get_elements_by_category(BuiltInCategory.OST_GenericModel)
 col_systems = get_elements_by_category(BuiltInCategory.OST_DuctSystem)
-col_insulation = get_elements_by_category(BuiltInCategory.OST_DuctInsulations)
+
 
 name_of_model = "_Якорный элемент"
 description = "Расчет краски и креплений"
@@ -75,9 +99,6 @@ description = "Расчет краски и креплений"
 col_model = \
     [elem for elem in col_model if elem.GetElementType()
     .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
-
-generation_rules_list = get_generation_element_list()
-
 
 class CalculationElement:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
@@ -254,66 +275,21 @@ class CalculationElement:
         return number
 
 
-def is_object_to_generate(element, gen_col, collection, parameter):
-    if element in gen_col:
-        for gen in generation_rules_list:
-            if gen.collection == collection and parameter == gen.method:
-                elem_type = doc.GetElementType()
-                if elem_type.GetParamValueOrDefault(parameter) == 1:
-                    return True
-
-
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
+        generation_rules_list = get_generation_element_list()
 
+        for rule_set in generation_rules_list:
+            elem_types = get_elements_types_by_category(rule_set.category)
+            elements = get_calculation_elements(elem_types, rule_set.method_name, rule_set.category)
 
-        test = get_elements_types_by_category(BuiltInCategory.OST_DuctCurves)
-        get_calculation_elements(test, SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name)
+            split_calculation_elements_list(elements)
+
         # при каждом повторе расчета удаляем старые версии
         #remove_models(col_model, name_of_model, description)
 
-        # collections = [col_insulation, col_pipes, col_curves]
-        #
-        # elements_to_generate = []
-        #
-        # #перебираем элементы и выясняем какие из них подлежат генерации
-        # for collection in collections:
-        #     for element in collection:
-        #         for rule_set in generation_rules_list:
-        #             set_name = rule_set.name
-        #             set_mark = rule_set.mark
-        #             set_maker = rule_set.maker
-        #             set_parameter = rule_set.method
-        #             set_collection = rule_set.collection
-        #             if is_object_to_generate(element, set_collection, collection, set_parameter):
-        #                 definition = CalculationElement(element, collection, set_parameter, set_name, set_mark, set_maker)
-        #
-        #                 parts = [part for part in [definition.EF, definition.corp, definition.sec, definition.floor,
-        #                                            definition.system,definition.group, definition.name, definition.mark,
-        #                                            definition.art, definition.maker, definition.local_description]
-        #                          if part is not None]
-        #                 key = ''.join(parts)
-        #
-        #
-        #                 toAppend = True
-        #                 for element_to_generate in elements_to_generate:
-        #                     if element_to_generate.key == key:
-        #                         toAppend = False
-        #                         element_to_generate.number = element_to_generate.number + definition.number
-        #
-        #                 if toAppend:
-        #                     elements_to_generate.append(definition)
-        #
-        # #иначе шпилек получится дробное число, а они в штуках
-        # for el in elements_to_generate:
-        #     if el.name == "Шпилька М8 1м/1шт":
-        #         el.number = int(math.ceil(el.number))
-        #
-        # new_position(elements_to_generate, temporary, name_of_model, description)
-
-#temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, name_of_model)
 
 # if isItFamily():
 #     forms.alert(
