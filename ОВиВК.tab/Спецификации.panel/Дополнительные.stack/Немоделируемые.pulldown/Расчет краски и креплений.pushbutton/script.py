@@ -6,6 +6,8 @@ __doc__ = "Генерирует в модели элементы с расчет
 
 import clr
 
+from paraSpec import shared_parameter
+
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
@@ -13,7 +15,6 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
 
-import paraSpec
 import checkAnchor
 import math
 
@@ -22,10 +23,11 @@ clr.ImportExtensions(dosymep.Bim4Everyone)
 
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 
-from Redomine import *
+
 from UnmodelingClassLibrary import  *
 
 from dosymep_libs.bim4everyone import *
+
 
 #Исходные данные
 doc = __revit__.ActiveUIDocument.Document
@@ -45,9 +47,16 @@ def get_elements_types_by_category(category):
         .ToElements()
     return col
 
-test = get_elements_types_by_category(BuiltInCategory.OST_DuctCurves)
-for x in test:
-    print x.Id
+def get_calculation_elements(types, calculation_name):
+    for type in types:
+        if type.GetSharedParamValueOrDefault(calculation_name) == 1:
+            list = []
+            el_ids = type.GetSimilarTypes()
+            for el_id in el_ids:
+                list.append(doc.GetElement(el_id))
+
+
+
 
 col_pipes = get_elements_by_category(BuiltInCategory.OST_PipeCurves)
 col_curves = get_elements_by_category(BuiltInCategory.OST_DuctCurves)
@@ -58,12 +67,17 @@ col_insulation = get_elements_by_category(BuiltInCategory.OST_DuctInsulations)
 name_of_model = "_Якорный элемент"
 description = "Расчет краски и креплений"
 
+# VISIsPaintCalculation Расчет краски и грунтовки
+# VISIsClampsCalculation ФОП_ВИС_Расчет хомутов
+# VISIsFasteningMetalCalculation Расчет металла для креплений
+
 # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
 col_model = \
     [elem for elem in col_model if elem.GetElementType()
     .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
 
 generation_rules_list = get_generation_element_list()
+
 
 class CalculationElement:
     pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
@@ -239,6 +253,7 @@ class CalculationElement:
             number = self.pins(element)
         return number
 
+
 def is_object_to_generate(element, gen_col, collection, parameter):
     if element in gen_col:
         for gen in generation_rules_list:
@@ -252,66 +267,67 @@ def is_object_to_generate(element, gen_col, collection, parameter):
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
+
+
+        test = get_elements_types_by_category(BuiltInCategory.OST_DuctCurves)
+        get_calculation_elements(test, SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name)
         # при каждом повторе расчета удаляем старые версии
-        remove_models(col_model, name_of_model, description)
+        #remove_models(col_model, name_of_model, description)
 
-        collections = [col_insulation, col_pipes, col_curves]
+        # collections = [col_insulation, col_pipes, col_curves]
+        #
+        # elements_to_generate = []
+        #
+        # #перебираем элементы и выясняем какие из них подлежат генерации
+        # for collection in collections:
+        #     for element in collection:
+        #         for rule_set in generation_rules_list:
+        #             set_name = rule_set.name
+        #             set_mark = rule_set.mark
+        #             set_maker = rule_set.maker
+        #             set_parameter = rule_set.method
+        #             set_collection = rule_set.collection
+        #             if is_object_to_generate(element, set_collection, collection, set_parameter):
+        #                 definition = CalculationElement(element, collection, set_parameter, set_name, set_mark, set_maker)
+        #
+        #                 parts = [part for part in [definition.EF, definition.corp, definition.sec, definition.floor,
+        #                                            definition.system,definition.group, definition.name, definition.mark,
+        #                                            definition.art, definition.maker, definition.local_description]
+        #                          if part is not None]
+        #                 key = ''.join(parts)
+        #
+        #
+        #                 toAppend = True
+        #                 for element_to_generate in elements_to_generate:
+        #                     if element_to_generate.key == key:
+        #                         toAppend = False
+        #                         element_to_generate.number = element_to_generate.number + definition.number
+        #
+        #                 if toAppend:
+        #                     elements_to_generate.append(definition)
+        #
+        # #иначе шпилек получится дробное число, а они в штуках
+        # for el in elements_to_generate:
+        #     if el.name == "Шпилька М8 1м/1шт":
+        #         el.number = int(math.ceil(el.number))
+        #
+        # new_position(elements_to_generate, temporary, name_of_model, description)
 
-        elements_to_generate = []
+#temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, name_of_model)
 
-        #перебираем элементы и выясняем какие из них подлежат генерации
-        for collection in collections:
-            for element in collection:
-                for rule_set in generation_rules_list:
-                    set_name = rule_set.name
-                    set_mark = rule_set.mark
-                    set_maker = rule_set.maker
-                    set_parameter = rule_set.method
-                    set_collection = rule_set.collection
-                    if is_object_to_generate(element, set_collection, collection, set_parameter):
-                        definition = CalculationElement(element, collection, set_parameter, set_name, set_mark, set_maker)
+# if isItFamily():
+#     forms.alert(
+#         "Надстройка не предназначена для работы с семействами",
+#         "Ошибка",
+#         exitscript=True
+#         )
 
-                        parts = [part for part in [definition.EF, definition.corp, definition.sec, definition.floor,
-                                                   definition.system,definition.group, definition.name, definition.mark,
-                                                   definition.art, definition.maker, definition.local_description]
-                                 if part is not None]
-                        key = ''.join(parts)
+# if temporary is None:
+#     forms.alert(
+#         "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
+#         "Ошибка",
+#         exitscript=True
+#         )
 
+script_execute()
 
-                        toAppend = True
-                        for element_to_generate in elements_to_generate:
-                            if element_to_generate.key == key:
-                                toAppend = False
-                                element_to_generate.number = element_to_generate.number + definition.number
-
-                        if toAppend:
-                            elements_to_generate.append(definition)
-
-        #иначе шпилек получится дробное число, а они в штуках
-        for el in elements_to_generate:
-            if el.name == "Шпилька М8 1м/1шт":
-                el.number = int(math.ceil(el.number))
-
-        new_position(elements_to_generate, temporary, name_of_model, description)
-
-temporary = isFamilyIn(BuiltInCategory.OST_GenericModel, name_of_model)
-
-if isItFamily():
-    forms.alert(
-        "Надстройка не предназначена для работы с семействами",
-        "Ошибка",
-        exitscript=True
-        )
-
-if temporary is None:
-    forms.alert(
-        "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
-        "Ошибка",
-        exitscript=True
-        )
-
-status = paraSpec.check_parameters()
-if not status:
-    anchor = checkAnchor.check_anchor(showText = False)
-    if anchor:
-        script_execute()

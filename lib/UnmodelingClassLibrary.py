@@ -21,13 +21,13 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep_libs.bim4everyone import *
 
 class GenerationElement:
-    def __init__(self, group, name, mark, art, maker, unit, method, collection, isType):
+    def __init__(self, group, name, mark, art, maker, unit, method, category, isType):
         self.group = group
         self.name = name
         self.mark = mark
         self.maker = maker
         self.unit = unit
-        self.collection = collection
+        self.collection = category
         self.method = method
         self.isType = isType
         self.art = art
@@ -66,7 +66,7 @@ def get_generation_element_list():
             unit="кг.",
             maker="",
             method=SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
-            collection=col_curves,
+            category=BuiltInCategory.OST_DuctCurves,
             isType=False),
         GenerationElement(
             group="12. Расчетные элементы",
@@ -76,7 +76,7 @@ def get_generation_element_list():
             unit="кг.",
             maker="",
             method=SharedParamsConfig.Instance.VISIsFasteningMetalCalculation.Name,
-            collection=col_pipes,
+            category=BuiltInCategory.OST_PipeCurves,
             isType=False),
 
         GenerationElement(
@@ -87,7 +87,7 @@ def get_generation_element_list():
             unit="кг.",
             maker="",
             method=SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
-            collection=col_pipes,
+            category=BuiltInCategory.OST_PipeCurves,
             isType=False),
         GenerationElement(
             group="12. Расчетные элементы",
@@ -97,7 +97,7 @@ def get_generation_element_list():
             unit="кг.",
             maker="",
             method=SharedParamsConfig.Instance.VISIsPaintCalculation.Name,
-            collection=col_pipes,
+            category=BuiltInCategory.OST_PipeCurves,
             isType=False),
         GenerationElement(
 
@@ -108,7 +108,7 @@ def get_generation_element_list():
             unit="шт.",
             maker="",
             method=SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
-            collection=col_pipes,
+            category=BuiltInCategory.OST_PipeCurves,
             isType=False),
         GenerationElement(
             group="12. Расчетные элементы",
@@ -118,7 +118,7 @@ def get_generation_element_list():
             unit="шт.",
             maker="",
             method=SharedParamsConfig.Instance.VISIsClampsCalculation.Name,
-            collection=col_pipes,
+            category=BuiltInCategory.OST_PipeCurves,
             isType=False)
     ]
     return gen_list
