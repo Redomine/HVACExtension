@@ -33,13 +33,6 @@ from dosymep_libs.bim4everyone import *
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
-def get_elements_by_category(category):
-    col = FilteredElementCollector(doc) \
-        .OfCategory(category) \
-        .WhereElementIsNotElementType() \
-        .ToElements()
-    return col
-
 def get_elements_types_by_category(category):
     col = FilteredElementCollector(doc) \
         .OfCategory(category) \
@@ -47,12 +40,12 @@ def get_elements_types_by_category(category):
         .ToElements()
     return col
 
-def get_calculation_elements(types, calculation_name, builtin_category):
+def get_calculation_elements(element_types, calculation_name, builtin_category):
     result_list = []
 
-    for type in types:
-        if type.GetSharedParamValueOrDefault(calculation_name) == 1:
-            for el_id in type.GetDependentElements(None):
+    for element_type in element_types:
+        if element_type.GetSharedParamValueOrDefault(calculation_name) == 1:
+            for el_id in element_type.GetDependentElements(None):
                 element = doc.GetElement(el_id)
                 category = element.Category
                 if category and category.IsId(builtin_category) and element.GetTypeId() != ElementId.InvalidElementId:
@@ -77,19 +70,6 @@ def split_calculation_elements_list(elements):
     lists = list(grouped_elements.values())
 
     return lists
-
-name_of_model = "_Якорный элемент"
-description = "Расчет краски и креплений"
-
-# VISIsPaintCalculation Расчет краски и грунтовки
-# VISIsClampsCalculation ФОП_ВИС_Расчет хомутов
-# VISIsFasteningMetalCalculation Расчет металла для креплений
-
-# Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
-col_model = \
-    [elem for elem in get_elements_by_category(BuiltInCategory.OST_GenericModel) if elem.GetElementType()
-    .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
-
 
 def get_number(element, name):
     length = 0
@@ -236,6 +216,7 @@ def get_number(element, name):
         return get_pins(element, length, diameter)
     return 0
 
+description = "Расчет краски и креплений"
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -243,7 +224,7 @@ def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
         generation_rules_list = get_generation_element_list()
         # при каждом повторе расчета удаляем старые версии
-        remove_models(doc, col_model, name_of_model, description)
+        remove_models(doc, description)
 
         # Для каждого рулсета расчета создаем список сгруппированных по функции-имени системы элементов у которых этот расчет активен
         for rule_set in generation_rules_list:
@@ -264,6 +245,8 @@ def script_execute(plugin_logger):
 
                 for element in elements:
                     new_row.number += get_number(element, rule_set.name)
+
+                create_new_position(doc, )
 
 # if isItFamily():
 #     forms.alert(

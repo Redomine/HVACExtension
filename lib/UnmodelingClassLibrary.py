@@ -2,6 +2,8 @@
 
 import clr
 
+from checkAnchor import famNames
+
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
@@ -190,7 +192,7 @@ def set_element(element, name, setting):
             element.LookupParameter(name).Set(setting)
 
 # Генерирует пустые элементы в рабочем наборе немоделируемых
-def new_position(doc, calculation_elements, temporary, famName, description):
+def create_new_position(doc, calculation_elements, temporary, famName, description):
     # Создаем заглушки по элементам, собранным из таблицы
     loc = XYZ(0, 0, 0)
 
@@ -260,7 +262,13 @@ def new_position(doc, calculation_elements, temporary, famName, description):
             col_model.pop(0)
 
 #для прогона новых ревизий генерации немоделируемых: стирает элемент с переданным именем модели
-def remove_models(doc, col_model, fam_name, description):
+def remove_models(doc, description):
+    fam_name = "_Якорный элемент"
+    # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
+    col_model = \
+        [elem for elem in get_elements_by_category(doc, BuiltInCategory.OST_GenericModel) if elem.GetElementType()
+        .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == fam_name]
+
     for element in col_model:
         edited_by = is_element_edited_by(element)
         if edited_by:
@@ -289,3 +297,9 @@ def is_family_in(doc, builtin, name):
             return element
 
     return None
+
+def get_elements_by_category(doc, category):
+    return FilteredElementCollector(doc) \
+        .OfCategory(category) \
+        .WhereElementIsNotElementType() \
+        .ToElements()
