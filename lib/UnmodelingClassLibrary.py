@@ -48,7 +48,7 @@ class RowOfSpecification:
         self.code = None
         self.maker = None
         self.unit = None
-        self.number = None
+        self.number = 0
         self.mass = None
         self.note = None
         self.function = None
@@ -127,6 +127,9 @@ def get_generation_element_list():
 def is_element_edited_by(element):
     user_name = __revit__.Application.Username
     edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+    if edited_by is None:
+        return None
+
     if edited_by.lower() != user_name.lower():
         return edited_by
     return None

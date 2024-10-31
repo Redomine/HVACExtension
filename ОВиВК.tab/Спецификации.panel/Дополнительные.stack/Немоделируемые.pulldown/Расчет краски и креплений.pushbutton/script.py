@@ -79,10 +79,6 @@ def split_calculation_elements_list(elements):
     # Преобразуем значения словаря в список списков
     lists = list(grouped_elements.values())
 
-    print len(lists)
-    # for x in lists:
-    #     print x
-
     return lists
 
 col_model = get_elements_by_category(BuiltInCategory.OST_GenericModel)
@@ -100,49 +96,6 @@ description = "Расчет краски и креплений"
 col_model = \
     [elem for elem in col_model if elem.GetElementType()
     .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
-
-class CalculationElement:
-    pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
-    def __init__(self, element, collection, parameter, name, mark, maker):
-        self.local_description = description
-
-
-        self.length = UnitUtils.ConvertFromInternalUnits(element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
-                                                         UnitTypeId.Meters)
-
-        if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-            self.pipe_diameter = UnitUtils.ConvertFromInternalUnits(
-                element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
-                UnitTypeId.Millimeters)
-
-        if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Round:
-            self.duct_diameter = UnitUtils.ConvertFromInternalUnits(
-                element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
-                UnitTypeId.Millimeters)
-
-        if element.IsExistsParam(SharedParamsConfig.Instance.VISSystemName.Name):
-            self.system = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName)
-
-        # Этот параметр не вызываем с платформы и удаляем из всех шаблонов
-        if element.IsExistsParam("ADSK_Имя системы"):
-            self.system = element.GetParamValueOrDefault("ADSK_Имя системы")
-
-        self.name = name
-        self.mark = mark
-        self.art = ""
-        self.maker = maker
-        self.unit = "None"
-        self.number = self.get_number(element, self.name)
-        self.mass = ""
-        self.comment = ""
-        self.EF = element.GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction)
-        self.parentId = element.Id.IntegerValue
-
-        for gen in generation_rules_list:
-            if gen.collection == collection and parameter == gen.method:
-                self.unit = gen.unit
-                isType = gen.isType
-
 
 
 def get_number(element, name):
@@ -279,7 +232,7 @@ def get_number(element, name):
     if name == "Металлические крепления для трубопроводов" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return get_pipe_material(length, diameter)
     if name == "Металлические крепления для воздуховодов" and element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        return get_duct_material(element, diameter, width, height)
+        return get_duct_material(element, diameter, width, height, area)
     if name == "Краска антикоррозионная за два раза" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return get_color(element)
     if name == "Грунтовка для стальных труб" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
@@ -296,24 +249,32 @@ def get_number(element, name):
 def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
         generation_rules_list = get_generation_element_list()
+        # при каждом повторе расчета удаляем старые версии
+        remove_models(doc, col_model, name_of_model, description)
 
-
+        # Для каждого рулсета расчета создаем список сгруппированных по функции-имени системы элементов у которых этот расчет активен
         for rule_set in generation_rules_list:
             elem_types = get_elements_types_by_category(rule_set.category)
-            elements = get_calculation_elements(elem_types, rule_set.method_name, rule_set.category)
+            calculation_elements = get_calculation_elements(elem_types, rule_set.method_name, rule_set.category)
 
             # поделенные по экономической функции и имени системы листы
-            splited_lists = split_calculation_elements_list(elements)
+            split_lists = split_calculation_elements_list(calculation_elements)
 
-            for elements in splited_lists:
+            for elements in split_lists:
                 new_row = RowOfSpecification()
+
+                # Эти элементы сгруппированы по функции-системы, достаточно забрать у одного
+                new_row.system = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName)
+                new_row.function = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction)
 
                 new_row.local_description = description
 
+                for element in elements:
+                    new_row.number += get_number(element, rule_set.name)
 
 
-        # при каждом повторе расчета удаляем старые версии
-        #remove_models(col_model, name_of_model, description)
+
+
 
 
 # if isItFamily():
