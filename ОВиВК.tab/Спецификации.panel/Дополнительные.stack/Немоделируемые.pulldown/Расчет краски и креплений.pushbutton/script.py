@@ -25,12 +25,9 @@ clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
-
 from collections import defaultdict
 from UnmodelingClassLibrary import  *
-
 from dosymep_libs.bim4everyone import *
-
 
 #Исходные данные
 doc = __revit__.ActiveUIDocument.Document
@@ -81,10 +78,6 @@ def split_calculation_elements_list(elements):
 
     return lists
 
-col_model = get_elements_by_category(BuiltInCategory.OST_GenericModel)
-col_systems = get_elements_by_category(BuiltInCategory.OST_DuctSystem)
-
-
 name_of_model = "_Якорный элемент"
 description = "Расчет краски и креплений"
 
@@ -94,7 +87,7 @@ description = "Расчет краски и креплений"
 
 # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
 col_model = \
-    [elem for elem in col_model if elem.GetElementType()
+    [elem for elem in get_elements_by_category(BuiltInCategory.OST_GenericModel) if elem.GetElementType()
     .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == name_of_model]
 
 
