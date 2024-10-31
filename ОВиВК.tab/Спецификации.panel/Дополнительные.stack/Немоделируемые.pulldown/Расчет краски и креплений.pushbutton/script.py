@@ -272,11 +272,6 @@ def script_execute(plugin_logger):
                 for element in elements:
                     new_row.number += get_number(element, rule_set.name)
 
-
-
-
-
-
 # if isItFamily():
 #     forms.alert(
 #         "Надстройка не предназначена для работы с семействами",
