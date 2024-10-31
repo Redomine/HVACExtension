@@ -40,21 +40,22 @@ class MaterialVariants:
 
 #класс содержащий все ячейки типовой спецификации
 class RowOfSpecification:
-    def __init__(self, corp, sec, floor, system, group, name, mark, art, maker, unit, number, mass, comment, EF):
-        self.corp = corp
-        self.sec = sec
-        self.floor = floor
-        self.system = system
-        self.group = group
-        self.name = name
-        self.mark = mark
-        self.art = art
-        self.maker = maker
-        self.unit = unit
-        self.number = number
-        self.mass = mass
-        self.comment = comment
-        self.EF = EF
+    def __init__(self):
+        self.system = None
+        self.group = "12. Расчетные элементы"
+        self.name = None
+        self.mark = None
+        self.code = None
+        self.maker = None
+        self.unit = None
+        self.number = None
+        self.mass = None
+        self.note = None
+        self.function = None
+
+        self.local_description = None
+        self.diameter = None
+        self.parentId = None
 
 def get_generation_element_list():
     gen_list = [
