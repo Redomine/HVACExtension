@@ -255,8 +255,8 @@ def script_execute(plugin_logger):
                 new_row.group = rule_set.group
                 new_row.local_description = description
                 # Эти элементы сгруппированы по функции-системы, достаточно забрать у одного
-                new_row.system = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName)
-                new_row.function = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction)
+                new_row.system = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName, "")
+                new_row.function = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction, "")
 
                 for element in elements:
                     new_row.number += get_number(element, rule_set.name)

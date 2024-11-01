@@ -19,8 +19,10 @@ from pyrevit import revit
 from pyrevit import script
 from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
+from dosymep.Bim4Everyone.SharedParams import *
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep_libs.bim4everyone import *
+from dosymep.Revit import *
 
 class GenerationElement:
     def __init__(self, group, name, mark, art, maker, unit, method_name, category, isType):
@@ -43,21 +45,21 @@ class MaterialVariants:
 #класс содержащий все ячейки типовой спецификации
 class RowOfSpecification:
     def __init__(self):
-        self.system = None
-        self.group = None
-        self.name = None
-        self.mark = None
-        self.code = None
-        self.maker = None
-        self.unit = None
+        self.system = ""
+        self.group = ""
+        self.name = ""
+        self.mark = ""
+        self.code = ""
+        self.maker = ""
+        self.unit = ""
         self.number = 0
-        self.mass = None
-        self.note = None
-        self.function = None
+        self.mass = ""
+        self.note = ""
+        self.function = ""
 
-        self.local_description = None
-        self.diameter = None
-        self.parentId = None
+        self.local_description = ""
+        self.diameter = 0
+        self.parentId = 0
 
 def get_generation_element_list():
     gen_list = [
@@ -167,35 +169,6 @@ def get_collar_material_variants():
 
     return variants
 
-#заполняет ячейки в сгенерированном немоделируемом
-def set_element(element, name, setting):
-
-    if setting == 'None':
-        setting = ''
-    if setting == None:
-        setting = ''
-
-    if name == 'ФОП_Экономическая функция':
-        if setting == '':
-            setting = 'None'
-        if setting == None:
-            setting = 'None'
-
-    if name == 'ФОП_ВИС_Имя системы':
-        if setting == '':
-            setting = 'None'
-        if setting == None:
-            setting = 'None'
-
-
-    if name == 'ФОП_ВИС_Число' or name == 'ФОП_ВИС_Масса':
-        element.LookupParameter(name).Set(setting)
-    else:
-        try:
-            element.LookupParameter(name).Set(str(setting))
-        except:
-            element.LookupParameter(name).Set(setting)
-
 # Генерирует пустые элементы в рабочем наборе немоделируемых
 def create_new_position(doc, new_row_data, family_symbol, family_name, description, loc):
     family_symbol.Activate()
@@ -221,17 +194,17 @@ def create_new_position(doc, new_row_data, family_symbol, family_name, descripti
     group = '{}_{}_{}_{}_{}'.format(
         new_row_data.group, new_row_data.name, new_row_data.mark, new_row_data.maker, new_row_data.code)
 
-    set_element(family_inst, 'ФОП_ВИС_Имя системы', new_row_data.system)
-    set_element(family_inst, 'ФОП_ВИС_Группирование', group)
-    set_element(family_inst, 'ФОП_ВИС_Наименование комбинированное', new_row_data.name)
-    set_element(family_inst, 'ФОП_ВИС_Марка', new_row_data.mark)
-    set_element(family_inst, 'ФОП_ВИС_Код изделия', new_row_data.code)
-    set_element(family_inst, 'ФОП_ВИС_Завод-изготовитель', new_row_data.maker)
-    set_element(family_inst, 'ФОП_ВИС_Единица измерения', new_row_data.unit)
-    set_element(family_inst, 'ФОП_ВИС_Число', new_row_data.number)
-    set_element(family_inst, 'ФОП_ВИС_Масса', new_row_data.mass)
-    set_element(family_inst, 'ФОП_ВИС_Примечание', new_row_data.note)
-    set_element(family_inst, 'ФОП_Экономическая функция', new_row_data.function)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISSystemName, new_row_data.system)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISGrouping, group)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISCombinedName, new_row_data.name)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISMarkNumber, new_row_data.mark)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISItemCode, new_row_data.code)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISManufacturer, new_row_data.maker)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISUnit, new_row_data.unit)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISSpecNumbers, new_row_data.number)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISMass, new_row_data.mass)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.VISNote, new_row_data.note)
+    family_inst.SetParamValue(SharedParamsConfig.Instance.EconomicFunction, new_row_data.function)
 
 
 #для прогона новых ревизий генерации немоделируемых: стирает элемент с переданным именем модели
