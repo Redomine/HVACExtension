@@ -222,9 +222,23 @@ description = "Расчет краски и креплений"
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
+        family_name = "_Якорный элемент"
+
+        if doc.IsFamilyDocument:
+            forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
+
+        family_symbol = is_family_in(doc, family_name)
+        if family_symbol is None:
+            forms.alert(
+                    "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
+                    "Ошибка",
+                    exitscript=True)
+
         generation_rules_list = get_generation_element_list()
         # при каждом повторе расчета удаляем старые версии
         remove_models(doc, description)
+
+        loc = XYZ(0, 0, 0)
 
         # Для каждого рулсета расчета создаем список сгруппированных по функции-имени системы элементов у которых этот расчет активен
         for rule_set in generation_rules_list:
@@ -234,33 +248,23 @@ def script_execute(plugin_logger):
             # поделенные по экономической функции и имени системы листы
             split_lists = split_calculation_elements_list(calculation_elements)
 
+            # Проходимся по разделенным спискам элементов и для каждого из них создаем новый якорный элемент
             for elements in split_lists:
                 new_row = RowOfSpecification()
 
+                new_row.group = rule_set.group
+                new_row.local_description = description
                 # Эти элементы сгруппированы по функции-системы, достаточно забрать у одного
                 new_row.system = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName)
                 new_row.function = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction)
 
-                new_row.local_description = description
-
                 for element in elements:
                     new_row.number += get_number(element, rule_set.name)
 
-                create_new_position(doc, )
+                # Увеличение координаты X на 1, чтоб элементы не создавались в одном месте
+                loc = XYZ(loc.X + 1, loc.Y, loc.Z)
 
-# if isItFamily():
-#     forms.alert(
-#         "Надстройка не предназначена для работы с семействами",
-#         "Ошибка",
-#         exitscript=True
-#         )
-
-# if temporary is None:
-#     forms.alert(
-#         "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
-#         "Ошибка",
-#         exitscript=True
-#         )
+                create_new_position(doc, new_row, family_symbol, family_name, description, loc)
 
 script_execute()
 
