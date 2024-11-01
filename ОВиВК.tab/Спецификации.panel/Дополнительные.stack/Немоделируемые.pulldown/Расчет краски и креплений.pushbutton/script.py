@@ -227,16 +227,17 @@ def script_execute(plugin_logger):
         if doc.IsFamilyDocument:
             forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
 
-        family_symbol = is_family_in(doc, family_name)
+        unmodeling_factory = UnmodelingFactory()
+        family_symbol = unmodeling_factory.is_family_in(doc, family_name)
         if family_symbol is None:
             forms.alert(
                     "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
                     "Ошибка",
                     exitscript=True)
 
-        generation_rules_list = get_generation_element_list()
+        generation_rules_list = unmodeling_factory.get_generation_element_list()
         # при каждом повторе расчета удаляем старые версии
-        remove_models(doc, description)
+        unmodeling_factory.remove_models(doc, description)
 
         loc = XYZ(0, 0, 0)
 
@@ -264,7 +265,7 @@ def script_execute(plugin_logger):
                 # Увеличение координаты X на 1, чтоб элементы не создавались в одном месте
                 loc = XYZ(loc.X + 1, loc.Y, loc.Z)
 
-                create_new_position(doc, new_row, family_symbol, family_name, description, loc)
+                unmodeling_factory.create_new_position(doc, new_row, family_symbol, family_name, description, loc)
 
 script_execute()
 
