@@ -59,8 +59,10 @@ def split_calculation_elements_list(elements):
 
     for element in elements:
 
-        shared_function = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction.Name, "Нет значения")
-        shared_system = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName.Name, "Нет значения")
+        shared_function = element.GetSharedParamValueOrDefault(
+            SharedParamsConfig.Instance.EconomicFunction.Name, "Нет значения")
+        shared_system = element.GetSharedParamValueOrDefault(
+            SharedParamsConfig.Instance.VISSystemName.Name, "Нет значения")
         function_system_key = shared_function + "_" + shared_system
 
         # Добавляем элемент в соответствующий список в словаре
@@ -71,7 +73,7 @@ def split_calculation_elements_list(elements):
 
     return lists
 
-def get_number(element, name):
+def get_number(element, name, unmodeling_factory):
     length = 0
     diameter = 0
     width = 0
@@ -105,13 +107,14 @@ def get_number(element, name):
         dependent_elements = pipe.GetDependentElements(pipe_insulation_filter)
         return len(dependent_elements) > 0
 
-    def mid_calculation_fix(coef, curve_length):
-        number = curve_length / coef
+    # возвращает количество материала в зависимости от его расхода на длину, если количество меньше 1 - возвращает 1
+    def get_material_value_by_rate(material_rate, curve_length):
+        number = curve_length / material_rate
         if number < 1:
             number = 1
         return int(number)
 
-    def get_pins(curve, pipe_length, pipe_diameter):
+    def get_pins(curve, pipe_length, pipe_diameter, factory):
         dict_var_pins = {15: [2, 1.5], 20: [3, 2], 25: [3.5, 2], 32: [4, 2.5], 40: [4.5, 3], 50: [5, 3], 65: [6, 4],
                             80: [6, 4], 100: [6, 4.5], 125: [7, 5]}
 
@@ -121,14 +124,14 @@ def get_number(element, name):
 
         if is_pipe_insulated(curve):
             if pipe_diameter in dict_var_pins:
-                return mid_calculation_fix(dict_var_pins[pipe_diameter][0], pipe_length)
+                return get_material_value_by_rate(dict_var_pins[pipe_diameter][0], pipe_length)
             else:
-                return mid_calculation_fix(7, pipe_length)
+                return get_material_value_by_rate(7, pipe_length)
         else:
             if pipe_diameter in dict_var_pins:
-                return mid_calculation_fix(dict_var_pins[pipe_diameter][1], pipe_length)
+                return get_material_value_by_rate(dict_var_pins[pipe_diameter][1], pipe_length)
             else:
-                return mid_calculation_fix(5, pipe_length)
+                return get_material_value_by_rate(5, pipe_length)
 
     def get_collars(pipe, pipe_diameter, pipe_length):
         # self.name = "{0}, Ду{1}".format(self.name, int(self.pipe_diameter))
@@ -141,14 +144,14 @@ def get_number(element, name):
 
         if is_pipe_insulated(pipe):
             if pipe_diameter in dict_var_collars:
-                return mid_calculation_fix(dict_var_collars[pipe_diameter][0], pipe_length)
+                return get_material_value_by_rate(dict_var_collars[pipe_diameter][0], pipe_length)
             else:
-                return mid_calculation_fix(7, pipe_length)
+                return get_material_value_by_rate(7, pipe_length)
         else:
             if pipe_diameter in dict_var_collars:
-                return mid_calculation_fix(dict_var_collars[pipe_diameter][1], pipe_length)
+                return get_material_value_by_rate(dict_var_collars[pipe_diameter][1], pipe_length)
             else:
-                return mid_calculation_fix(5, pipe_length)
+                return get_material_value_by_rate(5, pipe_length)
 
     def get_duct_material(duct, duct_diameter, duct_width, duct_height, duct_area):
         perimeter = 0
@@ -213,7 +216,7 @@ def get_number(element, name):
     if name == "Хомут трубный под шпильку М8" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return get_collars(element, diameter, length)
     if name == "Шпилька М8 1м/1шт" and element in element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return get_pins(element, length, diameter)
+        return get_pins(element, length, diameter, unmodeling_factory)
     return 0
 
 description = "Расчет краски и креплений"
@@ -260,7 +263,7 @@ def script_execute(plugin_logger):
                 new_row.function = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction, "")
 
                 for element in elements:
-                    new_row.number += get_number(element, rule_set.name)
+                    new_row.number += get_number(element, rule_set.name, unmodeling_factory)
 
                 # Увеличение координаты X на 1, чтоб элементы не создавались в одном месте
                 loc = XYZ(loc.X + 1, loc.Y, loc.Z)
