@@ -33,23 +33,24 @@ doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 selectedIds = uidoc.Selection.GetElementIds()
+unmodeling_factory = UnmodelingFactory()
 nameOfModel = '_Якорный элемент'
 description = 'Пустая строка'
-
+family_name = "_Якорный элемент"
 
 def get_new_position():
     element = doc.GetElement(selectedIds[0])
 
-    system = element.LookupParameter('ФОП_ВИС_Имя системы').AsString()
-    parent_group = element.LookupParameter('ФОП_ВИС_Группирование').AsString()
-    parent_function = element.LookupParameter('ФОП_Экономическая функция').AsString()
-    group = parent_group + '_1'
+    parent_system, parent_function = unmodeling_factory.get_system_function(element)
+    parent_group = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISGrouping.Name, '')
 
-    new_position = RowOfSpecification()
+    new_group = parent_group + '_1'
 
-    new_position.system = system
-    new_position.group = group
-    new_position.function = parent_function
+    new_position = RowOfSpecification(
+        parent_system,
+        parent_function,
+        new_group
+    )
 
     return new_position
 
@@ -70,12 +71,8 @@ def get_location(family_name, generic_models):
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
     with revit.Transaction("Добавление пустого элемента"):
-        family_name = "_Якорный элемент"
-
         if doc.IsFamilyDocument:
             forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
-
-        unmodeling_factory = UnmodelingFactory()
 
         family_symbol = unmodeling_factory.is_family_in(doc, family_name)
 
@@ -91,12 +88,9 @@ def script_execute(plugin_logger):
                 "Ошибка",
                 exitscript=True)
 
-        unmodeling_factory = UnmodelingFactory()
-
         generic_models = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel)
         location = get_location(family_name, generic_models)
 
         unmodeling_factory.create_new_position(doc, get_new_position(), family_symbol, family_name, description, location)
-
 
 script_execute()

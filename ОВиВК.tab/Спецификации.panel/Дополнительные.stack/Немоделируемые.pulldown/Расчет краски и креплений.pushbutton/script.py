@@ -32,6 +32,7 @@ from dosymep_libs.bim4everyone import *
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 material_calculator = MaterialCalculator()
+unmodeling_factory = UnmodelingFactory()
 
 def get_elements_types_by_category(category):
     col = FilteredElementCollector(doc) \
@@ -72,21 +73,13 @@ def split_calculation_elements_list(elements):
 
     return lists
 
-def get_number(element, operation_name, unmodeling_factory):
+def get_number(element, operation_name):
     length = 0
     diameter = 0
     width = 0
     height = 0
 
-
-
-    length = UnitUtils.ConvertFromInternalUnits(
-        element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
-        UnitTypeId.Meters)
-
-    area = UnitUtils.ConvertFromInternalUnits(
-        element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
-        UnitTypeId.SquareMeters)
+    length, area = material_calculator.get_curve_len_area_parameters(element)
 
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         diameter = UnitUtils.ConvertFromInternalUnits(
@@ -122,60 +115,16 @@ def get_number(element, operation_name, unmodeling_factory):
 
     return 0
 
-description = "Расчет краски и креплений"
-
-# def check_family():
-#     family_names = ["ОбщМд_Отв_Отверстие_Прямоугольное_В стене", "ОбщМд_Отв_Отверстие_Круглое_В стене"]
-#
-#     param_list = [
-#         shared_currency_level_offset_name,
-#         shared_currency_from_level_offset_name,
-#         shared_currency_absolute_offset_name,
-#         shared_level_offset_name,
-#         shared_from_level_offset_name,
-#         shared_absolute_offset_name
-#         ]
-#
-#     for family_name in family_names:
-#         family = find_family_symbol(family_name).Family
-#         symbol_params = get_family_shared_parameter_names(family)
-#
-#         for param in param_list:
-#             if param not in symbol_params:
-#                 forms.alert("Параметра {} нет в семействах отверстий. Обновите все семейства отверстий из базы семейств.".
-#                             format(param), "Ошибка", exitscript=True)
-
-# def get_family_shared_parameter_names(family):
-#     # Открываем документ семейства для редактирования
-#     family_doc = doc.EditFamily(family)
-#
-#     shared_parameters = []
-#     try:
-#         # Получаем менеджер семейства
-#         family_manager = family_doc.FamilyManager
-#
-#         # Получаем все параметры семейства
-#         parameters = family_manager.GetParameters()
-#
-#         # Фильтруем параметры, чтобы оставить только общие
-#         shared_parameters = [param.Definition.Name for param in parameters if param.IsShared]
-#
-#         return shared_parameters
-#     finally:
-#         # Закрываем документ семейства без сохранения изменений
-#         family_doc.Close(False)
-
-
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
     with revit.Transaction("Добавление расчетных элементов"):
         family_name = "_Якорный элемент"
+        material_description = "Расчет краски и креплений"
+        consumable_description = 'Расходники изоляции'
 
         if doc.IsFamilyDocument:
             forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
-
-        unmodeling_factory = UnmodelingFactory()
 
         family_symbol = unmodeling_factory.is_family_in(doc, family_name)
 
@@ -185,15 +134,18 @@ def script_execute(plugin_logger):
                     "Ошибка",
                     exitscript=True)
 
+        # при каждом повторе расчета удаляем старые версии и для креплений и для расходников
+        unmodeling_factory.remove_models(doc, material_description)
+        unmodeling_factory.remove_models(doc, consumable_description)
 
-        generation_rules_list = unmodeling_factory.get_generation_element_list()
-        # при каждом повторе расчета удаляем старые версии
-        unmodeling_factory.remove_models(doc, description)
-
-        loc = XYZ(0, 0, 0)
+        # базовые точки для размещения немоделируемых, для материалов растут по Х на 10 для каждого, для расходников - уменьшаются аналогично
+        material_location = XYZ(0, 0, 0)
+        consumable_location = XYZ(0, 0, 0)
 
         # генерация металла, креплений и краски
         # Для каждого рулсета расчета создаем список сгруппированных по функции-имени системы элементов у которых этот расчет активен
+        generation_rules_list = unmodeling_factory.get_generation_element_list()
+
         for rule_set in generation_rules_list:
             elem_types = get_elements_types_by_category(rule_set.category)
             calculation_elements = get_calculation_elements(elem_types, rule_set.method_name, rule_set.category)
@@ -203,27 +155,28 @@ def script_execute(plugin_logger):
 
             # Проходимся по разделенным спискам элементов и для каждого из них создаем новый якорный элемент
             for elements in split_lists:
-                new_row = RowOfSpecification()
-                new_row.name = rule_set.name
-                new_row.mark = rule_set.mark
-                new_row.code = rule_set.code
-                new_row.unit = rule_set.unit
-                new_row.maker = rule_set.maker
-
-                new_row.group = rule_set.group
-                new_row.local_description = description
                 # Эти элементы сгруппированы по функции-системы, достаточно забрать у одного
-                new_row.system = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName, "")
-                new_row.function = elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction, "")
+                system, function = unmodeling_factory.get_system_function(elements[0])
+
+                new_row = RowOfSpecification(
+                    system,
+                    function,
+                    rule_set.group,
+                    rule_set.name,
+                    rule_set.mark,
+                    rule_set.code,
+                    rule_set.maker,
+                    rule_set.unit,
+                    material_description
+                )
 
                 for element in elements:
-                    new_row.number += get_number(element, rule_set.name, unmodeling_factory)
+                    new_row.number += get_number(element, rule_set.name)
 
-                # Увеличение координаты X на 1, чтоб элементы не создавались в одном месте
-                loc = XYZ(loc.X + 10, loc.Y, loc.Z)
+                # Увеличение координаты X на 10, чтоб элементы не создавались в одном месте
+                material_location = XYZ(material_location.X + 10, 0, 0)
 
-                unmodeling_factory.create_new_position(doc, new_row, family_symbol, family_name, description, loc)
-
+                unmodeling_factory.create_new_position(doc, new_row, family_symbol, family_name, material_description, material_location)
 
         #генерация расходников изоляции
         insulations = []
@@ -231,49 +184,46 @@ def script_execute(plugin_logger):
         insulations+=(unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations))
 
         split_insulation_lists = split_calculation_elements_list(insulations)
-        consumable_description = 'Расходники изоляцияя'
 
-        unmodeling_factory.remove_models(doc, consumable_description)
-
-        consumable_location = XYZ(0, 0, 0)
         for insulation_elements in split_insulation_lists:
+            # получаем список из расходников для данного типа изоляции в отдельной функции-системе
             consumables = material_calculator.get_insulation_consumables(insulation_elements[0].GetElementType())
 
+            # для каждого расходника генерируем новую строку и вычисляем его количество
             for consumable in consumables:
+                # Эти элементы сгруппированы по функции-системы, достаточно забрать у одного
+                system, function = unmodeling_factory.get_system_function(
+                    insulation_elements[0])
 
-                new_consumable_row = RowOfSpecification()
-                new_consumable_row.name = consumable.name
-                new_consumable_row.mark = consumable.mark
-                new_consumable_row.unit = consumable.unit
-                new_consumable_row.maker = consumable.maker
+                new_consumable_row = RowOfSpecification(
+                    system,
+                    function,
+                    '12. Расходники изоляции',
+                    consumable.name,
+                    consumable.mark,
+                    '', # У расходников не будет кода изделия
+                    consumable.maker,
+                    consumable.unit,
+                    consumable_description
+                )
 
                 for insulation_element in insulation_elements:
                     host_id = insulation_element.HostElementId
                     if host_id is not None:
-                        host = doc.GetElement(host_id)
-                        length = UnitUtils.ConvertFromInternalUnits(
-                            host.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
-                            UnitTypeId.Meters)
-
-                        area = UnitUtils.ConvertFromInternalUnits(
-                            host.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
-                            UnitTypeId.SquareMeters)
-
+                        length, area = material_calculator.get_curve_len_area_parameters(doc.GetElement(host_id))
                         if consumable.is_expenditure_by_linear_meter == 0:
                             new_consumable_row.number += consumable.expenditure * area
                         else:
                             new_consumable_row.number += consumable.expenditure * length
 
-                new_consumable_row.group = '12. Расходники изоляции'
-                new_consumable_row.system = insulation_elements[0].GetParamValueOrDefault(
-                    SharedParamsConfig.Instance.VISSystemName, '')
-                new_consumable_row.function = insulation_elements[0].GetParamValueOrDefault(
-                    SharedParamsConfig.Instance.EconomicFunction, '')
-
                 consumable_location = XYZ(consumable_location.X - 10, 0, 0)
 
-                unmodeling_factory.create_new_position(doc, new_consumable_row,
-                                                       family_symbol, family_name, consumable_description, consumable_location)
+                unmodeling_factory.create_new_position(doc,
+                                                       new_consumable_row,
+                                                       family_symbol,
+                                                       family_name,
+                                                       consumable_description,
+                                                       consumable_location)
 
 script_execute()
 

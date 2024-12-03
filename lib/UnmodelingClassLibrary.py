@@ -46,22 +46,35 @@ class MaterialVariants:
 
 # класс содержащий все ячейки типовой спецификации
 class RowOfSpecification:
-    def __init__(self):
-        self.system = ""
-        self.group = ""
-        self.name = ""
-        self.mark = ""
-        self.code = ""
-        self.maker = ""
-        self.unit = ""
+    def __init__(self,
+                 system,
+                 function,
+                 group,
+                 name = '',
+                 mark = '',
+                 code = '',
+                 maker = '',
+                 unit = '',
+                 local_description = ''):
+        self.system = system
+        self.function = function
+        self.group = group
+
+        self.name = name
+        self.mark = mark
+        self.code = code
+        self.maker = maker
+        self.unit = unit
         self.number = 0
         self.mass = ""
         self.note = ""
-        self.function = ""
 
-        self.local_description = ""
+
+        self.local_description = local_description
         self.diameter = 0
         self.parentId = 0
+
+
 
 # класс описывающий расходники изоляции
 class InsulationConsumables:
@@ -75,6 +88,16 @@ class InsulationConsumables:
 
 # класс оперирующий созданием немоделируемых элементов
 class UnmodelingFactory:
+    out_of_system_value = '!Нет системы'
+    out_of_function_value = '!Нет функции'
+
+    def get_system_function(self, element):
+        system = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName,
+                                                self.out_of_system_value)
+        function = element.GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction,
+                                                  self.out_of_function_value)
+        return system, function
+
     def get_generation_element_list(self):
         gen_list = [
             GenerationRuleSet(
@@ -234,8 +257,63 @@ class UnmodelingFactory:
         description_param = family_inst.GetParam("ФОП_ВИС_Назначение")
         description_param.Set(description)
 
+    def check_family(self, family_symbol, doc):
+        param_names_list = [
+            "ФОП_ВИС_Назначение",
+            SharedParamsConfig.Instance.VISNote.Name,
+            SharedParamsConfig.Instance.VISMass.Name,
+            SharedParamsConfig.Instance.VISPosition.Name,
+            SharedParamsConfig.Instance.VISGrouping.Name,
+            SharedParamsConfig.Instance.EconomicFunction.Name,
+            SharedParamsConfig.Instance.VISSystemName.Name,
+            SharedParamsConfig.Instance.VISCombinedName.Name,
+            SharedParamsConfig.Instance.VISMarkNumber.Name,
+            SharedParamsConfig.Instance.VISItemCode.Name,
+            SharedParamsConfig.Instance.VISUnit.Name,
+            SharedParamsConfig.Instance.VISManufacturer.Name
+            ]
+
+        family = family_symbol.Family
+        symbol_params = self.get_family_shared_parameter_names(doc, family)
+
+        result = []
+        for param_name in param_names_list:
+            if param_name not in symbol_params:
+                result.append(param_name)
+
+        return result
+
+    def get_family_shared_parameter_names(self, doc, family):
+        # Открываем документ семейства для редактирования
+        family_doc = doc.EditFamily(family)
+
+        shared_parameters = []
+        try:
+            # Получаем менеджер семейства
+            family_manager = family_doc.FamilyManager
+
+            # Получаем все параметры семейства
+            parameters = family_manager.GetParameters()
+
+            # Фильтруем параметры, чтобы оставить только общие
+            shared_parameters = [param.Definition.Name for param in parameters if param.IsShared]
+
+            return shared_parameters
+        finally:
+            # Закрываем документ семейства без сохранения изменений
+            family_doc.Close(False)
+
 # класс-калькулятор для расходных элементов труб и воздуховодов
 class MaterialCalculator:
+    def get_curve_len_area_parameters(self, host):
+        length = UnitUtils.ConvertFromInternalUnits(
+            host.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
+            UnitTypeId.Meters)
+        area = UnitUtils.ConvertFromInternalUnits(
+            host.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
+            UnitTypeId.SquareMeters)
+        return length, area
+
     def get_pipe_material_variants(self):
         """ Возвращает коллекцию вариантов расхода металла по диаметрам для изолированных труб. Для неизолированных 0 """
 
