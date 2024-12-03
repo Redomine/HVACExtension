@@ -6,8 +6,7 @@ __doc__ = "Генерирует в модели элементы с расчет
 
 import clr
 
-from Redomine import rowOfSpecification
-from paraSpec import shared_parameter
+from UnmodelingClassLibrary import UnmodelingFactory, MaterialCalculator, RowOfSpecification
 
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
@@ -16,7 +15,7 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
 
-import checkAnchor
+
 import math
 
 clr.ImportExtensions(dosymep.Revit)
@@ -32,6 +31,7 @@ from dosymep_libs.bim4everyone import *
 #Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
+material_calculator = MaterialCalculator()
 
 def get_elements_types_by_category(category):
     col = FilteredElementCollector(doc) \
@@ -58,7 +58,6 @@ def split_calculation_elements_list(elements):
     grouped_elements = defaultdict(list)
 
     for element in elements:
-
         shared_function = element.GetSharedParamValueOrDefault(
             SharedParamsConfig.Instance.EconomicFunction.Name, "Нет значения")
         shared_system = element.GetSharedParamValueOrDefault(
@@ -73,11 +72,18 @@ def split_calculation_elements_list(elements):
 
     return lists
 
-def get_number(element, name, unmodeling_factory):
+def get_number(element, operation_name, unmodeling_factory):
     length = 0
     diameter = 0
     width = 0
     height = 0
+
+
+
+    length = UnitUtils.ConvertFromInternalUnits(
+        element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
+        UnitTypeId.Meters)
+
     area = UnitUtils.ConvertFromInternalUnits(
         element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
         UnitTypeId.SquareMeters)
@@ -101,125 +107,64 @@ def get_number(element, name, unmodeling_factory):
             element.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM),
             UnitTypeId.Millimeters)
 
+    if operation_name == "Металлические крепления для трубопроводов" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        return material_calculator.get_pipe_material(length, diameter)
+    if operation_name == "Металлические крепления для воздуховодов" and element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+        return material_calculator.get_duct_material(element, diameter, width, height, area)
+    if operation_name == "Краска антикоррозионная за два раза" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        return material_calculator.get_color(element)
+    if operation_name == "Грунтовка для стальных труб" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        return material_calculator.get_grunt(area)
+    if operation_name == "Хомут трубный под шпильку М8" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        return material_calculator.get_collars_and_pins(element, diameter, length)
+    if operation_name == "Шпилька М8 1м/1шт" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        return material_calculator.get_collars_and_pins(element, diameter, length)
 
-    def is_pipe_insulated(pipe):
-        pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
-        dependent_elements = pipe.GetDependentElements(pipe_insulation_filter)
-        return len(dependent_elements) > 0
-
-    # возвращает количество материала в зависимости от его расхода на длину, если количество меньше 1 - возвращает 1
-    def get_material_value_by_rate(material_rate, curve_length):
-        number = curve_length / material_rate
-        if number < 1:
-            number = 1
-        return int(number)
-
-    def get_pins(curve, pipe_length, pipe_diameter, factory):
-        dict_var_pins = {15: [2, 1.5], 20: [3, 2], 25: [3.5, 2], 32: [4, 2.5], 40: [4.5, 3], 50: [5, 3], 65: [6, 4],
-                            80: [6, 4], 100: [6, 4.5], 125: [7, 5]}
-
-        # Мы не считаем крепление труб до 0.5 м
-        if pipe_length < 0.5:
-            return 0
-
-        if is_pipe_insulated(curve):
-            if pipe_diameter in dict_var_pins:
-                return get_material_value_by_rate(dict_var_pins[pipe_diameter][0], pipe_length)
-            else:
-                return get_material_value_by_rate(7, pipe_length)
-        else:
-            if pipe_diameter in dict_var_pins:
-                return get_material_value_by_rate(dict_var_pins[pipe_diameter][1], pipe_length)
-            else:
-                return get_material_value_by_rate(5, pipe_length)
-
-    def get_collars(pipe, pipe_diameter, pipe_length):
-        # self.name = "{0}, Ду{1}".format(self.name, int(self.pipe_diameter))
-        # self.local_description = "{0} {1}".format(self.local_description, self.name)
-        dict_var_collars = {15:[2, 1.5], 20:[3, 2], 25:[3.5, 2], 32:[4, 2.5], 40:[4.5, 3], 50:[5, 3], 65:[6, 4],
-                            80:[6, 4], 100:[6, 4.5], 125:[7, 5]}
-
-        if pipe_length < 0.5:
-            return 0
-
-        if is_pipe_insulated(pipe):
-            if pipe_diameter in dict_var_collars:
-                return get_material_value_by_rate(dict_var_collars[pipe_diameter][0], pipe_length)
-            else:
-                return get_material_value_by_rate(7, pipe_length)
-        else:
-            if pipe_diameter in dict_var_collars:
-                return get_material_value_by_rate(dict_var_collars[pipe_diameter][1], pipe_length)
-            else:
-                return get_material_value_by_rate(5, pipe_length)
-
-    def get_duct_material(duct, duct_diameter, duct_width, duct_height, duct_area):
-        perimeter = 0
-        if duct.DuctType.Shape == ConnectorProfileType.Round:
-            perimeter = 3.14 * duct_diameter
-
-        if duct.DuctType.Shape == ConnectorProfileType.Rectangular:
-            duct_width = UnitUtils.ConvertFromInternalUnits(
-                duct.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM),
-                UnitTypeId.Millimeters)  # Преобразование в метры
-
-            duct_height = UnitUtils.ConvertFromInternalUnits(
-                duct.GetParamValue(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM),
-                UnitTypeId.Millimeters)  # Преобразование в метры
-
-            perimeter = 2 * (duct_width + duct_height)
-
-
-        if perimeter < 1001:
-            kg = duct_area * 0.65
-        elif perimeter < 1801:
-            kg = duct_area * 1.22
-        else:
-            kg = duct_area * 2.25
-
-        return kg
-
-    def get_pipe_material(pipe_length, pipe_diameter):
-        dict_var_p_mat = {15: 0.14, 20: 0.12, 25: 0.11, 32: 0.1, 40: 0.11, 50: 0.144, 65: 0.195,
-                            80: 0.233, 100: 0.37, 125: 0.53}
-        coefficient = 1.7
-        # Запас 70% задан по согласованию.
-
-        # Сортируем ключи словаря
-        sorted_keys = sorted(dict_var_p_mat.keys())
-
-        # Ищем первый ключ, который больше или равен self.pipe_diameter
-        for key in sorted_keys:
-            if pipe_diameter <= key:
-                key_up = dict_var_p_mat[key] * coefficient
-                return key_up * pipe_length
-        else:
-            return 0.62*coefficient* pipe_length
-
-    def get_grunt(pipe_area):
-        number = pipe_area / 10
-        return number
-
-    def get_color(pipe):
-        area = (pipe.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
-        number = area * 0.2 * 2
-        return number
-
-    if name == "Металлические крепления для трубопроводов" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return get_pipe_material(length, diameter)
-    if name == "Металлические крепления для воздуховодов" and element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        return get_duct_material(element, diameter, width, height, area)
-    if name == "Краска антикоррозионная за два раза" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return get_color(element)
-    if name == "Грунтовка для стальных труб" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return get_grunt(area)
-    if name == "Хомут трубный под шпильку М8" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return get_collars(element, diameter, length)
-    if name == "Шпилька М8 1м/1шт" and element in element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return get_pins(element, length, diameter, unmodeling_factory)
     return 0
 
 description = "Расчет краски и креплений"
+
+# def check_family():
+#     family_names = ["ОбщМд_Отв_Отверстие_Прямоугольное_В стене", "ОбщМд_Отв_Отверстие_Круглое_В стене"]
+#
+#     param_list = [
+#         shared_currency_level_offset_name,
+#         shared_currency_from_level_offset_name,
+#         shared_currency_absolute_offset_name,
+#         shared_level_offset_name,
+#         shared_from_level_offset_name,
+#         shared_absolute_offset_name
+#         ]
+#
+#     for family_name in family_names:
+#         family = find_family_symbol(family_name).Family
+#         symbol_params = get_family_shared_parameter_names(family)
+#
+#         for param in param_list:
+#             if param not in symbol_params:
+#                 forms.alert("Параметра {} нет в семействах отверстий. Обновите все семейства отверстий из базы семейств.".
+#                             format(param), "Ошибка", exitscript=True)
+
+# def get_family_shared_parameter_names(family):
+#     # Открываем документ семейства для редактирования
+#     family_doc = doc.EditFamily(family)
+#
+#     shared_parameters = []
+#     try:
+#         # Получаем менеджер семейства
+#         family_manager = family_doc.FamilyManager
+#
+#         # Получаем все параметры семейства
+#         parameters = family_manager.GetParameters()
+#
+#         # Фильтруем параметры, чтобы оставить только общие
+#         shared_parameters = [param.Definition.Name for param in parameters if param.IsShared]
+#
+#         return shared_parameters
+#     finally:
+#         # Закрываем документ семейства без сохранения изменений
+#         family_doc.Close(False)
+
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -231,12 +176,15 @@ def script_execute(plugin_logger):
             forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
 
         unmodeling_factory = UnmodelingFactory()
+
         family_symbol = unmodeling_factory.is_family_in(doc, family_name)
+
         if family_symbol is None:
             forms.alert(
                     "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
                     "Ошибка",
                     exitscript=True)
+
 
         generation_rules_list = unmodeling_factory.get_generation_element_list()
         # при каждом повторе расчета удаляем старые версии
@@ -244,6 +192,7 @@ def script_execute(plugin_logger):
 
         loc = XYZ(0, 0, 0)
 
+        # генерация металла, креплений и краски
         # Для каждого рулсета расчета создаем список сгруппированных по функции-имени системы элементов у которых этот расчет активен
         for rule_set in generation_rules_list:
             elem_types = get_elements_types_by_category(rule_set.category)
@@ -255,6 +204,11 @@ def script_execute(plugin_logger):
             # Проходимся по разделенным спискам элементов и для каждого из них создаем новый якорный элемент
             for elements in split_lists:
                 new_row = RowOfSpecification()
+                new_row.name = rule_set.name
+                new_row.mark = rule_set.mark
+                new_row.code = rule_set.code
+                new_row.unit = rule_set.unit
+                new_row.maker = rule_set.maker
 
                 new_row.group = rule_set.group
                 new_row.local_description = description
@@ -266,9 +220,44 @@ def script_execute(plugin_logger):
                     new_row.number += get_number(element, rule_set.name, unmodeling_factory)
 
                 # Увеличение координаты X на 1, чтоб элементы не создавались в одном месте
-                loc = XYZ(loc.X + 1, loc.Y, loc.Z)
+                loc = XYZ(loc.X + 10, loc.Y, loc.Z)
 
                 unmodeling_factory.create_new_position(doc, new_row, family_symbol, family_name, description, loc)
+
+        #генерация расходников изоляции
+
+
+        insulations = []
+        insulations+=(unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations))
+        insulations+=(unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations))
+
+        split_insulation_lists = split_calculation_elements_list(insulations)
+        consumable_description = 'Расходники изоляцияя'
+
+        for insulation_elements in split_insulation_lists:
+            consumables = material_calculator.get_insulation_consumables(insulation_elements[0].GetElementType())
+
+            print consumables
+
+            for consumable in consumables:
+                loc = XYZ(loc.X - 10, loc.Y, loc.Z)
+
+                new_consumable_row = RowOfSpecification()
+                new_consumable_row.name = consumable.name
+                new_consumable_row.mark = consumable.mark
+                new_consumable_row.unit = consumable.unit
+                new_consumable_row.maker = consumable.maker
+
+                for insulation_element in insulation_elements:
+                    new_consumable_row.number += 1
+
+                new_consumable_row.group = '12. Расходники изоляции'
+                new_consumable_row.system = insulation_elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName, '')
+                new_consumable_row.function = insulation_elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction, '')
+
+
+                unmodeling_factory.create_new_position(doc, new_consumable_row,
+                                                       family_symbol, family_name, consumable_description, loc)
 
 script_execute()
 
