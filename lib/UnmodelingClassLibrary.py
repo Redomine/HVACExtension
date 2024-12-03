@@ -63,6 +63,7 @@ class RowOfSpecification:
         self.diameter = 0
         self.parentId = 0
 
+# класс описывающий расходники изоляции
 class InsulationConsumables:
     def __init__(self, name, mark, maker, unit, expenditure, is_expenditure_by_linear_meter):
         self.name = name

@@ -224,9 +224,8 @@ def script_execute(plugin_logger):
 
                 unmodeling_factory.create_new_position(doc, new_row, family_symbol, family_name, description, loc)
 
+
         #генерация расходников изоляции
-
-
         insulations = []
         insulations+=(unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations))
         insulations+=(unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations))
@@ -234,13 +233,13 @@ def script_execute(plugin_logger):
         split_insulation_lists = split_calculation_elements_list(insulations)
         consumable_description = 'Расходники изоляцияя'
 
+        unmodeling_factory.remove_models(doc, consumable_description)
+
+        consumable_location = XYZ(0, 0, 0)
         for insulation_elements in split_insulation_lists:
             consumables = material_calculator.get_insulation_consumables(insulation_elements[0].GetElementType())
 
-            print consumables
-
             for consumable in consumables:
-                loc = XYZ(loc.X - 10, loc.Y, loc.Z)
 
                 new_consumable_row = RowOfSpecification()
                 new_consumable_row.name = consumable.name
@@ -249,15 +248,32 @@ def script_execute(plugin_logger):
                 new_consumable_row.maker = consumable.maker
 
                 for insulation_element in insulation_elements:
-                    new_consumable_row.number += 1
+                    host_id = insulation_element.HostElementId
+                    if host_id is not None:
+                        host = doc.GetElement(host_id)
+                        length = UnitUtils.ConvertFromInternalUnits(
+                            host.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
+                            UnitTypeId.Meters)
+
+                        area = UnitUtils.ConvertFromInternalUnits(
+                            host.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
+                            UnitTypeId.SquareMeters)
+
+                        if consumable.is_expenditure_by_linear_meter == 0:
+                            new_consumable_row.number += consumable.expenditure * area
+                        else:
+                            new_consumable_row.number += consumable.expenditure * length
 
                 new_consumable_row.group = '12. Расходники изоляции'
-                new_consumable_row.system = insulation_elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName, '')
-                new_consumable_row.function = insulation_elements[0].GetParamValueOrDefault(SharedParamsConfig.Instance.EconomicFunction, '')
+                new_consumable_row.system = insulation_elements[0].GetParamValueOrDefault(
+                    SharedParamsConfig.Instance.VISSystemName, '')
+                new_consumable_row.function = insulation_elements[0].GetParamValueOrDefault(
+                    SharedParamsConfig.Instance.EconomicFunction, '')
 
+                consumable_location = XYZ(consumable_location.X - 10, 0, 0)
 
                 unmodeling_factory.create_new_position(doc, new_consumable_row,
-                                                       family_symbol, family_name, consumable_description, loc)
+                                                       family_symbol, family_name, consumable_description, consumable_location)
 
 script_execute()
 
