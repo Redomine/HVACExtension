@@ -195,20 +195,21 @@ class UnmodelingFactory:
 
     #для прогона новых ревизий генерации немоделируемых: стирает элемент с переданным именем модели
     def remove_models(self, doc, description):
+        user_name = __revit__.Application.Username
         fam_name = "_Якорный элемент"
         # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
-        col_model = \
+        generic_model_collection = \
             [elem for elem in self.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel) if elem.GetElementType()
             .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == fam_name]
 
-        for element in col_model:
+        for element in generic_model_collection:
             edited_by = self.is_element_edited_by(element)
             if edited_by:
                 forms.alert("Якорные элементы не были обработаны, так как были заняты пользователями:" + edited_by,
                             "Ошибка",
                             exitscript=True)
 
-        for element in col_model:
+        for element in generic_model_collection:
             if element.LookupParameter('ФОП_ВИС_Назначение'):
                 elem_type = doc.GetElement(element.GetTypeId())
                 current_name = elem_type.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString()

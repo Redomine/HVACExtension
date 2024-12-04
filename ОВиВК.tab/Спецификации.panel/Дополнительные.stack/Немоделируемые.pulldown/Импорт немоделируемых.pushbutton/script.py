@@ -20,21 +20,16 @@ from UnmodelingClassLibrary import UnmodelingFactory, MaterialCalculator, RowOfS
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
-from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
 from UnmodelingClassLibrary import  *
 from dosymep_libs.bim4everyone import *
 
-
 from Microsoft.Office.Interop import Excel
 from Redomine import *
-from System.Runtime.InteropServices import Marshal
 from rpw.ui.forms import select_file
-from rpw.ui.forms import TextInput
-from rpw.ui.forms import SelectFromList
-from rpw.ui.forms import Alert
+
 
 #Исходные данные
 doc = __revit__.ActiveUIDocument.Document
@@ -59,7 +54,13 @@ def find_column(worksheet, search_value):
 def script_execute(plugin_logger):
     family_symbol = unmodeling_factory.startup_checks(doc)
     exel = Excel.ApplicationClass()
+    # Создание объекта TextInput
+
     filepath = select_file()
+
+    if filepath is None:
+        sys.exit()
+
     workbook = exel.Workbooks.Open(filepath, ReadOnly=True)
     sheet_name = 'Импорт'
 
