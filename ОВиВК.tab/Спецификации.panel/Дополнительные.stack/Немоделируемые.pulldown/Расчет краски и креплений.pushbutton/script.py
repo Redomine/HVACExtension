@@ -196,23 +196,43 @@ def generate_insulation_consumables(doc, family_symbol, consumable_description):
     insulations = get_insulation_elements(doc)
     split_insulation_lists = split_calculation_elements_list(insulations)
 
+    # Кэширование результатов get_system_function и get_insulation_consumables
+    system_function_cache = {}
+    consumables_cache = {}
+    curve_params_cache = {}
+
     for insulation_elements in split_insulation_lists:
-        consumables = material_calculator.get_insulation_consumables(insulation_elements[0].GetElementType())
+        element_type = insulation_elements[0].GetElementType()
+
+        if element_type not in consumables_cache:
+            consumables_cache[element_type] = material_calculator.get_insulation_consumables(element_type)
+
+        consumables = consumables_cache[element_type]
 
         for consumable in consumables:
-            system, function = unmodeling_factory.get_system_function(insulation_elements[0])
+            if element_type not in system_function_cache:
+                system_function_cache[element_type] = unmodeling_factory.get_system_function(insulation_elements[0])
+
+            system, function = system_function_cache[element_type]
 
             new_consumable_row = create_consumable_row_of_specification(system, function,
                                                                         consumable, consumable_description)
 
+            host_elements = {}
             for insulation_element in insulation_elements:
                 host_id = insulation_element.HostElementId
                 if host_id is not None:
-                    length, area = material_calculator.get_curve_len_area_parameters(doc.GetElement(host_id))
-                    if consumable.is_expenditure_by_linear_meter == 0:
-                        new_consumable_row.number += consumable.expenditure * area
-                    else:
-                        new_consumable_row.number += consumable.expenditure * length
+                    if host_id not in host_elements:
+                        host = doc.GetElement(host_id)
+                        host_elements[host_id] = host
+                        if host.Category.IsId(BuiltInCategory.OST_DuctCurves) or host.Category.IsId(BuiltInCategory.OST_PipeCurves):
+                            if host_id not in curve_params_cache:
+                                curve_params_cache[host_id] = material_calculator.get_curve_len_area_parameters(host)
+                            length, area = curve_params_cache[host_id]
+                            if consumable.is_expenditure_by_linear_meter == 0:
+                                new_consumable_row.number += consumable.expenditure * area
+                            else:
+                                new_consumable_row.number += consumable.expenditure * length
 
             consumable_location = XYZ(consumable_location.X - 10, 0, 0)
 
@@ -253,4 +273,3 @@ def script_execute(plugin_logger):
         generate_insulation_consumables(doc, family_symbol, consumable_description)
 
 script_execute()
-
