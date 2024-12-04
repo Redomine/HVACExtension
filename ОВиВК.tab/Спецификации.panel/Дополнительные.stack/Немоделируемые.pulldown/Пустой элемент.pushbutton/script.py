@@ -34,9 +34,8 @@ view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 selected_ids = uidoc.Selection.GetElementIds()
 unmodeling_factory = UnmodelingFactory()
-nameOfModel = '_Якорный элемент'
 description = 'Пустая строка'
-family_name = "_Якорный элемент"
+
 
 def get_new_position():
     element = doc.GetElement(selected_ids[0])
@@ -83,7 +82,6 @@ def script_execute(plugin_logger):
             "Выделите целевой элемент",
             "Ошибка",
             exitscript=True)
-
 
     with revit.Transaction("Добавление пустого элемента"):
         generic_models = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel)

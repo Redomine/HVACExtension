@@ -3,18 +3,15 @@
 
 __title__ = "Расчет краски и креплений"
 __doc__ = "Генерирует в модели элементы с расчетом количества соответствующих материалов"
-print 1
+
 import clr
 
-
-print 2
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
-
 
 import math
 
@@ -214,7 +211,6 @@ def script_execute(plugin_logger):
                 unmodeling_factory.create_new_position(doc,
                                                        new_consumable_row,
                                                        family_symbol,
-                                                       family_name,
                                                        consumable_description,
                                                        consumable_location)
 

@@ -53,7 +53,10 @@ class RowOfSpecification:
                  code = '',
                  maker = '',
                  unit = '',
-                 local_description = ''):
+                 local_description = '',
+                 number = 0,
+                 mass = '',
+                 note = ''):
         self.system = system
         self.function = function
         self.group = group
@@ -63,9 +66,9 @@ class RowOfSpecification:
         self.code = code
         self.maker = maker
         self.unit = unit
-        self.number = 0
-        self.mass = ""
-        self.note = ""
+        self.number = number
+        self.mass = mass
+        self.note = note
 
 
         self.local_description = local_description
@@ -249,6 +252,7 @@ class UnmodelingFactory:
         family_inst.SetParamValue(SharedParamsConfig.Instance.VISUnit, new_row_data.unit)
         family_inst.SetParamValue(SharedParamsConfig.Instance.VISSpecNumbers, new_row_data.number)
         family_inst.SetParamValue(SharedParamsConfig.Instance.VISMass, new_row_data.mass)
+
         family_inst.SetParamValue(SharedParamsConfig.Instance.VISNote, new_row_data.note)
         family_inst.SetParamValue(SharedParamsConfig.Instance.EconomicFunction, new_row_data.function)
         description_param = family_inst.GetParam("ФОП_ВИС_Назначение")
