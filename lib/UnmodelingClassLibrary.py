@@ -70,7 +70,6 @@ class RowOfSpecification:
         self.mass = mass
         self.note = note
 
-
         self.local_description = local_description
         self.diameter = 0
         self.parentId = 0

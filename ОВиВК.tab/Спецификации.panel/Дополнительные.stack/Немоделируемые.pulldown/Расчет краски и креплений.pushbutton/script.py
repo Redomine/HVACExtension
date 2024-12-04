@@ -72,7 +72,6 @@ def split_calculation_elements_list(elements):
     return lists
 
 def get_number(element, operation_name):
-    length = 0
     diameter = 0
     width = 0
     height = 0
@@ -81,7 +80,7 @@ def get_number(element, operation_name):
 
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         diameter = UnitUtils.ConvertFromInternalUnits(
-            element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
+            element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER),
             UnitTypeId.Millimeters)
 
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Round:
@@ -106,14 +105,92 @@ def get_number(element, operation_name):
         return material_calculator.get_color(element)
     if operation_name == "Грунтовка для стальных труб" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return material_calculator.get_grunt(area)
-    if operation_name == "Хомут трубный под шпильку М8" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return material_calculator.get_collars_and_pins(element, diameter, length)
-    if operation_name == "Шпилька М8 1м/1шт" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+    if operation_name in ["Хомут трубный под шпильку М8", "Шпилька М8 1м/1шт"] and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return material_calculator.get_collars_and_pins(element, diameter, length)
 
     return 0
 
+def remove_old_models(doc, material_description, consumable_description):
+    unmodeling_factory.remove_models(doc, material_description)
+    unmodeling_factory.remove_models(doc, consumable_description)
 
+def generate_materials(doc, family_symbol, material_description, material_location):
+    generation_rules_list = unmodeling_factory.get_generation_element_list()
+
+    for rule_set in generation_rules_list:
+        elem_types = get_elements_types_by_category(rule_set.category)
+        calculation_elements = get_calculation_elements(elem_types, rule_set.method_name, rule_set.category)
+
+        split_lists = split_calculation_elements_list(calculation_elements)
+
+        for elements in split_lists:
+            system, function = unmodeling_factory.get_system_function(elements[0])
+
+            new_row = create_row_of_specification(system, function, rule_set, material_description)
+
+            for element in elements:
+                new_row.number += get_number(element, rule_set.name)
+
+            material_location = XYZ(material_location.X + 10, 0, 0)
+
+            unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
+
+def create_row_of_specification(system, function, rule_set, material_description):
+    return RowOfSpecification(
+        system,
+        function,
+        rule_set.group,
+        rule_set.name,
+        rule_set.mark,
+        rule_set.code,
+        rule_set.maker,
+        rule_set.unit,
+        material_description
+    )
+
+def generate_insulation_consumables(doc, family_symbol, consumable_description, consumable_location):
+    insulations = get_insulation_elements(doc)
+    split_insulation_lists = split_calculation_elements_list(insulations)
+
+    for insulation_elements in split_insulation_lists:
+        consumables = material_calculator.get_insulation_consumables(insulation_elements[0].GetElementType())
+
+        for consumable in consumables:
+            system, function = unmodeling_factory.get_system_function(insulation_elements[0])
+
+            new_consumable_row = create_consumable_row_of_specification(system, function, consumable, consumable_description)
+
+            for insulation_element in insulation_elements:
+                host_id = insulation_element.HostElementId
+                if host_id is not None:
+                    length, area = material_calculator.get_curve_len_area_parameters(doc.GetElement(host_id))
+                    if consumable.is_expenditure_by_linear_meter == 0:
+                        new_consumable_row.number += consumable.expenditure * area
+                    else:
+                        new_consumable_row.number += consumable.expenditure * length
+
+            consumable_location = XYZ(consumable_location.X - 10, 0, 0)
+
+            unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol, consumable_description, consumable_location)
+
+def create_consumable_row_of_specification(system, function, consumable, consumable_description):
+    return RowOfSpecification(
+        system,
+        function,
+        '12. Расходники изоляции',
+        consumable.name,
+        consumable.mark,
+        '',  # У расходников не будет кода изделия
+        consumable.maker,
+        consumable.unit,
+        consumable_description
+    )
+
+def get_insulation_elements(doc):
+    insulations = []
+    insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
+    insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations)
+    return insulations
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -124,95 +201,13 @@ def script_execute(plugin_logger):
         material_description = "Расчет краски и креплений"
         consumable_description = 'Расходники изоляции'
 
-        # при каждом повторе расчета удаляем старые версии и для креплений и для расходников
-        unmodeling_factory.remove_models(doc, material_description)
-        unmodeling_factory.remove_models(doc, consumable_description)
+        remove_old_models(doc, material_description, consumable_description)
 
-        # базовые точки для размещения немоделируемых, для материалов растут по Х на 10 для каждого, для расходников - уменьшаются аналогично
         material_location = XYZ(0, 0, 0)
         consumable_location = XYZ(0, 0, 0)
 
-        # генерация металла, креплений и краски
-        # Для каждого рулсета расчета создаем список сгруппированных по функции-имени системы элементов у которых этот расчет активен
-        generation_rules_list = unmodeling_factory.get_generation_element_list()
-
-        for rule_set in generation_rules_list:
-            elem_types = get_elements_types_by_category(rule_set.category)
-            calculation_elements = get_calculation_elements(elem_types, rule_set.method_name, rule_set.category)
-
-            # поделенные по экономической функции и имени системы листы
-            split_lists = split_calculation_elements_list(calculation_elements)
-
-            # Проходимся по разделенным спискам элементов и для каждого из них создаем новый якорный элемент
-            for elements in split_lists:
-                # Эти элементы сгруппированы по функции-системы, достаточно забрать у одного
-                system, function = unmodeling_factory.get_system_function(elements[0])
-
-                new_row = RowOfSpecification(
-                    system,
-                    function,
-                    rule_set.group,
-                    rule_set.name,
-                    rule_set.mark,
-                    rule_set.code,
-                    rule_set.maker,
-                    rule_set.unit,
-                    material_description
-                )
-
-                for element in elements:
-                    new_row.number += get_number(element, rule_set.name)
-
-                # Увеличение координаты X на 10, чтоб элементы не создавались в одном месте
-                material_location = XYZ(material_location.X + 10, 0, 0)
-
-                unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
-
-        #генерация расходников изоляции
-        insulations = []
-        insulations+=(unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations))
-        insulations+=(unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations))
-
-        split_insulation_lists = split_calculation_elements_list(insulations)
-
-        for insulation_elements in split_insulation_lists:
-            # получаем список из расходников для данного типа изоляции в отдельной функции-системе
-            consumables = material_calculator.get_insulation_consumables(insulation_elements[0].GetElementType())
-
-            # для каждого расходника генерируем новую строку и вычисляем его количество
-            for consumable in consumables:
-                # Эти элементы сгруппированы по функции-системы, достаточно забрать у одного
-                system, function = unmodeling_factory.get_system_function(
-                    insulation_elements[0])
-
-                new_consumable_row = RowOfSpecification(
-                    system,
-                    function,
-                    '12. Расходники изоляции',
-                    consumable.name,
-                    consumable.mark,
-                    '', # У расходников не будет кода изделия
-                    consumable.maker,
-                    consumable.unit,
-                    consumable_description
-                )
-
-                for insulation_element in insulation_elements:
-                    host_id = insulation_element.HostElementId
-                    if host_id is not None:
-                        length, area = material_calculator.get_curve_len_area_parameters(doc.GetElement(host_id))
-                        if consumable.is_expenditure_by_linear_meter == 0:
-                            new_consumable_row.number += consumable.expenditure * area
-                        else:
-                            new_consumable_row.number += consumable.expenditure * length
-
-                consumable_location = XYZ(consumable_location.X - 10, 0, 0)
-
-                unmodeling_factory.create_new_position(doc,
-                                                       new_consumable_row,
-                                                       family_symbol,
-                                                       consumable_description,
-                                                       consumable_location)
+        generate_materials(doc, family_symbol, material_description, material_location)
+        generate_insulation_consumables(doc, family_symbol, consumable_description, consumable_location)
 
 script_execute()
 
