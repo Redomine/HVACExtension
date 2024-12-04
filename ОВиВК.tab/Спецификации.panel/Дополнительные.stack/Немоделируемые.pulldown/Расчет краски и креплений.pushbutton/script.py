@@ -3,11 +3,11 @@
 
 __title__ = "Расчет краски и креплений"
 __doc__ = "Генерирует в модели элементы с расчетом количества соответствующих материалов"
-
+print 1
 import clr
 
-from UnmodelingClassLibrary import UnmodelingFactory, MaterialCalculator, RowOfSpecification
 
+print 2
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
@@ -25,6 +25,7 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
+
 from UnmodelingClassLibrary import  *
 from dosymep_libs.bim4everyone import *
 
@@ -115,24 +116,16 @@ def get_number(element, operation_name):
 
     return 0
 
+
+
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
+    family_symbol = unmodeling_factory.startup_checks(doc)
+
     with revit.Transaction("Добавление расчетных элементов"):
-        family_name = "_Якорный элемент"
         material_description = "Расчет краски и креплений"
         consumable_description = 'Расходники изоляции'
-
-        if doc.IsFamilyDocument:
-            forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
-
-        family_symbol = unmodeling_factory.is_family_in(doc, family_name)
-
-        if family_symbol is None:
-            forms.alert(
-                    "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
-                    "Ошибка",
-                    exitscript=True)
 
         # при каждом повторе расчета удаляем старые версии и для креплений и для расходников
         unmodeling_factory.remove_models(doc, material_description)
@@ -176,7 +169,7 @@ def script_execute(plugin_logger):
                 # Увеличение координаты X на 10, чтоб элементы не создавались в одном месте
                 material_location = XYZ(material_location.X + 10, 0, 0)
 
-                unmodeling_factory.create_new_position(doc, new_row, family_symbol, family_name, material_description, material_location)
+                unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
 
         #генерация расходников изоляции
         insulations = []

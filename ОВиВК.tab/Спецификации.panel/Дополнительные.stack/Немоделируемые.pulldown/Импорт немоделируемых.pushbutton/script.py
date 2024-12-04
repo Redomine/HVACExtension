@@ -160,8 +160,3 @@ if not status:
     anchor = checkAnchor.check_anchor(showText = False)
     if anchor:
         script_execute()
-
-
-
-
-

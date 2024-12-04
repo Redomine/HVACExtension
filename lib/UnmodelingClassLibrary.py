@@ -2,8 +2,6 @@
 
 import clr
 
-from checkAnchor import famNames
-
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
@@ -73,8 +71,6 @@ class RowOfSpecification:
         self.local_description = local_description
         self.diameter = 0
         self.parentId = 0
-
-
 
 # класс описывающий расходники изоляции
 class InsulationConsumables:
@@ -176,7 +172,8 @@ class UnmodelingFactory:
         return None
 
     # Возвращает FamilySymbol, если семейство есть в проекте, None если нет
-    def is_family_in(self, doc, name):
+    def is_family_in(self, doc):
+        name = '_Якорный элемент'
         # Создаем фильтрованный коллектор для категории OST_Mass и класса FamilySymbol
         collector = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_GenericModel).OfClass(FamilySymbol)
 
@@ -219,7 +216,7 @@ class UnmodelingFactory:
                         doc.Delete(element.Id)
 
     # Генерирует пустые элементы в рабочем наборе немоделируемых
-    def create_new_position(self, doc, new_row_data, family_symbol, family_name, description, loc):
+    def create_new_position(self, doc, new_row_data, family_symbol, description, loc):
         family_symbol.Activate()
 
         # Находим рабочий набор "99_Немоделируемые элементы"
@@ -257,6 +254,44 @@ class UnmodelingFactory:
         description_param = family_inst.GetParam("ФОП_ВИС_Назначение")
         description_param.Set(description)
 
+    # Проверяем файл, семейство
+    def startup_checks(self, doc):
+        if doc.IsFamilyDocument:
+            forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
+
+        family_symbol = self.is_family_in(doc)
+
+        if family_symbol is None:
+            forms.alert(
+                "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
+                "Ошибка",
+                exitscript=True)
+
+        self.check_family(family_symbol, doc)
+
+        self.check_worksets(doc)
+
+        return family_symbol
+
+    def check_worksets(self, doc):
+        if WorksetTable.IsWorksetNameUnique(doc, '99_Немоделируемые элементы'):
+            with revit.Transaction("Добавление рабочего набора"):
+                Workset.Create(doc, '99_Немоделируемые элементы')
+                forms.alert('Был создан рабочий набор "99_Немоделируемые элементы". '
+                            'Откройте диспетчер рабочих наборов и снимите галочку с параметра "Видимый на всех видах". '
+                            'В данном рабочем наборе будут создаваться немоделируемые элементы '
+                            'и требуется исключить их видимость.',
+                            "Рабочие наборы")
+        else:
+            fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
+            for ws in fws:
+                if ws.Name == '99_Немоделируемые элементы' and ws.IsVisibleByDefault:
+                    forms.alert('Рабочий набор "99_Немоделируемые элементы" на данный момент отображается на всех видах.'
+                                ' Откройте диспетчер рабочих наборов и снимите галочку с параметра "Видимый на всех видах".'
+                                ' В данном рабочем наборе будут создаваться немоделируемые элементы '
+                                'и требуется исключить их видимость.',
+                                "Рабочие наборы")
+
     def check_family(self, family_symbol, doc):
         param_names_list = [
             "ФОП_ВИС_Назначение",
@@ -277,9 +312,10 @@ class UnmodelingFactory:
         symbol_params = self.get_family_shared_parameter_names(doc, family)
 
         result = []
-        for param_name in param_names_list:
-            if param_name not in symbol_params:
-                result.append(param_name)
+        for param in param_names_list:
+            if param not in symbol_params:
+                forms.alert("Параметра {} нет в семействе якорного элемента. Обновите из базы.".
+                            format(param), "Ошибка", exitscript=True)
 
         return result
 

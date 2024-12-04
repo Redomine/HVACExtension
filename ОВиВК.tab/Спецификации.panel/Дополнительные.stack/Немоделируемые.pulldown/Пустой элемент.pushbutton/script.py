@@ -32,14 +32,14 @@ from dosymep_libs.bim4everyone import *
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
-selectedIds = uidoc.Selection.GetElementIds()
+selected_ids = uidoc.Selection.GetElementIds()
 unmodeling_factory = UnmodelingFactory()
 nameOfModel = '_Якорный элемент'
 description = 'Пустая строка'
 family_name = "_Якорный элемент"
 
 def get_new_position():
-    element = doc.GetElement(selectedIds[0])
+    element = doc.GetElement(selected_ids[0])
 
     parent_system, parent_function = unmodeling_factory.get_system_function(element)
     parent_group = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISGrouping.Name, '')
@@ -70,27 +70,25 @@ def get_location(family_name, generic_models):
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
+    family_symbol = unmodeling_factory.startup_checks(doc)
+
+    if view.Category == None or not view.Category.IsId(BuiltInCategory.OST_Schedules):
+        forms.alert(
+            "Добавление пустого элемента возможно только на целевой спецификации.",
+            "Ошибка",
+            exitscript=True)
+
+    if 0 == selected_ids.Count and selected_ids[0] is not Element:
+        forms.alert(
+            "Выделите целевой элемент",
+            "Ошибка",
+            exitscript=True)
+
+
     with revit.Transaction("Добавление пустого элемента"):
-        if doc.IsFamilyDocument:
-            forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
-
-        family_symbol = unmodeling_factory.is_family_in(doc, family_name)
-
-        if family_symbol is None:
-            forms.alert(
-                "Не обнаружен якорный элемент. Проверьте наличие семейства или восстановите исходное имя.",
-                "Ошибка",
-                exitscript=True)
-
-        if not view.Category.IsId(BuiltInCategory.OST_Schedules):
-            forms.alert(
-                "Добавление пустого элемента возможно только на целевой спецификации.",
-                "Ошибка",
-                exitscript=True)
-
         generic_models = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel)
         location = get_location(family_name, generic_models)
 
-        unmodeling_factory.create_new_position(doc, get_new_position(), family_symbol, family_name, description, location)
+        unmodeling_factory.create_new_position(doc, get_new_position(), family_symbol, description, location)
 
 script_execute()
