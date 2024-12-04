@@ -220,6 +220,9 @@ class UnmodelingFactory:
 
     # Генерирует пустые элементы в рабочем наборе немоделируемых
     def create_new_position(self, doc, new_row_data, family_symbol, description, loc):
+        if new_row_data.number == 0 and description != 'Пустая строка':
+            return
+
         family_symbol.Activate()
 
         # Находим рабочий набор "99_Немоделируемые элементы"

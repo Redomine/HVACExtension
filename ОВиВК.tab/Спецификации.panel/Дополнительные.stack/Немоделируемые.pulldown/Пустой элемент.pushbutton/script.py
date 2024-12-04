@@ -53,11 +53,11 @@ def get_new_position():
 
     return new_position
 
-def get_location(family_name, generic_models):
+def get_location(generic_models):
     # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
     filtered_generics = \
         [elem for elem in generic_models if elem.GetElementType()
-        .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == family_name]
+        .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == '_Якорный элемент']
 
     count = 0
     for generic in filtered_generics:
@@ -85,7 +85,7 @@ def script_execute(plugin_logger):
 
     with revit.Transaction("Добавление пустого элемента"):
         generic_models = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel)
-        location = get_location(family_name, generic_models)
+        location = get_location(generic_models)
 
         unmodeling_factory.create_new_position(doc, get_new_position(), family_symbol, description, location)
 

@@ -13,8 +13,6 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
 
-import math
-
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
@@ -114,7 +112,54 @@ def remove_old_models(doc, material_description, consumable_description):
     unmodeling_factory.remove_models(doc, material_description)
     unmodeling_factory.remove_models(doc, consumable_description)
 
-def generate_materials(doc, family_symbol, material_description, material_location):
+def generate_materials(doc, family_symbol, material_description):
+    def process_pipe_clamps(doc, elements, system, function, rule_set, material_description, family_symbol):
+        pipes = []
+        pipe_dict = {}
+
+        for element in elements:
+            if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+                pipes.append(element)
+
+        for pipe in pipes:
+            full_diameter = UnitUtils.ConvertFromInternalUnits(
+                pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER),
+                UnitTypeId.Millimeters)
+            pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
+            dependent_elements = pipe.GetDependentElements(pipe_insulation_filter)
+
+            if len(dependent_elements) > 0:
+                insulation = doc.GetElement(dependent_elements[0])
+                insulation_thikness = UnitUtils.ConvertFromInternalUnits(
+                    insulation.Thickness,
+                    UnitTypeId.Millimeters)
+                full_diameter += insulation_thikness
+
+            if full_diameter not in pipe_dict:
+                pipe_dict[full_diameter] = []
+            pipe_dict[full_diameter].append(pipe)
+
+        material_location = XYZ(0, 0, 0)
+        for pipe_row in pipe_dict:
+            new_row = create_row_of_specification(system, function, rule_set, material_description)
+            new_row.name = new_row.name + " D=" + str(pipe_row)
+
+            material_location = XYZ(material_location.X + 10, material_location.Y + 10, 0)
+
+            for element in pipe_dict[pipe_row]:
+                new_row.number += get_number(element, rule_set.name)
+
+            unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
+
+    def process_other_rules(doc, elements, system, function, rule_set, material_description,
+                            material_location, family_symbol):
+        new_row = create_row_of_specification(system, function, rule_set, material_description)
+        for element in elements:
+            new_row.number += get_number(element, rule_set.name)
+
+        unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
+
+    material_location = XYZ(0, 0, 0)
     generation_rules_list = unmodeling_factory.get_generation_element_list()
 
     for rule_set in generation_rules_list:
@@ -126,14 +171,12 @@ def generate_materials(doc, family_symbol, material_description, material_locati
         for elements in split_lists:
             system, function = unmodeling_factory.get_system_function(elements[0])
 
-            new_row = create_row_of_specification(system, function, rule_set, material_description)
-
-            for element in elements:
-                new_row.number += get_number(element, rule_set.name)
-
-            material_location = XYZ(material_location.X + 10, 0, 0)
-
-            unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
+            if rule_set.name == "Хомут трубный под шпильку М8":
+                process_pipe_clamps(doc, elements, system, function, rule_set, material_description, family_symbol)
+            else:
+                material_location = XYZ(material_location.X + 10, 0, 0)
+                process_other_rules(doc, elements, system, function, rule_set, material_description,
+                                    material_location, family_symbol)
 
 def create_row_of_specification(system, function, rule_set, material_description):
     return RowOfSpecification(
@@ -148,7 +191,8 @@ def create_row_of_specification(system, function, rule_set, material_description
         material_description
     )
 
-def generate_insulation_consumables(doc, family_symbol, consumable_description, consumable_location):
+def generate_insulation_consumables(doc, family_symbol, consumable_description):
+    consumable_location = XYZ(0, 0, 0)
     insulations = get_insulation_elements(doc)
     split_insulation_lists = split_calculation_elements_list(insulations)
 
@@ -158,7 +202,8 @@ def generate_insulation_consumables(doc, family_symbol, consumable_description, 
         for consumable in consumables:
             system, function = unmodeling_factory.get_system_function(insulation_elements[0])
 
-            new_consumable_row = create_consumable_row_of_specification(system, function, consumable, consumable_description)
+            new_consumable_row = create_consumable_row_of_specification(system, function,
+                                                                        consumable, consumable_description)
 
             for insulation_element in insulation_elements:
                 host_id = insulation_element.HostElementId
@@ -171,7 +216,8 @@ def generate_insulation_consumables(doc, family_symbol, consumable_description, 
 
             consumable_location = XYZ(consumable_location.X - 10, 0, 0)
 
-            unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol, consumable_description, consumable_location)
+            unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol,
+                                                   consumable_description, consumable_location)
 
 def create_consumable_row_of_specification(system, function, consumable, consumable_description):
     return RowOfSpecification(
@@ -203,11 +249,8 @@ def script_execute(plugin_logger):
 
         remove_old_models(doc, material_description, consumable_description)
 
-        material_location = XYZ(0, 0, 0)
-        consumable_location = XYZ(0, 0, 0)
-
-        generate_materials(doc, family_symbol, material_description, material_location)
-        generate_insulation_consumables(doc, family_symbol, consumable_description, consumable_location)
+        generate_materials(doc, family_symbol, material_description)
+        generate_insulation_consumables(doc, family_symbol, consumable_description)
 
 script_execute()
 
