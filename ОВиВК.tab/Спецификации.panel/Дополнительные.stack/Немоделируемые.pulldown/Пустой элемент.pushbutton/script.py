@@ -39,8 +39,9 @@ unmodeling_factory = UnmodelingFactory()
 description = 'Пустая строка'
 
 
-def get_new_position(location, family_symbol, rows_number):
+def get_new_position(family_symbol, rows_number):
     element = doc.GetElement(selected_ids[0])
+    location = unmodeling_factory.get_base_location(doc)
 
     parent_system, parent_function = unmodeling_factory.get_system_function(element)
     parent_group = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISGrouping.Name, '')
@@ -54,27 +55,14 @@ def get_new_position(location, family_symbol, rows_number):
             new_group
         )
 
-        location = XYZ(0, location.Y + 10, 0)
+        location = unmodeling_factory.update_location(location)
+
         unmodeling_factory.create_new_position(doc, new_position, family_symbol, description, location)
 
-def get_location(generic_models):
-    # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
-    filtered_generics = \
-        [elem for elem in generic_models if elem.GetElementType()
-        .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == '_Якорный элемент']
-
-    count = 0
-    for generic in filtered_generics:
-        if generic.GetSharedParamValue('ФОП_ВИС_Назначение') == description:
-            count+=1
-
-    return XYZ(0, 10+10*count, 0)
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
-
-
     family_symbol = unmodeling_factory.startup_checks(doc)
 
     if view.Category == None or not view.Category.IsId(BuiltInCategory.OST_Schedules):
@@ -104,10 +92,7 @@ def script_execute(plugin_logger):
             exitscript=True)
 
     with revit.Transaction("Добавление пустого элемента"):
-        generic_models = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel)
-        location = get_location(generic_models)
-
-        get_new_position(location, family_symbol, rows_number)
+        get_new_position(family_symbol, rows_number)
 
 
 

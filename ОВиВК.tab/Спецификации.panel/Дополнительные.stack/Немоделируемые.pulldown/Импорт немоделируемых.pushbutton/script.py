@@ -154,10 +154,10 @@ def script_execute(plugin_logger):
         # при каждом повторе расчета удаляем старые версии
         unmodeling_factory.remove_models(doc, description)
 
-        element_location = XYZ(0, 0, 0)
+        element_location = unmodeling_factory.get_base_location(doc)
 
         for element in elements_to_generate:
-            element_location = XYZ(0, element_location.Y - 10, 0)
+            element_location = unmodeling_factory.update_location(element_location)
 
             unmodeling_factory.create_new_position(doc, element, family_symbol, description, element_location)
 

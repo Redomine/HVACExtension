@@ -89,6 +89,11 @@ class UnmodelingFactory:
     out_of_system_value = '!Нет системы'
     out_of_function_value = '!Нет функции'
 
+    # Максимальная встреченная координата в проекте. Обновляется в первый раз в get_base_location, далее обновляется в
+    # при создании экземпляра якоря
+    max_location_y = 0
+
+    # Забираем из элемента значение параметров функции и системы
     def get_system_function(self, element):
         system = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISSystemName,
                                                 self.out_of_system_value)
@@ -96,7 +101,41 @@ class UnmodelingFactory:
                                                   self.out_of_function_value)
         return system, function
 
-    def get_generation_element_list(self):
+    # Получаем базовую локацию для вставки первого из элементов. Проверяем якоря проекта на самый большой Y и возвращаем его, немного увеличив.
+    # Если уже max_location_y не ноль - возвращает его с небольшим прирощением
+    def get_base_location(self, doc):
+        if self.max_location_y == 0:
+            # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
+            generic_models = self.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel)
+
+            filtered_generics = \
+                [elem for elem in generic_models if elem.GetElementType()
+                .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == '_Якорный элемент']
+            max_y = None
+            base_location_point = None
+
+            for elem in filtered_generics:
+                # Получаем LocationPoint элемента
+                location_point = elem.Location.Point
+
+                # Получаем значение Y из LocationPoint
+                y_value = location_point.Y
+
+                # Проверяем, является ли текущее значение Y максимальным
+                if max_y is None or y_value > max_y:
+                    max_y = y_value
+                    base_location_point = location_point
+
+            return XYZ(0, 10 + max_y, 0)
+
+        return XYZ(0, 0.01 + self.max_location_y, 0)
+
+    # Получает базовую локацию и слегка ее увеличивает
+    def update_location(self, loc):
+        return XYZ(0, loc.Y + 0.01, 0)
+
+    # Получаем список правил для генерации материалов
+    def get_ruleset(self):
         gen_list = [
             GenerationRuleSet(
                 group="12. Расчетные элементы",
@@ -163,7 +202,8 @@ class UnmodelingFactory:
         ]
         return gen_list
 
-    def is_element_edited_by(self, element):
+    # Возвращает имя занявшего элемент или None
+    def get_element_editor_name(self, element):
         user_name = __revit__.Application.Username
         edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
         if edited_by is None:
@@ -186,6 +226,7 @@ class UnmodelingFactory:
 
         return None
 
+    # Возвращает список элементов по их категории
     def get_elements_by_category(self, doc, category):
         return FilteredElementCollector(doc) \
             .OfCategory(category) \
@@ -202,7 +243,7 @@ class UnmodelingFactory:
             .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == fam_name]
 
         for element in generic_model_collection:
-            edited_by = self.is_element_edited_by(element)
+            edited_by = self.get_element_editor_name(element)
             if edited_by:
                 forms.alert("Якорные элементы не были обработаны, так как были заняты пользователями:" + edited_by,
                             "Ошибка",
@@ -222,6 +263,8 @@ class UnmodelingFactory:
     def create_new_position(self, doc, new_row_data, family_symbol, description, loc):
         if new_row_data.number == 0 and description != 'Пустая строка':
             return
+
+        self.max_location_y = loc.Y
 
         family_symbol.Activate()
 
@@ -280,6 +323,8 @@ class UnmodelingFactory:
 
         return family_symbol
 
+    # Проверяет наличие рабочего набора немоделируемых. Если нет - создаем и просим выключить видимость, если есть но видим -
+    # просто просим ее выключить
     def check_worksets(self, doc):
         if WorksetTable.IsWorksetNameUnique(doc, '99_Немоделируемые элементы'):
             with revit.Transaction("Добавление рабочего набора"):
@@ -299,6 +344,7 @@ class UnmodelingFactory:
                                 'и требуется исключить их видимость.',
                                 "Рабочие наборы")
 
+    # Проверяем семейство на наличие параметров. Если чего-то нет - останавливаем скрипт
     def check_family(self, family_symbol, doc):
         param_names_list = [
             "ФОП_ВИС_Назначение",
@@ -326,6 +372,7 @@ class UnmodelingFactory:
 
         return result
 
+    # Получаем список имен общих параметров семейства
     def get_family_shared_parameter_names(self, doc, family):
         # Открываем документ семейства для редактирования
         family_doc = doc.EditFamily(family)
@@ -348,7 +395,8 @@ class UnmodelingFactory:
 
 # класс-калькулятор для расходных элементов труб и воздуховодов
 class MaterialCalculator:
-    def get_curve_len_area_parameters(self, host):
+    # Получаем значения длины и площади хоста изоляции. Для фитингов не сработает
+    def get_curve_len_area_parameters_values(self, host):
         length = UnitUtils.ConvertFromInternalUnits(
             host.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
             UnitTypeId.Meters)
@@ -357,14 +405,16 @@ class MaterialCalculator:
             UnitTypeId.SquareMeters)
         return length, area
 
-    def get_pipe_material_variants(self):
+    # Получаем экземпляры класса материала для металла труб
+    def get_pipe_material_class_instances(self):
         """ Возвращает коллекцию вариантов расхода металла по диаметрам для изолированных труб. Для неизолированных 0 """
 
         # Ключ словаря - диаметр. Первое значение списка по ключу - значение для изолированной трубы, второе - для неизолированной
         # для труб согласовано использование в расчетах только изолированных трубопроводов, поэтому в качестве неизолированной при создании
         # экземпляра варианта используем 0
-        dict_var_p_mat = {15: 0.14, 20: 0.12, 25: 0.11, 32: 0.1, 40: 0.11, 50: 0.144, 65: 0.195,
-                          80: 0.233, 100: 0.37, 125: 0.53, 999: 0.53}
+        # Запас 70% задан по согласованию. В этих значениях он уже учтен, в нормативке он соответственно меньше.
+        dict_var_p_mat = {15: 0.238, 20: 0.204, 25: 0.187, 32: 0.170, 40: 0.187, 50: 0.2448, 65: 0.3315,
+                          80: 0.3791, 100: 0.629, 125: 0.901, 150: 1.054, 200: 1.309, 999: 0.1564}
 
         variants = []
         for diameter, insulated_rate in dict_var_p_mat.items():
@@ -373,7 +423,8 @@ class MaterialCalculator:
 
         return variants
 
-    def get_collar_material_variants(self):
+    # Получаем экземпляры класса материала для металла воздуховодов
+    def get_collar_material_class_instances(self):
         """ Возвращает коллекцию вариантов расхода хомутов по диаметрам для изолированных и неизолированных труб """
 
         # Ключ словаря - диаметр. Первое значение списка по ключу - значение для изолированной трубы, второе - для неизолированной
@@ -389,6 +440,7 @@ class MaterialCalculator:
 
         return variants
 
+    # Если труба изолирована - возвращает True
     def is_pipe_insulated(self, pipe):
         pipe_insulation_filter = ElementCategoryFilter(BuiltInCategory.OST_PipeInsulations)
         dependent_elements = pipe.GetDependentElements(pipe_insulation_filter)
@@ -401,8 +453,9 @@ class MaterialCalculator:
             number = 1
         return int(number)
 
-    def get_collars_and_pins(self, pipe, pipe_diameter, pipe_length):
-        collar_materials = self.get_collar_material_variants()
+    # Возвращает число хомутов и шпилек
+    def get_collars_and_pins_number(self, pipe, pipe_diameter, pipe_length):
+        collar_materials = self.get_collar_material_class_instances()
 
         if pipe_length < 0.5:
             return 0
@@ -414,7 +467,8 @@ class MaterialCalculator:
                 else:
                     return self.get_material_value_by_rate(collar_material.not_insulated_rate, pipe_length)
 
-    def get_duct_material(self, duct, duct_diameter, duct_width, duct_height, duct_area):
+    # Возвращает массу металла воздуховодов
+    def get_duct_material_mass(self, duct, duct_diameter, duct_width, duct_height, duct_area):
         perimeter = 0
         if duct.DuctType.Shape == ConnectorProfileType.Round:
             perimeter = 3.14 * duct_diameter
@@ -439,26 +493,27 @@ class MaterialCalculator:
 
         return mass
 
-    def get_pipe_material(self, pipe_length, pipe_diameter):
-        pipe_materials = self.get_pipe_material_variants()
-        coefficient = 1.7
-        # Запас 70% задан по согласованию.
+    # Возвращает массу металла для труб
+    def get_pipe_material_mass(self, pipe_length, pipe_diameter):
+        pipe_materials = self.get_pipe_material_class_instances()
 
         for pipe_material in pipe_materials:
             if pipe_diameter <= pipe_material.diameter:
-                rate_with_stock = pipe_material.insulated_rate * coefficient
-                return rate_with_stock * pipe_length
+                return pipe_material.insulated_rate * pipe_length
 
-    def get_grunt(self, pipe_area):
+    # Возвращает массу грунтовки
+    def get_grunt_mass(self, pipe_area):
         number = pipe_area / 10
         return number
 
-    def get_color(self, pipe):
+    # Возвращает массу краски
+    def get_color_mass(self, pipe):
         area = (pipe.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
         number = area * 0.2 * 2
         return number
 
-    def get_insulation_consumables(self, insulation_element_type):
+    # Возвращает список экземпляров расходников изоляции для конкретных ее типов
+    def get_consumables_class_instances(self, insulation_element_type):
         consumables_name_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Name.Name
         consumables_mark_1 = SharedParamsConfig.Instance.VISInsulationConsumable1MarkNumber.Name
         consumables_maker_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Manufacturer.Name

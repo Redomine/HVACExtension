@@ -30,6 +30,7 @@ view = doc.ActiveView
 material_calculator = MaterialCalculator()
 unmodeling_factory = UnmodelingFactory()
 
+# Получает типы элементов по их категории
 def get_elements_types_by_category(category):
     col = FilteredElementCollector(doc) \
         .OfCategory(category) \
@@ -37,7 +38,8 @@ def get_elements_types_by_category(category):
         .ToElements()
     return col
 
-def get_calculation_elements(element_types, calculation_name, builtin_category):
+# Проверяет для типов элементов включен ли в них определенный расчет. Если включен - возвращает список экземпляров
+def get_material_hosts(element_types, calculation_name, builtin_category):
     result_list = []
 
     for element_type in element_types:
@@ -50,6 +52,7 @@ def get_calculation_elements(element_types, calculation_name, builtin_category):
 
     return result_list
 
+# Разделяем список элементов на подсписки из тех элементов, у которых одинаковая функция и система
 def split_calculation_elements_list(elements):
     # Создаем словарь для группировки элементов по ключу
     grouped_elements = defaultdict(list)
@@ -69,12 +72,13 @@ def split_calculation_elements_list(elements):
 
     return lists
 
-def get_number(element, operation_name):
+# Вычисление количественного значения расходника
+def get_material_number_value(element, operation_name):
     diameter = 0
     width = 0
     height = 0
 
-    length, area = material_calculator.get_curve_len_area_parameters(element)
+    length, area = material_calculator.get_curve_len_area_parameters_values(element)
 
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         diameter = UnitUtils.ConvertFromInternalUnits(
@@ -96,23 +100,25 @@ def get_number(element, operation_name):
             UnitTypeId.Millimeters)
 
     if operation_name == "Металлические крепления для трубопроводов" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return material_calculator.get_pipe_material(length, diameter)
+        return material_calculator.get_pipe_material_mass(length, diameter)
     if operation_name == "Металлические крепления для воздуховодов" and element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        return material_calculator.get_duct_material(element, diameter, width, height, area)
+        return material_calculator.get_duct_material_mass(element, diameter, width, height, area)
     if operation_name == "Краска антикоррозионная за два раза" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return material_calculator.get_color(element)
+        return material_calculator.get_color_mass(element)
     if operation_name == "Грунтовка для стальных труб" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return material_calculator.get_grunt(area)
+        return material_calculator.get_grunt_mass(area)
     if operation_name in ["Хомут трубный под шпильку М8", "Шпилька М8 1м/1шт"] and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return material_calculator.get_collars_and_pins(element, diameter, length)
+        return material_calculator.get_collars_and_pins_number(element, diameter, length)
 
     return 0
 
+# Удаление уже размещенных в модели расходников и материалов перед новой генерацией
 def remove_old_models(doc, material_description, consumable_description):
     unmodeling_factory.remove_models(doc, material_description)
     unmodeling_factory.remove_models(doc, consumable_description)
 
-def generate_materials(doc, family_symbol, material_description):
+# Обработка предопределенного списка материалов
+def process_materials(doc, family_symbol, material_description):
     def process_pipe_clamps(doc, elements, system, function, rule_set, material_description, family_symbol):
         pipes = []
         pipe_dict = {}
@@ -139,32 +145,32 @@ def generate_materials(doc, family_symbol, material_description):
                 pipe_dict[full_diameter] = []
             pipe_dict[full_diameter].append(pipe)
 
-        material_location = XYZ(0, 0, 0)
+        material_location = unmodeling_factory.get_base_location(doc)
         for pipe_row in pipe_dict:
-            new_row = create_row_of_specification(system, function, rule_set, material_description)
+            new_row = create_material_row_class_instance(system, function, rule_set, material_description)
             new_row.name = new_row.name + " D=" + str(pipe_row)
 
-            material_location = XYZ(material_location.X + 10, material_location.Y + 10, 0)
+            material_location = unmodeling_factory.update_location(material_location)
+
 
             for element in pipe_dict[pipe_row]:
-                new_row.number += get_number(element, rule_set.name)
-
+                new_row.number += get_material_number_value(element, rule_set.name)
             unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
 
     def process_other_rules(doc, elements, system, function, rule_set, material_description,
                             material_location, family_symbol):
-        new_row = create_row_of_specification(system, function, rule_set, material_description)
+        new_row = create_material_row_class_instance(system, function, rule_set, material_description)
         for element in elements:
-            new_row.number += get_number(element, rule_set.name)
+            new_row.number += get_material_number_value(element, rule_set.name)
 
         unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
 
-    material_location = XYZ(0, 0, 0)
-    generation_rules_list = unmodeling_factory.get_generation_element_list()
+    material_location = unmodeling_factory.get_base_location(doc)
+    generation_rules_list = unmodeling_factory.get_ruleset()
 
     for rule_set in generation_rules_list:
         elem_types = get_elements_types_by_category(rule_set.category)
-        calculation_elements = get_calculation_elements(elem_types, rule_set.method_name, rule_set.category)
+        calculation_elements = get_material_hosts(elem_types, rule_set.method_name, rule_set.category)
 
         split_lists = split_calculation_elements_list(calculation_elements)
 
@@ -173,27 +179,17 @@ def generate_materials(doc, family_symbol, material_description):
 
             if rule_set.name == "Хомут трубный под шпильку М8":
                 process_pipe_clamps(doc, elements, system, function, rule_set, material_description, family_symbol)
+                material_location = unmodeling_factory.get_base_location(doc)
             else:
-                material_location = XYZ(material_location.X + 10, 0, 0)
+                material_location = unmodeling_factory.update_location(material_location)
+
                 process_other_rules(doc, elements, system, function, rule_set, material_description,
                                     material_location, family_symbol)
 
-def create_row_of_specification(system, function, rule_set, material_description):
-    return RowOfSpecification(
-        system,
-        function,
-        rule_set.group,
-        rule_set.name,
-        rule_set.mark,
-        rule_set.code,
-        rule_set.maker,
-        rule_set.unit,
-        material_description
-    )
-
-def generate_insulation_consumables(doc, family_symbol, consumable_description):
-    consumable_location = XYZ(0, 0, 0)
-    insulations = get_insulation_elements(doc)
+# Обработка расходников изоляции
+def process_insulation_consumables(doc, family_symbol, consumable_description):
+    consumable_location = unmodeling_factory.get_base_location(doc)
+    insulations = get_insulation_elements_list(doc)
     split_insulation_lists = split_calculation_elements_list(insulations)
 
     # Кэширование результатов get_system_function и get_insulation_consumables
@@ -205,7 +201,7 @@ def generate_insulation_consumables(doc, family_symbol, consumable_description):
         element_type = insulation_elements[0].GetElementType()
 
         if element_type not in consumables_cache:
-            consumables_cache[element_type] = material_calculator.get_insulation_consumables(element_type)
+            consumables_cache[element_type] = material_calculator.get_consumables_class_instances(element_type)
 
         consumables = consumables_cache[element_type]
 
@@ -215,8 +211,8 @@ def generate_insulation_consumables(doc, family_symbol, consumable_description):
 
             system, function = system_function_cache[element_type]
 
-            new_consumable_row = create_consumable_row_of_specification(system, function,
-                                                                        consumable, consumable_description)
+            new_consumable_row = create_consumable_row_class_instance(system, function,
+                                                                      consumable, consumable_description)
 
             host_elements = {}
             for insulation_element in insulation_elements:
@@ -227,19 +223,29 @@ def generate_insulation_consumables(doc, family_symbol, consumable_description):
                         host_elements[host_id] = host
                         if host.Category.IsId(BuiltInCategory.OST_DuctCurves) or host.Category.IsId(BuiltInCategory.OST_PipeCurves):
                             if host_id not in curve_params_cache:
-                                curve_params_cache[host_id] = material_calculator.get_curve_len_area_parameters(host)
+                                curve_params_cache[host_id] = material_calculator.get_curve_len_area_parameters_values(host)
                             length, area = curve_params_cache[host_id]
                             if consumable.is_expenditure_by_linear_meter == 0:
                                 new_consumable_row.number += consumable.expenditure * area
                             else:
                                 new_consumable_row.number += consumable.expenditure * length
 
-            consumable_location = XYZ(consumable_location.X - 10, 0, 0)
+
+            consumable_location = unmodeling_factory.update_location(consumable_location)
+
 
             unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol,
                                                    consumable_description, consumable_location)
 
-def create_consumable_row_of_specification(system, function, consumable, consumable_description):
+# Получаем список элементов изоляции труб и воздуховодов
+def get_insulation_elements_list(doc):
+    insulations = []
+    insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
+    insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations)
+    return insulations
+
+# Создаем экземпляр класса расходника изоляции для генерации строки
+def create_consumable_row_class_instance(system, function, consumable, consumable_description):
     return RowOfSpecification(
         system,
         function,
@@ -252,11 +258,19 @@ def create_consumable_row_of_specification(system, function, consumable, consuma
         consumable_description
     )
 
-def get_insulation_elements(doc):
-    insulations = []
-    insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
-    insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations)
-    return insulations
+# Создаем экземпляр класса материала для генерации строки
+def create_material_row_class_instance(system, function, rule_set, material_description):
+    return RowOfSpecification(
+        system,
+        function,
+        rule_set.group,
+        rule_set.name,
+        rule_set.mark,
+        rule_set.code,
+        rule_set.maker,
+        rule_set.unit,
+        material_description
+    )
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -269,7 +283,7 @@ def script_execute(plugin_logger):
 
         remove_old_models(doc, material_description, consumable_description)
 
-        generate_materials(doc, family_symbol, material_description)
-        generate_insulation_consumables(doc, family_symbol, consumable_description)
+        process_materials(doc, family_symbol, material_description)
+        process_insulation_consumables(doc, family_symbol, consumable_description)
 
 script_execute()
