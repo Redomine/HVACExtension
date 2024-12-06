@@ -19,6 +19,7 @@ from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
 from dosymep.Bim4Everyone.SharedParams import *
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep_libs.bim4everyone import *
 from dosymep.Revit import *
 
@@ -320,6 +321,13 @@ class UnmodelingFactory:
         self.check_family(family_symbol, doc)
 
         self.check_worksets(doc)
+
+        # На всякий случай выполняем настройку параметров - в теории уже должны быть на месте, но лучше продублировать
+        revit_params = [SharedParamsConfig.Instance.EconomicFunction,
+                        SharedParamsConfig.Instance.VISSystemName]
+
+        project_parameters = ProjectParameters.Create(doc.Application)
+        project_parameters.SetupRevitParams(doc, revit_params)
 
         return family_symbol
 
