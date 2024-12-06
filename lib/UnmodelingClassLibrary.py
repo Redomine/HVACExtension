@@ -405,11 +405,16 @@ class UnmodelingFactory:
 class MaterialCalculator:
     # Получаем значения длины и площади хоста изоляции. Для фитингов не сработает
     def get_curve_len_area_parameters_values(self, host):
+        length = host.GetParamValueOrDefault(BuiltInParameter.CURVE_ELEM_LENGTH)
+        area = host.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+        if length is None or area is None:
+            return 0, 0
+
         length = UnitUtils.ConvertFromInternalUnits(
-            host.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH),
+            length,
             UnitTypeId.Meters)
         area = UnitUtils.ConvertFromInternalUnits(
-            host.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
+            area,
             UnitTypeId.SquareMeters)
         return length, area
 

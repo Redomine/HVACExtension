@@ -195,7 +195,6 @@ def process_insulation_consumables(doc, family_symbol, consumable_description):
     # Кэширование результатов get_system_function и get_insulation_consumables
     system_function_cache = {}
     consumables_cache = {}
-    curve_params_cache = {}
 
     for insulation_elements in split_insulation_lists:
         element_type = insulation_elements[0].GetElementType()
@@ -214,25 +213,14 @@ def process_insulation_consumables(doc, family_symbol, consumable_description):
             new_consumable_row = create_consumable_row_class_instance(system, function,
                                                                       consumable, consumable_description)
 
-            host_elements = {}
             for insulation_element in insulation_elements:
-                host_id = insulation_element.HostElementId
-                if host_id is not None:
-                    if host_id not in host_elements:
-                        host = doc.GetElement(host_id)
-                        host_elements[host_id] = host
-                        if host.Category.IsId(BuiltInCategory.OST_DuctCurves) or host.Category.IsId(BuiltInCategory.OST_PipeCurves):
-                            if host_id not in curve_params_cache:
-                                curve_params_cache[host_id] = material_calculator.get_curve_len_area_parameters_values(host)
-                            length, area = curve_params_cache[host_id]
-                            if consumable.is_expenditure_by_linear_meter == 0:
-                                new_consumable_row.number += consumable.expenditure * area
-                            else:
-                                new_consumable_row.number += consumable.expenditure * length
-
+                length, area = material_calculator.get_curve_len_area_parameters_values(insulation_element)
+                if consumable.is_expenditure_by_linear_meter == 0:
+                    new_consumable_row.number += consumable.expenditure * area
+                else:
+                    new_consumable_row.number += consumable.expenditure * length
 
             consumable_location = unmodeling_factory.update_location(consumable_location)
-
 
             unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol,
                                                    consumable_description, consumable_location)
