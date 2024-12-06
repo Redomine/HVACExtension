@@ -104,7 +104,7 @@ def get_material_number_value(element, operation_name):
     if operation_name == "Металлические крепления для воздуховодов" and element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         return material_calculator.get_duct_material_mass(element, diameter, width, height, area)
     if operation_name == "Краска антикоррозионная за два раза" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return material_calculator.get_color_mass(element)
+        return material_calculator.get_color_mass(area)
     if operation_name == "Грунтовка для стальных труб" and element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return material_calculator.get_grunt_mass(area)
     if operation_name in ["Хомут трубный под шпильку М8", "Шпилька М8 1м/1шт"] and element.Category.IsId(BuiltInCategory.OST_PipeCurves):

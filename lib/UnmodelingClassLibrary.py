@@ -507,9 +507,8 @@ class MaterialCalculator:
         return number
 
     # Возвращает массу краски
-    def get_color_mass(self, pipe):
-        area = (pipe.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903)
-        number = area * 0.2 * 2
+    def get_color_mass(self, pipe_area):
+        number = pipe_area * 0.2 * 2
         return number
 
     # Возвращает список экземпляров расходников изоляции для конкретных ее типов
