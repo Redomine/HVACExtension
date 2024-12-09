@@ -164,7 +164,6 @@ class UnmodelingFactory:
             base_location_point = None
 
             for elem in filtered_generics:
-                print 1
                 # Получаем LocationPoint элемента
                 location_point = elem.Location.Point
 
@@ -488,7 +487,8 @@ class MaterialCalculator:
             variant = MaterialVariants(diameter, insulated_rate, 0)
             variants.append(variant)
 
-        return variants
+        variants_sorted = sorted(variants, key=lambda x: x.diameter)
+        return variants_sorted
 
     # Получаем экземпляры класса материала для металла воздуховодов
     def get_collar_material_class_instances(self):
@@ -505,7 +505,8 @@ class MaterialCalculator:
             variant = MaterialVariants(diameter, insulated_rate, not_insulated_rate)
             variants.append(variant)
 
-        return variants
+        variants_sorted = sorted(variants, key=lambda x: x.diameter)
+        return variants_sorted
 
     # Если труба изолирована - возвращает True
     def is_pipe_insulated(self, pipe):
