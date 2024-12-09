@@ -90,6 +90,49 @@ class UnmodelingFactory:
     out_of_system_value = '!Нет системы'
     out_of_function_value = '!Нет функции'
 
+    # Получает типы элементов по их категории
+    def get_elements_types_by_category(self, doc, category):
+        col = FilteredElementCollector(doc) \
+            .OfCategory(category) \
+            .WhereElementIsElementType() \
+            .ToElements()
+        return col
+
+    def get_pipe_duct_insulation_types(self, doc):
+        result = []
+
+        result.extend(self.get_elements_types_by_category(doc, BuiltInCategory.OST_PipeInsulations))
+        result.extend(self.get_elements_types_by_category(doc, BuiltInCategory.OST_DuctInsulations))
+        return result
+
+    # Создаем экземпляр класса расходника изоляции для генерации строки
+    def create_consumable_row_class_instance(self, system, function, consumable, consumable_description):
+        return RowOfSpecification(
+            system,
+            function,
+            '12. Расходники изоляции',
+            consumable.name,
+            consumable.mark,
+            '',  # У расходников не будет кода изделия
+            consumable.maker,
+            consumable.unit,
+            consumable_description
+        )
+
+    # Создаем экземпляр класса материала для генерации строки
+    def create_material_row_class_instance(self, system, function, rule_set, material_description):
+        return RowOfSpecification(
+            system,
+            function,
+            rule_set.group,
+            rule_set.name,
+            rule_set.mark,
+            rule_set.code,
+            rule_set.maker,
+            rule_set.unit,
+            material_description
+        )
+
     # Максимальная встреченная координата в проекте. Обновляется в первый раз в get_base_location, далее обновляется в
     # при создании экземпляра якоря
     max_location_y = 0
