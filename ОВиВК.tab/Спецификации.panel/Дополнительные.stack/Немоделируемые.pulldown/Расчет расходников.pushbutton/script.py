@@ -69,12 +69,16 @@ def get_material_number_value(element, operation_name):
     diameter = 0
     width = 0
     height = 0
+    outer_diameter = 0
 
     length, area = material_calculator.get_curve_len_area_parameters_values(element)
 
     if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        diameter = UnitUtils.ConvertFromInternalUnits(
+        outer_diameter = UnitUtils.ConvertFromInternalUnits(
             element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER),
+            UnitTypeId.Millimeters)
+        diameter = UnitUtils.ConvertFromInternalUnits(
+            element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM),
             UnitTypeId.Millimeters)
 
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Round:
@@ -105,7 +109,7 @@ def get_material_number_value(element, operation_name):
         return material_calculator.get_grunt_mass(area)
     if (operation_name in ["Хомут трубный под шпильку М8", "Шпилька М8 1м/1шт"]
             and element.Category.IsId(BuiltInCategory.OST_PipeCurves)):
-        return material_calculator.get_collars_and_pins_number(element, diameter, length)
+        return material_calculator.get_collars_and_pins_number(element, outer_diameter, length)
 
     return 0
 
