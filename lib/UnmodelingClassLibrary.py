@@ -89,6 +89,7 @@ class InsulationConsumables:
 class UnmodelingFactory:
     out_of_system_value = '!Нет системы'
     out_of_function_value = '!Нет функции'
+    ws_id = None
 
     # Получает типы элементов по их категории
     def get_elements_types_by_category(self, doc, category):
@@ -310,25 +311,15 @@ class UnmodelingFactory:
 
         self.max_location_y = loc.Y
 
-        family_symbol.Activate()
+        if self.ws_id is None:
+            forms.alert('Не удалось найти рабочий набор "99_Немоделируемые элементы"', "Ошибка", exitscript=True)
 
-        # Находим рабочий набор "99_Немоделируемые элементы"
-        fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
-        workset_id = None
-        for ws in fws:
-            if ws.Name == '99_Немоделируемые элементы':
-                workset_id = ws.Id
-                break
 
-        if workset_id is None:
-            print('Не удалось найти рабочий набор "99_Немоделируемые элементы", проверьте список наборов')
-            return
-
-        # Создаем элемент и назначем рабочий набор
+        # Создаем элемент и назначаем рабочий набор
         family_inst = doc.Create.NewFamilyInstance(loc, family_symbol, Structure.StructuralType.NonStructural)
 
         family_inst_workset = family_inst.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
-        family_inst_workset.Set(workset_id.IntegerValue)
+        family_inst_workset.Set(self.ws_id.IntegerValue)
 
         group = '{}_{}_{}_{}_{}'.format(
             new_row_data.group, new_row_data.name, new_row_data.mark, new_row_data.maker, new_row_data.code)
@@ -379,21 +370,27 @@ class UnmodelingFactory:
     def check_worksets(self, doc):
         if WorksetTable.IsWorksetNameUnique(doc, '99_Немоделируемые элементы'):
             with revit.Transaction("Добавление рабочего набора"):
-                Workset.Create(doc, '99_Немоделируемые элементы')
+                new_ws = Workset.Create(doc, '99_Немоделируемые элементы')
                 forms.alert('Был создан рабочий набор "99_Немоделируемые элементы". '
                             'Откройте диспетчер рабочих наборов и снимите галочку с параметра "Видимый на всех видах". '
                             'В данном рабочем наборе будут создаваться немоделируемые элементы '
                             'и требуется исключить их видимость.',
                             "Рабочие наборы")
+                self.ws_id = new_ws.Id
         else:
             fws = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset)
             for ws in fws:
+                if ws.Name == '99_Немоделируемые элементы':
+                    self.ws_id = ws.Id
+
                 if ws.Name == '99_Немоделируемые элементы' and ws.IsVisibleByDefault:
                     forms.alert('Рабочий набор "99_Немоделируемые элементы" на данный момент отображается на всех видах.'
                                 ' Откройте диспетчер рабочих наборов и снимите галочку с параметра "Видимый на всех видах".'
                                 ' В данном рабочем наборе будут создаваться немоделируемые элементы '
                                 'и требуется исключить их видимость.',
                                 "Рабочие наборы")
+                    self.ws_id = ws.Id
+                    return
 
     # Проверяем семейство на наличие параметров. Если чего-то нет - останавливаем скрипт
     def check_family(self, family_symbol, doc):

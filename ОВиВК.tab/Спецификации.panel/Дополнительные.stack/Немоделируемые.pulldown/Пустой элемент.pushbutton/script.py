@@ -92,6 +92,8 @@ def script_execute(plugin_logger):
             exitscript=True)
 
     with revit.Transaction("Добавление пустого элемента"):
+        family_symbol.Activate()
+
         get_new_position(family_symbol, rows_number)
 
 

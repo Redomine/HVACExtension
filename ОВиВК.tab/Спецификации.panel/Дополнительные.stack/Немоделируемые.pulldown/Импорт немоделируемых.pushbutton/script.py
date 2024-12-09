@@ -151,6 +151,8 @@ def script_execute(plugin_logger):
         row += 1
 
     with revit.Transaction("Добавление расчетных элементов"):
+        family_symbol.Activate()
+
         # при каждом повторе расчета удаляем старые версии
         unmodeling_factory.remove_models(doc, description)
 

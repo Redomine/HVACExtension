@@ -190,9 +190,6 @@ def process_insulation_consumables(family_symbol, consumable_description):
     insulation_list = get_insulation_elements_list()
     split_insulation_lists = split_calculation_elements_list(insulation_list)
 
-    # Кэширование результатов get_system_function и get_insulation_consumables
-    system_function_cache = {}
-    consumables_cache = {}
     consumables_by_insulation_type = {}
 
     insulation_types = unmodeling_factory.get_pipe_duct_insulation_types(doc)
@@ -200,7 +197,8 @@ def process_insulation_consumables(family_symbol, consumable_description):
     # кэшируем данные по расходникам изоляции для ее типов
     for insulation_type in insulation_types:
         if insulation_type not in consumables_by_insulation_type:
-             consumables_by_insulation_type[insulation_type.Id] = material_calculator.get_consumables_class_instances(insulation_type)
+             consumables_by_insulation_type[insulation_type.Id] = material_calculator.get_consumables_class_instances(
+                 insulation_type)
 
     # Разбили изоляцию по системе-функции и дробим по типам чтоб их сопоставить
     for insulation_elements in split_insulation_lists:
@@ -217,16 +215,20 @@ def process_insulation_consumables(family_symbol, consumable_description):
             insulation_elements_by_type[insulation_type.Id].append(insulation_element)
 
 
-
         # Сравниваем словарь по расходникам изоляции и словарь по типам изоляции в этой функции-системе
         for insulation_type_id, elements in insulation_elements_by_type.items():
 
             if insulation_type_id in consumables_by_insulation_type:
+                # Получение классов расходников для этого айди типа изоляции
                 consumables = consumables_by_insulation_type[insulation_type_id]
 
+                # для каждого расходника генерируем строку
                 for consumable in consumables:
-                    new_consumable_row = unmodeling_factory.create_consumable_row_class_instance(system, function,
-                                                                                       consumable, consumable_description)
+                    new_consumable_row = unmodeling_factory.create_consumable_row_class_instance(
+                        system,
+                        function,
+                        consumable,
+                        consumable_description)
 
                     for element in elements:
                         length, area = material_calculator.get_curve_len_area_parameters_values(element)
@@ -239,40 +241,6 @@ def process_insulation_consumables(family_symbol, consumable_description):
 
                     unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol,
                                                            consumable_description, consumable_location)
-
-
-
-
-
-    # # Разбили изоляцию по системе-функции и проходимся по
-    # for insulation_elements in split_insulation_lists:
-    #     element_type = insulation_elements[0].GetElementType()
-    #
-    #     if element_type not in consumables_cache:
-    #         consumables_cache[element_type] = material_calculator.get_consumables_class_instances(element_type)
-    #
-    #     consumables = consumables_cache[element_type]
-    #
-    #     for consumable in consumables:
-    #         if element_type not in system_function_cache:
-    #             system_function_cache[element_type] = unmodeling_factory.get_system_function(insulation_elements[0])
-    #
-    #         system, function = system_function_cache[element_type]
-    #
-    #         new_consumable_row = unmodeling_factory.create_consumable_row_class_instance(system, function,
-    #                                                                   consumable, consumable_description)
-    #
-    #         for insulation_element in insulation_elements:
-    #             length, area = material_calculator.get_curve_len_area_parameters_values(insulation_element)
-    #             if consumable.is_expenditure_by_linear_meter == 0:
-    #                 new_consumable_row.number += consumable.expenditure * area
-    #             else:
-    #                 new_consumable_row.number += consumable.expenditure * length
-    #
-    #         consumable_location = unmodeling_factory.update_location(consumable_location)
-    #
-    #         unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol,
-    #                                                consumable_description, consumable_location)
 
 # Получаем список элементов изоляции труб и воздуховодов
 def get_insulation_elements_list():
@@ -287,6 +255,8 @@ def script_execute(plugin_logger):
     family_symbol = unmodeling_factory.startup_checks(doc)
 
     with revit.Transaction("Добавление расчетных элементов"):
+        family_symbol.Activate()
+
         material_description = "Расчет краски и креплений"
         consumable_description = 'Расходники изоляции'
 
