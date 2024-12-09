@@ -404,9 +404,17 @@ class UnmodelingFactory:
 # класс-калькулятор для расходных элементов труб и воздуховодов
 class MaterialCalculator:
     # Получаем значения длины и площади хоста изоляции. Для фитингов не сработает
-    def get_curve_len_area_parameters_values(self, host):
-        length = host.GetParamValueOrDefault(BuiltInParameter.CURVE_ELEM_LENGTH)
-        area = host.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+    def get_curve_len_area_parameters_values(self, element):
+        length = element.GetParamValueOrDefault(BuiltInParameter.CURVE_ELEM_LENGTH)
+
+        # Если просто брать площадь поверхности для труб - ревит возвращает площадь по условному диаметру
+        if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+            outer_diameter = element.GetParamValueOrDefault(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER)
+            area = 3.14 * outer_diameter * length
+        else:
+            area = element.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
+
+        # Это для соединительных деталей в случае если идет обсчет хостов изоляции может сработать
         if length is None or area is None:
             return 0, 0
 
@@ -416,6 +424,7 @@ class MaterialCalculator:
         area = UnitUtils.ConvertFromInternalUnits(
             area,
             UnitTypeId.SquareMeters)
+
         return length, area
 
     # Получаем экземпляры класса материала для металла труб
