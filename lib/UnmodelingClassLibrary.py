@@ -156,10 +156,15 @@ class UnmodelingFactory:
             filtered_generics = \
                 [elem for elem in generic_models if elem.GetElementType()
                 .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == '_Якорный элемент']
+
+            if len(filtered_generics) == 0:
+                return XYZ(0, 0.01, 0)
+
             max_y = None
             base_location_point = None
 
             for elem in filtered_generics:
+                print 1
                 # Получаем LocationPoint элемента
                 location_point = elem.Location.Point
 
@@ -171,7 +176,7 @@ class UnmodelingFactory:
                     max_y = y_value
                     base_location_point = location_point
 
-            return XYZ(0, 10 + max_y, 0)
+            return XYZ(0, 0.01 + max_y, 0)
 
         return XYZ(0, 0.01 + self.max_location_y, 0)
 
