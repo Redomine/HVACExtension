@@ -178,7 +178,6 @@ def process_materials(family_symbol, material_description):
 
         for elements in split_lists:
             system, function = unmodeling_factory.get_system_function(elements[0])
-
             if rule_set.name == "Хомут трубный под шпильку М8":
                 process_pipe_clamps(elements, system, function, rule_set, material_description, family_symbol)
                 material_location = unmodeling_factory.get_base_location(doc)
