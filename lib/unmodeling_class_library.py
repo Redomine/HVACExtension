@@ -19,6 +19,7 @@ from pyrevit import script
 from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
 from dosymep.Bim4Everyone.SharedParams import *
+from dosymep.Bim4Everyone import ElementExtensions
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep_libs.bim4everyone import *
@@ -89,6 +90,17 @@ class InsulationConsumables:
 # класс оперирующий созданием немоделируемых элементов
 class UnmodelingFactory:
     coordinate_step = 0.01 # Шаг координаты на который разносим немоделируемые. ~3 мм, чтоб они не стояли в одном месте и чтоб не растягивали чертеж своим существованием
+    description_param_name = 'ФОП_ВИС_Назначение'
+
+    # Значения параметра "ФОП_ВИС_Назначение" по которому определеяется удалять элемент или нет
+    empty_description = 'Пустая строка'
+    import_description = 'Импорт немоделируемых'
+    material_description = 'Расчет краски и креплений'
+    consumable_description = 'Расходники изоляции'
+
+    # Значение группирования для элементов
+    consumable_group = '12. Расходники изоляции'
+
     family_name = '_Якорный элемент'
     out_of_system_value = '!Нет системы'
     out_of_function_value = '!Нет функции'
@@ -114,7 +126,7 @@ class UnmodelingFactory:
         return RowOfSpecification(
             system,
             function,
-            '12. Расходники изоляции',
+            self.consumable_group,
             consumable.name,
             consumable.mark,
             '',  # У расходников не будет кода изделия
@@ -158,10 +170,10 @@ class UnmodelingFactory:
 
             filtered_generics = \
                 [elem for elem in generic_models if elem.GetElementType()
-                .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == '_Якорный элемент']
+                .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == self.family_name]
 
             if len(filtered_generics) == 0:
-                return XYZ(0, self.coordinate_step, 0)
+                return XYZ(0, 0, 0)
 
             max_y = None
             base_location_point = None
@@ -285,11 +297,10 @@ class UnmodelingFactory:
     #для прогона новых ревизий генерации немоделируемых: стирает элемент с переданным именем модели
     def remove_models(self, doc, description):
         user_name = __revit__.Application.Username
-        fam_name = "_Якорный элемент"
         # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
         generic_model_collection = \
             [elem for elem in self.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel) if elem.GetElementType()
-            .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == fam_name]
+            .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == self.family_name]
 
         for element in generic_model_collection:
             edited_by = self.get_element_editor_name(element)
@@ -299,18 +310,18 @@ class UnmodelingFactory:
                             exitscript=True)
 
         for element in generic_model_collection:
-            if element.LookupParameter('ФОП_ВИС_Назначение'):
+            if element.IsExistsParam(self.description_param_name):
                 elem_type = doc.GetElement(element.GetTypeId())
                 current_name = elem_type.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString()
-                current_description = element.LookupParameter('ФОП_ВИС_Назначение').AsString()
+                current_description = element.GetParamValueOrDefault(self.description_param_name)
 
-                if  current_name == fam_name:
+                if  current_name == self.family_name:
                     if description in current_description:
                         doc.Delete(element.Id)
 
     # Генерирует пустые элементы в рабочем наборе немоделируемых
     def create_new_position(self, doc, new_row_data, family_symbol, description, loc):
-        if new_row_data.number == 0 and description != 'Пустая строка':
+        if new_row_data.number == 0 and description != self.empty_description:
             return
 
         self.max_location_y = loc.Y
@@ -340,7 +351,7 @@ class UnmodelingFactory:
 
         family_inst.SetParamValue(SharedParamsConfig.Instance.VISNote, new_row_data.note)
         family_inst.SetParamValue(SharedParamsConfig.Instance.EconomicFunction, new_row_data.function)
-        description_param = family_inst.GetParam("ФОП_ВИС_Назначение")
+        description_param = family_inst.GetParam(self.description_param_name)
         description_param.Set(description)
 
     # Проверяем файл, семейство
@@ -479,6 +490,7 @@ class MaterialCalculator:
         # для труб согласовано использование в расчетах только изолированных трубопроводов, поэтому в качестве неизолированной при создании
         # экземпляра варианта используем 0
         # Запас 70% задан по согласованию. В этих значениях он уже учтен, в нормативке он соответственно меньше.
+        # Цифры приняты по http://slpl.ru/node/218 с запасом, по согласованию с инженерами
         dict_var_p_mat = {15: 0.238, 20: 0.204, 25: 0.187, 32: 0.170, 40: 0.187, 50: 0.2448, 65: 0.3315,
                           80: 0.3791, 100: 0.629, 125: 0.901, 150: 1.054, 200: 1.309, 999: 0.1564}
 
@@ -490,11 +502,12 @@ class MaterialCalculator:
         variants_sorted = sorted(variants, key=lambda x: x.diameter)
         return variants_sorted
 
-    # Получаем экземпляры класса материала для металла воздуховодов
+    # Получаем экземпляры класса материала для хомутов или шпилек
     def get_collar_material_class_instances(self):
         """ Возвращает коллекцию вариантов расхода хомутов по диаметрам для изолированных и неизолированных труб """
 
         # Ключ словаря - диаметр. Первое значение списка по ключу - значение для изолированной трубы, второе - для неизолированной
+        # Количество хомутов на метр по диаметру принято по согласованию с инженерами
         dict_var_collars = {15: [2, 1.5], 20: [3, 2], 25: [3.5, 2], 32: [4, 2.5], 40: [4.5, 3], 50: [5, 3], 65: [6, 4],
                             80: [6, 4], 100: [6, 4.5], 125: [7, 5], 999: [7, 5]}
 
@@ -583,67 +596,72 @@ class MaterialCalculator:
 
     # Возвращает список экземпляров расходников изоляции для конкретных ее типов
     def get_consumables_class_instances(self, insulation_element_type):
-        consumables_name_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Name.Name
-        consumables_mark_1 = SharedParamsConfig.Instance.VISInsulationConsumable1MarkNumber.Name
-        consumables_maker_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Manufacturer.Name
-        consumables_unit_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Unit.Name
-        consumables_expenditure_1 = SharedParamsConfig.Instance.VISInsulationConsumable1ConsumptionPerSqM.Name
-        is_expenditure_by_linear_meter_1 = SharedParamsConfig.Instance.VISInsulationConsumable1ConsumptionPerMetr.Name
+        def is_name_value_exists(shared_param):
+            value = insulation_element_type.GetParamValueOrDefault(shared_param)
+            return value is not None and value != ""
 
-        consumables_name_2 = SharedParamsConfig.Instance.VISInsulationConsumable2Name.Name
-        consumables_mark_2 = SharedParamsConfig.Instance.VISInsulationConsumable2MarkNumber.Name
-        consumables_maker_2 = SharedParamsConfig.Instance.VISInsulationConsumable2Manufacturer.Name
-        consumables_unit_2 = SharedParamsConfig.Instance.VISInsulationConsumable2Unit.Name
-        consumables_expenditure_2 = SharedParamsConfig.Instance.VISInsulationConsumable2ConsumptionPerSqM.Name
-        is_expenditure_by_linear_meter_2 = SharedParamsConfig.Instance.VISInsulationConsumable2ConsumptionPerMetr.Name
+        def is_expenditure_value_exist(shared_param):
+            value = insulation_element_type.GetParamValueOrDefault(shared_param)
+            return value is not None and value != 0
+
+        consumables_name_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Name
+        consumables_mark_1 = SharedParamsConfig.Instance.VISInsulationConsumable1MarkNumber
+        consumables_maker_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Manufacturer
+        consumables_unit_1 = SharedParamsConfig.Instance.VISInsulationConsumable1Unit
+        consumables_expenditure_1 = SharedParamsConfig.Instance.VISInsulationConsumable1ConsumptionPerSqM
+        is_expenditure_by_linear_meter_1 = SharedParamsConfig.Instance.VISInsulationConsumable1ConsumptionPerMetr
+
+        consumables_name_2 = SharedParamsConfig.Instance.VISInsulationConsumable2Name
+        consumables_mark_2 = SharedParamsConfig.Instance.VISInsulationConsumable2MarkNumber
+        consumables_maker_2 = SharedParamsConfig.Instance.VISInsulationConsumable2Manufacturer
+        consumables_unit_2 = SharedParamsConfig.Instance.VISInsulationConsumable2Unit
+        consumables_expenditure_2 = SharedParamsConfig.Instance.VISInsulationConsumable2ConsumptionPerSqM
+        is_expenditure_by_linear_meter_2 = SharedParamsConfig.Instance.VISInsulationConsumable2ConsumptionPerMetr
 
 
-        consumables_name_3 = SharedParamsConfig.Instance.VISInsulationConsumable3Name.Name
-        consumables_mark_3 = SharedParamsConfig.Instance.VISInsulationConsumable3MarkNumber.Name
-        consumables_maker_3 = SharedParamsConfig.Instance.VISInsulationConsumable3Manufacturer.Name
-        consumables_unit_3 = SharedParamsConfig.Instance.VISInsulationConsumable3Unit.Name
-        consumables_expenditure_3 = SharedParamsConfig.Instance.VISInsulationConsumable3ConsumptionPerSqM.Name
-        is_expenditure_by_linear_meter_3 = SharedParamsConfig.Instance.VISInsulationConsumable3ConsumptionPerMetr.Name
+        consumables_name_3 = SharedParamsConfig.Instance.VISInsulationConsumable3Name
+        consumables_mark_3 = SharedParamsConfig.Instance.VISInsulationConsumable3MarkNumber
+        consumables_maker_3 = SharedParamsConfig.Instance.VISInsulationConsumable3Manufacturer
+        consumables_unit_3 = SharedParamsConfig.Instance.VISInsulationConsumable3Unit
+        consumables_expenditure_3 = SharedParamsConfig.Instance.VISInsulationConsumable3ConsumptionPerSqM
+        is_expenditure_by_linear_meter_3 = SharedParamsConfig.Instance.VISInsulationConsumable3ConsumptionPerMetr
 
 
         result = []
         # Если у 1 расходника и имя и расход не равны None, то добавляем расходник в результаты
-        if (insulation_element_type.GetSharedParamValueOrDefault(consumables_name_1) is not None and
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_expenditure_1) is not None):
+        if is_name_value_exists(consumables_name_1) and is_expenditure_value_exist(consumables_expenditure_1):
             result.append(
                 InsulationConsumables(
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_name_1, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_mark_1, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_maker_1, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_unit_1, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_expenditure_1),
-                insulation_element_type.GetSharedParamValueOrDefault(is_expenditure_by_linear_meter_1))
+                insulation_element_type.GetParamValueOrDefault(consumables_name_1, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_mark_1, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_maker_1, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_unit_1, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_expenditure_1),
+                insulation_element_type.GetParamValueOrDefault(is_expenditure_by_linear_meter_1))
             )
 
         # Если у 2 расходника и имя и расход не равны None, то добавляем расходник в результаты
-        if (insulation_element_type.GetSharedParamValueOrDefault(consumables_name_2) is not None and
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_expenditure_2) is not None):
+        if is_name_value_exists(consumables_name_2) and is_expenditure_value_exist(consumables_expenditure_2):
             result.append(
                 InsulationConsumables(
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_name_2, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_mark_2, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_maker_2, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_unit_2, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_expenditure_2),
-                insulation_element_type.GetSharedParamValueOrDefault(is_expenditure_by_linear_meter_2))
+                insulation_element_type.GetParamValueOrDefault(consumables_name_2, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_mark_2, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_maker_2, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_unit_2, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_expenditure_2),
+                insulation_element_type.GetParamValueOrDefault(is_expenditure_by_linear_meter_2))
             )
 
         # Если у 3 расходника и имя и расход не равны None, то добавляем расходник в результаты
-        if (insulation_element_type.GetSharedParamValueOrDefault(consumables_name_3) is not None and
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_expenditure_3) is not None):
+        if is_name_value_exists(consumables_name_3) and is_expenditure_value_exist(consumables_expenditure_3):
             result.append(
                 InsulationConsumables(
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_name_3, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_mark_3, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_maker_3, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_unit_3, ''),
-                insulation_element_type.GetSharedParamValueOrDefault(consumables_expenditure_3),
-                insulation_element_type.GetSharedParamValueOrDefault(is_expenditure_by_linear_meter_3))
+                insulation_element_type.GetParamValueOrDefault(consumables_name_3, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_mark_3, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_maker_3, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_unit_3, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_expenditure_3),
+                insulation_element_type.GetParamValueOrDefault(is_expenditure_by_linear_meter_3))
             )
 
         return result

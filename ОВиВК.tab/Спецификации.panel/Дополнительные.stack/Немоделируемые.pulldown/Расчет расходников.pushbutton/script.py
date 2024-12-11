@@ -49,9 +49,9 @@ def split_calculation_elements_list(elements):
 
     for element in elements:
         shared_function = element.GetSharedParamValueOrDefault(
-            SharedParamsConfig.Instance.EconomicFunction.Name, "Нет значения")
+            SharedParamsConfig.Instance.EconomicFunction.Name, unmodeling_factory.out_of_function_value)
         shared_system = element.GetSharedParamValueOrDefault(
-            SharedParamsConfig.Instance.VISSystemName.Name, "Нет значения")
+            SharedParamsConfig.Instance.VISSystemName.Name, unmodeling_factory.out_of_system_value)
         function_system_key = shared_function + "_" + shared_system
 
         # Добавляем элемент в соответствующий список в словаре
@@ -112,9 +112,9 @@ def get_material_number_value(element, operation_name):
     return 0
 
 # Удаление уже размещенных в модели расходников и материалов перед новой генерацией
-def remove_old_models(material_description, consumable_description):
-    unmodeling_factory.remove_models(doc, material_description)
-    unmodeling_factory.remove_models(doc, consumable_description)
+def remove_old_models():
+    unmodeling_factory.remove_models(doc, unmodeling_factory.material_description)
+    unmodeling_factory.remove_models(doc, unmodeling_factory.consumable_description)
 
 # Обработка предопределенного списка материалов
 def process_materials(family_symbol, material_description):
@@ -259,13 +259,11 @@ def script_execute(plugin_logger):
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         family_symbol.Activate()
 
-        material_description = "Расчет краски и креплений"
-        consumable_description = 'Расходники изоляции'
 
         # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
-        remove_old_models(material_description, consumable_description)
+        remove_old_models()
 
-        process_materials(family_symbol, material_description)
-        process_insulation_consumables(family_symbol, consumable_description)
+        process_materials(family_symbol, unmodeling_factory.material_description)
+        process_insulation_consumables(family_symbol, unmodeling_factory.consumable_description)
 
 script_execute()

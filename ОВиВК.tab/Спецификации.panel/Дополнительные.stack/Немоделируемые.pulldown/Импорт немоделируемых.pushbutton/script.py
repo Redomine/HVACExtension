@@ -32,7 +32,6 @@ from rpw.ui.forms import select_file
 doc = __revit__.ActiveUIDocument.Document
 unmodeling_factory = UnmodelingFactory()
 view = doc.ActiveView
-description = 'Импорт немоделируемых'
 
 def find_column(worksheet, search_value):
     found_cell = worksheet.Cells.Find(What=search_value)
@@ -138,7 +137,7 @@ def script_execute(plugin_logger):
                 code,
                 maker,
                 unit,
-                description,
+                unmodeling_factory.import_description,
                 number,
                 mass,
                 note
@@ -151,14 +150,18 @@ def script_execute(plugin_logger):
         family_symbol.Activate()
 
         # при каждом повторе расчета удаляем старые версии
-        unmodeling_factory.remove_models(doc, description)
+        unmodeling_factory.remove_models(doc, unmodeling_factory.import_description)
 
         element_location = unmodeling_factory.get_base_location(doc)
 
         for element in elements_to_generate:
             element_location = unmodeling_factory.update_location(element_location)
 
-            unmodeling_factory.create_new_position(doc, element, family_symbol, description, element_location)
+            unmodeling_factory.create_new_position(doc,
+                                                   element,
+                                                   family_symbol,
+                                                   unmodeling_factory.import_description,
+                                                   element_location)
 
     # Закрываем рабочую книгу без сохранения изменений
     workbook.Close(SaveChanges=False)

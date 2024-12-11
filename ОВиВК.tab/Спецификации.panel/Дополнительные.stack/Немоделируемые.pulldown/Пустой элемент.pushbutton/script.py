@@ -33,14 +33,14 @@ view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 selected_ids = uidoc.Selection.GetElementIds()
 unmodeling_factory = UnmodelingFactory()
-description = 'Пустая строка'
+
 
 def get_new_position(family_symbol, rows_number):
     element = doc.GetElement(selected_ids[0])
     location = unmodeling_factory.get_base_location(doc)
 
     parent_system, parent_function = unmodeling_factory.get_system_function(element)
-    parent_group = element.GetSharedParamValueOrDefault(SharedParamsConfig.Instance.VISGrouping.Name, '')
+    parent_group = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISGrouping, '')
 
     for count in range(1, rows_number + 1):
         new_group = "{}{}".format(parent_group, '_' + str(count))
@@ -53,7 +53,11 @@ def get_new_position(family_symbol, rows_number):
 
         location = unmodeling_factory.update_location(location)
 
-        unmodeling_factory.create_new_position(doc, new_position, family_symbol, description, location)
+        unmodeling_factory.create_new_position(doc,
+                                               new_position,
+                                               family_symbol,
+                                               unmodeling_factory.empty_description,
+                                               location)
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -75,7 +79,7 @@ def script_execute(plugin_logger):
     rows_number = forms.ask_for_string(
         default='1',
         prompt='Введите количество пустых строк:',
-        title=__title__
+        title=unmodeling_factory.empty_description
     )
 
     try:
