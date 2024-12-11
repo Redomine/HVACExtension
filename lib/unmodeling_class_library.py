@@ -90,7 +90,7 @@ class InsulationConsumables:
 # класс оперирующий созданием немоделируемых элементов
 class UnmodelingFactory:
     coordinate_step = 0.01 # Шаг координаты на который разносим немоделируемые. ~3 мм, чтоб они не стояли в одном месте и чтоб не растягивали чертеж своим существованием
-    description_param_name = 'ФОП_ВИС_Назначение'
+    description_param_name = 'ФОП_ВИС_Назначение' # Пока нет в платформе, будет добавлено и перенесено в RevitParams
 
     # Значения параметра "ФОП_ВИС_Назначение" по которому определеяется удалять элемент или нет
     empty_description = 'Пустая строка'
@@ -105,6 +105,10 @@ class UnmodelingFactory:
     out_of_system_value = '!Нет системы'
     out_of_function_value = '!Нет функции'
     ws_id = None
+
+    # Максимальная встреченная координата в проекте. Обновляется в первый раз в get_base_location, далее обновляется в
+    # при создании экземпляра якоря
+    max_location_y = 0
 
     # Получает типы элементов по их категории
     def get_elements_types_by_category(self, doc, category):
@@ -148,10 +152,6 @@ class UnmodelingFactory:
             rule_set.unit,
             material_description
         )
-
-    # Максимальная встреченная координата в проекте. Обновляется в первый раз в get_base_location, далее обновляется в
-    # при создании экземпляра якоря
-    max_location_y = 0
 
     # Забираем из элемента значение параметров функции и системы
     def get_system_function(self, element):
@@ -273,9 +273,9 @@ class UnmodelingFactory:
         if edited_by is None:
             return None
 
-        if edited_by.lower() != user_name.lower():
-            return edited_by
-        return None
+        if edited_by.lower() == user_name.lower():
+            return None
+        return edited_by
 
     # Возвращает FamilySymbol, если семейство есть в проекте, None если нет
     def is_family_in(self, doc):
@@ -321,6 +321,10 @@ class UnmodelingFactory:
 
     # Генерирует пустые элементы в рабочем наборе немоделируемых
     def create_new_position(self, doc, new_row_data, family_symbol, description, loc):
+        def set_param_value(shared_param, param_value):
+            if param_value is not None:
+                family_inst.SetParamValue(shared_param, param_value)
+
         if new_row_data.number == 0 and description != self.empty_description:
             return
 
@@ -339,18 +343,18 @@ class UnmodelingFactory:
         group = '{}_{}_{}_{}_{}'.format(
             new_row_data.group, new_row_data.name, new_row_data.mark, new_row_data.maker, new_row_data.code)
 
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISSystemName, new_row_data.system)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISGrouping, group)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISCombinedName, new_row_data.name)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISMarkNumber, new_row_data.mark)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISItemCode, new_row_data.code)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISManufacturer, new_row_data.maker)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISUnit, new_row_data.unit)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISSpecNumbers, new_row_data.number)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISMass, new_row_data.mass)
 
-        family_inst.SetParamValue(SharedParamsConfig.Instance.VISNote, new_row_data.note)
-        family_inst.SetParamValue(SharedParamsConfig.Instance.EconomicFunction, new_row_data.function)
+        set_param_value(SharedParamsConfig.Instance.VISSystemName, new_row_data.system)
+        set_param_value(SharedParamsConfig.Instance.VISGrouping, group)
+        set_param_value(SharedParamsConfig.Instance.VISCombinedName, new_row_data.name)
+        set_param_value(SharedParamsConfig.Instance.VISMarkNumber, new_row_data.mark)
+        set_param_value(SharedParamsConfig.Instance.VISItemCode, new_row_data.code)
+        set_param_value(SharedParamsConfig.Instance.VISManufacturer, new_row_data.maker)
+        set_param_value(SharedParamsConfig.Instance.VISUnit, new_row_data.unit)
+        set_param_value(SharedParamsConfig.Instance.VISSpecNumbers, new_row_data.number)
+        set_param_value(SharedParamsConfig.Instance.VISMass, new_row_data.mass)
+        set_param_value(SharedParamsConfig.Instance.VISNote, new_row_data.note)
+        set_param_value(SharedParamsConfig.Instance.EconomicFunction, new_row_data.function)
         description_param = family_inst.GetParam(self.description_param_name)
         description_param.Set(description)
 
@@ -410,7 +414,7 @@ class UnmodelingFactory:
     # Проверяем семейство на наличие параметров. Если чего-то нет - останавливаем скрипт
     def check_family(self, family_symbol, doc):
         param_names_list = [
-            "ФОП_ВИС_Назначение",
+            self.description_param_name,
             SharedParamsConfig.Instance.VISNote.Name,
             SharedParamsConfig.Instance.VISMass.Name,
             SharedParamsConfig.Instance.VISPosition.Name,
@@ -428,10 +432,12 @@ class UnmodelingFactory:
         symbol_params = self.get_family_shared_parameter_names(doc, family)
 
         result = []
-        for param in param_names_list:
-            if param not in symbol_params:
-                forms.alert("Параметра {} нет в семействе якорного элемента. Обновите из базы.".
-                            format(param), "Ошибка", exitscript=True)
+        missing_params = [param for param in param_names_list if param not in symbol_params]
+
+        if missing_params:
+            missing_params_str = ", ".join(missing_params)
+            forms.alert('Обновите семейство якорного элемента. Параметры {} отсутствуют.'.format(missing_params_str),
+                        "Ошибка", exitscript=True)
 
         return result
 
@@ -632,10 +638,10 @@ class MaterialCalculator:
         if is_name_value_exists(consumables_name_1) and is_expenditure_value_exist(consumables_expenditure_1):
             result.append(
                 InsulationConsumables(
-                insulation_element_type.GetParamValueOrDefault(consumables_name_1, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_mark_1, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_maker_1, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_unit_1, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_name_1),
+                insulation_element_type.GetParamValueOrDefault(consumables_mark_1),
+                insulation_element_type.GetParamValueOrDefault(consumables_maker_1),
+                insulation_element_type.GetParamValueOrDefault(consumables_unit_1),
                 insulation_element_type.GetParamValueOrDefault(consumables_expenditure_1),
                 insulation_element_type.GetParamValueOrDefault(is_expenditure_by_linear_meter_1))
             )
@@ -644,10 +650,10 @@ class MaterialCalculator:
         if is_name_value_exists(consumables_name_2) and is_expenditure_value_exist(consumables_expenditure_2):
             result.append(
                 InsulationConsumables(
-                insulation_element_type.GetParamValueOrDefault(consumables_name_2, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_mark_2, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_maker_2, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_unit_2, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_name_2),
+                insulation_element_type.GetParamValueOrDefault(consumables_mark_2),
+                insulation_element_type.GetParamValueOrDefault(consumables_maker_2),
+                insulation_element_type.GetParamValueOrDefault(consumables_unit_2),
                 insulation_element_type.GetParamValueOrDefault(consumables_expenditure_2),
                 insulation_element_type.GetParamValueOrDefault(is_expenditure_by_linear_meter_2))
             )
@@ -656,10 +662,10 @@ class MaterialCalculator:
         if is_name_value_exists(consumables_name_3) and is_expenditure_value_exist(consumables_expenditure_3):
             result.append(
                 InsulationConsumables(
-                insulation_element_type.GetParamValueOrDefault(consumables_name_3, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_mark_3, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_maker_3, ''),
-                insulation_element_type.GetParamValueOrDefault(consumables_unit_3, ''),
+                insulation_element_type.GetParamValueOrDefault(consumables_name_3),
+                insulation_element_type.GetParamValueOrDefault(consumables_mark_3),
+                insulation_element_type.GetParamValueOrDefault(consumables_maker_3),
+                insulation_element_type.GetParamValueOrDefault(consumables_unit_3),
                 insulation_element_type.GetParamValueOrDefault(consumables_expenditure_3),
                 insulation_element_type.GetParamValueOrDefault(is_expenditure_by_linear_meter_3))
             )
