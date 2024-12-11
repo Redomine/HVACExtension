@@ -87,6 +87,7 @@ class InsulationConsumables:
 
 # класс оперирующий созданием немоделируемых элементов
 class UnmodelingFactory:
+    coordinate_step = 0.01 # Шаг координаты на который разносим немоделируемые. ~3 мм, чтоб они не стояли в одном месте и чтоб не растягивали чертеж своим существованием
     out_of_system_value = '!Нет системы'
     out_of_function_value = '!Нет функции'
     ws_id = None
@@ -158,7 +159,7 @@ class UnmodelingFactory:
                 .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == '_Якорный элемент']
 
             if len(filtered_generics) == 0:
-                return XYZ(0, 0.01, 0)
+                return XYZ(0, self.coordinate_step, 0)
 
             max_y = None
             base_location_point = None
@@ -175,13 +176,13 @@ class UnmodelingFactory:
                     max_y = y_value
                     base_location_point = location_point
 
-            return XYZ(0, 0.01 + max_y, 0)
+            return XYZ(0, self.coordinate_step + max_y, 0)
 
-        return XYZ(0, 0.01 + self.max_location_y, 0)
+        return XYZ(0, self.coordinate_step + self.max_location_y, 0)
 
     # Получает базовую локацию и слегка ее увеличивает
     def update_location(self, loc):
-        return XYZ(0, loc.Y + 0.01, 0)
+        return XYZ(0, loc.Y + self.coordinate_step, 0)
 
     # Получаем список правил для генерации материалов
     def get_ruleset(self):
