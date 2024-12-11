@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import math
 
 import clr
 
@@ -88,6 +89,7 @@ class InsulationConsumables:
 # класс оперирующий созданием немоделируемых элементов
 class UnmodelingFactory:
     coordinate_step = 0.01 # Шаг координаты на который разносим немоделируемые. ~3 мм, чтоб они не стояли в одном месте и чтоб не растягивали чертеж своим существованием
+    family_name = '_Якорный элемент'
     out_of_system_value = '!Нет системы'
     out_of_function_value = '!Нет функции'
     ws_id = None
@@ -265,13 +267,10 @@ class UnmodelingFactory:
 
     # Возвращает FamilySymbol, если семейство есть в проекте, None если нет
     def is_family_in(self, doc):
-        name = '_Якорный элемент'
-        # Создаем фильтрованный коллектор для категории OST_Mass и класса FamilySymbol
         collector = FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_GenericModel).OfClass(FamilySymbol)
 
-        # Итерируемся по элементам коллектора
         for element in collector:
-            if element.Family.Name == name:
+            if element.Family.Name == self.family_name:
                 return element
 
         return None
@@ -455,7 +454,7 @@ class MaterialCalculator:
         # Если просто брать площадь поверхности для труб - ревит возвращает площадь по условному диаметру
         if element.Category.IsId(BuiltInCategory.OST_PipeCurves):
             outer_diameter = element.GetParamValueOrDefault(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER)
-            area = 3.14 * outer_diameter * length
+            area = math.pi * outer_diameter * length
         else:
             area = element.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
 
@@ -540,7 +539,7 @@ class MaterialCalculator:
     def get_duct_material_mass(self, duct, duct_diameter, duct_width, duct_height, duct_area):
         perimeter = 0
         if duct.DuctType.Shape == ConnectorProfileType.Round:
-            perimeter = 3.14 * duct_diameter
+            perimeter = math.pi * duct_diameter
 
         if duct.DuctType.Shape == ConnectorProfileType.Rectangular:
             duct_width = UnitUtils.ConvertFromInternalUnits(
@@ -553,6 +552,8 @@ class MaterialCalculator:
 
             perimeter = 2 * (duct_width + duct_height)
 
+        # Расходы массы на площади идут из СНиП IV-2-82 Сборник 20. Вентиляция и
+        # кондиционирование воздуха
         if perimeter < 1001:
             mass = duct_area * 0.65
         elif perimeter < 1801:
