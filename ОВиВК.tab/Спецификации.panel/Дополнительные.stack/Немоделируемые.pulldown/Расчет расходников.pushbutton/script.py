@@ -258,7 +258,7 @@ def get_insulation_elements_list():
 def script_execute(plugin_logger):
     family_symbol = unmodeling_factory.startup_checks(doc)
 
-    with revit.Transaction("Добавление расчетных элементов"):
+    with revit.Transaction("BIM: Добавление расчетных элементов"):
         family_symbol.Activate()
 
         material_description = "Расчет краски и креплений"

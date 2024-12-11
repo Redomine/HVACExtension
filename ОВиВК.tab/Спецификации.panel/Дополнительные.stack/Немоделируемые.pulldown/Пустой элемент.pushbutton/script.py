@@ -38,7 +38,6 @@ selected_ids = uidoc.Selection.GetElementIds()
 unmodeling_factory = UnmodelingFactory()
 description = 'Пустая строка'
 
-
 def get_new_position(family_symbol, rows_number):
     element = doc.GetElement(selected_ids[0])
     location = unmodeling_factory.get_base_location(doc)
@@ -58,7 +57,6 @@ def get_new_position(family_symbol, rows_number):
         location = unmodeling_factory.update_location(location)
 
         unmodeling_factory.create_new_position(doc, new_position, family_symbol, description, location)
-
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -91,11 +89,9 @@ def script_execute(plugin_logger):
             "Ошибка",
             exitscript=True)
 
-    with revit.Transaction("Добавление пустого элемента"):
+    with revit.Transaction("BIM: Добавление пустого элемента"):
         family_symbol.Activate()
 
         get_new_position(family_symbol, rows_number)
-
-
 
 script_execute()

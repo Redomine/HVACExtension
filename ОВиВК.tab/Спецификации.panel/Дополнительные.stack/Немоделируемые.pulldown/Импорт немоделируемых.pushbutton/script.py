@@ -150,7 +150,7 @@ def script_execute(plugin_logger):
 
         row += 1
 
-    with revit.Transaction("Добавление расчетных элементов"):
+    with revit.Transaction("BIM: Импорт немоделируемых"):
         family_symbol.Activate()
 
         # при каждом повторе расчета удаляем старые версии
