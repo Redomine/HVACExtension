@@ -4,12 +4,14 @@ title:
 
 tooltip:
   ru: Импортирует в модель шаблонную таблицу эксель.
+    
     1. Заполните шаблонную таблицу немоделируемых
 
     2. Активируйте команду и укажите путь к таблице
 
     3. Старые импортированные элементы будут удалены, новые будут созданы по таблице
   en_us: Imports a template Excel table into the model.
+    
     1. Fill in the template table of non-modeled
 
     2. Activate the command and specify the path to the table
