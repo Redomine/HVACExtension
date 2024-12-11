@@ -15,7 +15,7 @@ import sys
 import System
 import dosymep
 
-from UnmodelingClassLibrary import UnmodelingFactory, MaterialCalculator, RowOfSpecification
+from unmodeling_class_library import UnmodelingFactory, MaterialCalculator, RowOfSpecification
 
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
@@ -23,7 +23,7 @@ clr.ImportExtensions(dosymep.Bim4Everyone)
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
-from UnmodelingClassLibrary import  *
+from unmodeling_class_library import  *
 from dosymep_libs.bim4everyone import *
 
 from Microsoft.Office.Interop import Excel

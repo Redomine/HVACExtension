@@ -8,7 +8,7 @@ from itertools import count
 
 import clr
 
-from UnmodelingClassLibrary import UnmodelingFactory, MaterialCalculator, RowOfSpecification
+from unmodeling_class_library import UnmodelingFactory, MaterialCalculator, RowOfSpecification
 
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
@@ -26,7 +26,7 @@ from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
-from UnmodelingClassLibrary import  *
+from unmodeling_class_library import  *
 from dosymep_libs.bim4everyone import *
 
 

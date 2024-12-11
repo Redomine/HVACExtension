@@ -21,7 +21,7 @@ from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
 
-from UnmodelingClassLibrary import  *
+from unmodeling_class_library import  *
 from dosymep_libs.bim4everyone import *
 
 #Исходные данные
