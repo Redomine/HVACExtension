@@ -1,9 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Пустой элемент'
-__doc__ = "Генерирует в модели пустой якорный элемент"
-
 from itertools import count
 
 import clr

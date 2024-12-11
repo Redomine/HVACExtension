@@ -1,9 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Импорт немоделируемых'
-__doc__ = "Генерирует в модели элементы в соответствии с их ведомостью"
-
 import clr
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
