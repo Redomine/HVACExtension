@@ -1,54 +1,74 @@
 # -*- coding: utf-8 -*-
+import math
+
 import clr
-import sys
-import System
-from System.Collections.Generic import *
-clr.AddReference('ProtoGeometry')
-from Autodesk.DesignScript.Geometry import *
-clr.AddReference("RevitNodes")
+
 clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
-import Revit
-import Redomine
-clr.ImportExtensions(Revit.Elements)
-clr.ImportExtensions(Revit.GeometryConversion)
-clr.AddReference("RevitServices")
-import RevitServices
-from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager
-from pyrevit import revit
-from rpw.ui.forms import SelectFromList
-from System import Guid
-clr.AddReference("RevitAPI")
-clr.AddReference("RevitAPIUI")
 import dosymep
-from Redomine import *
+
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
-from dosymep.Bim4Everyone.Templates import ProjectParameters
 
-import Autodesk
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.UI import *
+
+from pyrevit import forms
+from pyrevit import revit
+from pyrevit import script
+from pyrevit import HOST_APP
+from pyrevit import EXEC_PARAMS
+from dosymep.Bim4Everyone.SharedParams import *
+from dosymep.Bim4Everyone import ElementExtensions
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from dosymep.Bim4Everyone.Templates import ProjectParameters
+from dosymep_libs.bim4everyone import *
+from dosymep.Revit import *
+
+doc = __revit__.ActiveUIDocument.Document  # type: Document
+active_view = doc.ActiveView
+
+class SpecificationSettings:
+    definition = None
+    rollback_itemized = False
+    rollback_header = False
+    hidden = []
+    sort_para_group_indexes = None
+    position_index = None
+    group_index = None
+
+    def __init__(self, definition):
+        self.sort_para_group_indexes, self.position_index, self.group_index = get_sort_rules(definition)
 
 
-def make_col(category):
-    col = FilteredElementCollector(doc) \
-        .OfCategory(category) \
-        .WhereElementIsNotElementType() \
-        .ToElements()
-    return col
+        self.definition = definition
+        # если заголовки показаны изначально или если спека изначально развернута - сворачивать назад не нужно
+        self.rollback_itemized = not definition.IsItemized
+        self.rollback_header = not definition.ShowHeaders
 
-def get_duct_area(element):
-    length_reserve = 1 + (doc.ProjectInformation.LookupParameter(
-        'ФОП_ВИС_Запас воздуховодов/труб').AsDouble() / 100)  # запас длин
-    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
-        fop_number = (element.GetParamValue(BuiltInParameter.RBS_CURVE_SURFACE_AREA) * 0.092903) * length_reserve
-        fop_number = round(fop_number, 2)
-    return fop_number
+        # Разворачиваем спецификацию полностью
+        definition.IsItemized = True
+        definition.ShowHeaders = True
 
-def getSortGroupInd(definition):
+        # Собираем номера скрытых столбцов и разворачиваем их
+        i = 0
+        while i < definition.GetFieldCount():
+            if definition.GetField(i).IsHidden == True:
+                self.hidden.append(i)
+            definition.GetField(i).IsHidden = False
+            i += 1
+
+    def repair_specification(self):
+        self.definition.IsItemized = not self.rollback_itemized
+        self.definition.ShowHeaders = not self.rollback_header
+
+        i = 0
+        while i < self.definition.GetFieldCount():
+            if i in self.hidden:
+                self.definition.GetField(i).IsHidden = True
+            i += 1
+
+def get_sort_rules(definition):
     sortGroupInd = []
     posInShed = False
     groupingInd = False
@@ -73,181 +93,115 @@ def getSortGroupInd(definition):
         index += 1
 
     if posInShed == False or groupingInd == False:
-        print "Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации"
-        print 'С добавленными параметрами "ФОП_ВИС_Позиция", "ФОП_ВИС_Группирование" и "ФОП_ВИС_Примечание"'
-        sys.exit()
+
+        forms.alert('С добавленными параметрами "ФОП_ВИС_Позиция", "ФОП_ВИС_Группирование" и "ФОП_ВИС_Примечание"',
+                    "Ошибка", exitscript=True)
     return [sortGroupInd, FOP_pos_ind, groupingInd]
 
+# возвращает значение данных по которым идет сортировка слитыми в единую строку
+def get_sort_rule_string(row, specification_settings, vs):
+    return ''.join(vs.GetCellText(SectionType.Body, row, ind) for ind in specification_settings.sort_para_group_indexes)
 
-doc = __revit__.ActiveUIDocument.Document  # type: Document
-vs = doc.ActiveView
+def process_row(row, specification_settings,old_schedule_string, position_number):
+    new_sort_rule = get_sort_rule_string(row, specification_settings, active_view)
+    element_id = active_view.GetCellText(SectionType.Body, row, specification_settings.position_index)
+    if element_id.isdigit():
+        group = active_view.GetCellText(SectionType.Body, row, specification_settings.group_index)
+        element = doc.GetElement(ElementId(int(element_id)))
+        if new_sort_rule != old_schedule_string:
+            position_number += 1
+
+        if '_Узел_' not in group:
+            element.SetParamValue(SharedParamsConfig.Instance.VISPosition, str(position_number))
+        else:
+            element.SetParamValue(SharedParamsConfig.Instance.VISPosition, '')
+
+    return new_sort_rule, position_number
+
+def check_edited_elements(elements):
+    # Возвращает имя занявшего элемент или None
+    def get_element_editor_name(element):
+        user_name = __revit__.Application.Username
+        edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+        if edited_by is None:
+            return None
+
+        if edited_by.lower() == user_name.lower():
+            return None
+        return edited_by
+
+    report_rows = []
+
+    # если что-то из элементов занято, то дальнейшая обработка не имеет смысла, нужно освобождать спеку
+    for element in elements:
+        name = get_element_editor_name(element)
+        if name is not None:
+            report_rows.append(name)
+
+    if len(report_rows) > 0:
+        report_message = (("Нумерация/заполнение примечаний не были выполнены, "
+                          "так как часть элементов спецификации занята пользователями: {}")
+                          .format(", ".join(report_rows)))
+        forms.alert(report_message, "Ошибка", exitscript=True)
+
+def process_areas():
+    ducts = FilteredElementCollector(doc, active_view.Id).OfCategory(BuiltInCategory.OST_DuctCurves).ToElements()
+
+    # Создаем словарь для хранения воздуховодов по их позициям
+    duct_dict = {}
+
+    # Перебираем все воздуховоды и добавляем их в словарь по признаку одинаковой позиции
+    for duct in ducts:
+        duct_position = duct.GetParamValue(SharedParamsConfig.Instance.VISPosition)
+        duct_area = UnitUtils.ConvertFromInternalUnits(
+            duct.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
+            UnitTypeId.SquareMeters)
+
+        if duct_position in duct_dict:
+            duct_dict[duct_position] += duct_area
+        else:
+            duct_dict[duct_position] = duct_area
+
+    # Обновляем параметр VISNote для каждого воздуховода
+    for duct in ducts:
+        duct_position = duct.GetParamValue(SharedParamsConfig.Instance.VISPosition)
+        formatted_area = "{:.2f}".format(duct_dict[duct_position]).rstrip('0').rstrip('.') + ' м²'
+        duct.SetParamValue(SharedParamsConfig.Instance.VISNote, formatted_area)
 
 def numerate(doNumbers, doAreas):
-    try:
-        vs.Category.IsId(BuiltInCategory.OST_Schedules)
-    except:
-        print "Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации"
-        print 'С добавленными параметрами "ФОП_ВИС_Позиция", "ФОП_ВИС_Группирование" и "ФОП_ВИС_Примечание"'
-        sys.exit()
+    if active_view.Category is None or not active_view.Category.IsId(BuiltInCategory.OST_Schedules):
+        forms.alert("Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации",
+                    "Ошибка", exitscript=True)
 
+    definition = active_view.Definition
+    section_data = active_view.GetTableData().GetSectionData(SectionType.Body)
+    elements = FilteredElementCollector(doc, doc.ActiveView.Id)
+    #если что-то из элементов занято, то дальнейшая обработка не имеет смысла, нужно освобождать спеку
+    check_edited_elements(elements)
 
-    if vs.Category.IsId(BuiltInCategory.OST_Schedules):
-        uiapp = DocumentManager.Instance.CurrentUIApplication
-        #app = uiapp.Application
-        uidoc = __revit__.ActiveUIDocument
-
-        definition = vs.Definition
-        tData = vs.GetTableData()
-        tsData = tData.GetSectionData(SectionType.Header)
-        sectionData = vs.GetTableData().GetSectionData(SectionType.Body)
-
-        sortColumnHeaders = []
-        sortGroupNamesInds = []
-        headerIndexes = []
-        report_rows = set()
-
-        elements = FilteredElementCollector(doc, doc.ActiveView.Id)
-        #если что-то из элементов занято, то дальнейшая обработка не имеет смысла, нужно освобождать спеку
+    with revit.Transaction("Запись айди"):
+        specification_settings = SpecificationSettings(definition)
 
         for element in elements:
-            if isElementEditedBy(element):
-                fillReportRows(element, report_rows)
-                continue
-        if report_rows:
-            print "Нумерация/заполнение примечаний не были выполнены, так как часть элементов спецификации занята пользователями:"
-            print "\r\n".join(report_rows)
-        else:
-            with revit.Transaction("Запись айди"):
-                rollback_itemized = False
-                rollback_header = False
+            element.SetParamValue(SharedParamsConfig.Instance.VISPosition, str(element.Id.IntegerValue))
 
-                #если заголовки показаны изначально или если спека изначально развернута - сворачивать назад не нужно
-                if definition.IsItemized == False:
-                    rollback_itemized = True
-                definition.IsItemized = True
+    position_number = 0 # Стартовый значение для номера
+    old_sort_rule = '' # Стартовая пустая строка сортировки
+    with revit.Transaction("Запись номера"):
+        row = section_data.FirstRowNumber
+        while row <= section_data.LastRowNumber:
+            old_sort_rule, position_number = process_row(row,
+                                                            specification_settings,
+                                                            old_sort_rule,
+                                                            position_number)
+            row += 1
 
-                if definition.ShowHeaders == False:
-                    rollback_header = True
-                definition.ShowHeaders = True
-                hidden = []
-                i = 0
-                while i < definition.GetFieldCount():
-                    if definition.GetField(i).IsHidden == True:
-                        hidden.append(i)
-                    definition.GetField(i).IsHidden = False
-                    i += 1
+        specification_settings.repair_specification()
 
-                #получаем элементы на активном виде и для начала прописываем айди в позицию
+        if doAreas is True:
+            process_areas()
 
-                for element in elements:
-                    ADSK_Pos = element.get_Parameter(Guid('3f809907-b64c-4a8d-be5e-06709ee28386'))
-                    ADSK_Pos.Set(str(element.Id.IntegerValue))
+        if doNumbers is False:
+            for element in elements:
+                element.SetParamValue(SharedParamsConfig.Instance.VISPosition, '')
 
-            newIndex = 0 #Стартовый значение для номера
-            with revit.Transaction("Запись номера"):
-
-                #получаем по каким столбикам мы сортируем
-                sortGroupInd = getSortGroupInd(definition)[0] #список параметров с сортировкой
-                FOP_pos_ind = getSortGroupInd(definition)[1] #индекс столбика с позицией
-                groupingInd = getSortGroupInd(definition)[2] #индекс столбика с группированием
-
-                row = sectionData.FirstRowNumber
-                column = sectionData.FirstColumnNumber
-                oldSheduleString = None
-
-                while row <= sectionData.LastRowNumber:
-                    newSheduleString = ''
-                    for ind in sortGroupInd:
-                        newSheduleString = newSheduleString + vs.GetCellText(SectionType.Body, row, ind)
-                    #получаем элемент по записанному айди
-                    elId = vs.GetCellText(SectionType.Body, row, FOP_pos_ind)
-
-                    #print sortGroupInd[1]
-
-                    #group = vs.GetCellText(SectionType.Body, row, groupingInd)
-
-                    if groupingInd:
-                        group = vs.GetCellText(SectionType.Body, row, groupingInd)
-                        if newSheduleString != oldSheduleString:
-                            if elId:
-                                try:
-                                    if int(elId) and '_Узел_' not in group:
-                                        newIndex += 1
-                                        oldIndex = startIndex
-                                except Exception: #если вместо айди прилетает текст, пропускаем
-                                    pass
-
-                        try:
-                            pos = doc.GetElement(ElementId(int(elId)))
-                            if '_Узел_' not in group:
-                                pos.LookupParameter('ФОП_ВИС_Позиция').Set(str(newIndex))
-                            else:
-                                pos.LookupParameter('ФОП_ВИС_Позиция').Set('')
-                        except Exception:
-                            pass
-
-                    row += 1
-
-                    oldSheduleString = newSheduleString
-
-                if rollback_itemized == True:
-                    definition.IsItemized = False
-
-                if rollback_header == True:
-                    definition.ShowHeaders = False
-
-                i = 0
-                while i < definition.GetFieldCount():
-                    if i in hidden:
-                        definition.GetField(i).IsHidden = True
-                    i += 1
-
-
-
-                if doAreas:
-                    colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-                    duct_dict = {}
-                    for element in colCurves:
-                        index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
-                        if index not in duct_dict:
-                            duct_dict[index] = get_duct_area(element)
-                        else:
-                            duct_dict[index] = duct_dict[index] + get_duct_area(element)
-
-                    for element in colCurves:
-                        note = element.LookupParameter('ФОП_ВИС_Примечание')
-                        index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
-                        if note:
-                            note.Set(str('{:g}'.format(duct_dict[index]))+' м²')
-
-
-                    if doc.ProjectInformation.LookupParameter('ФОП_ВИС_Учитывать фитинги воздуховодов').AsInteger() == 1:
-                        colFittings = make_col(BuiltInCategory.OST_DuctFitting)
-                        fitting_dict = {}
-                        for element in colFittings:
-
-                            index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
-                            if index not in fitting_dict:
-                                #print Redomine.get_fitting_area(element)
-                                fitting_dict[index] = Redomine.get_fitting_area(element)
-                            else:
-                                fitting_dict[index] = fitting_dict[index] + Redomine.get_fitting_area(element)
-
-                        for element in colFittings:
-                            note = element.LookupParameter('ФОП_ВИС_Примечание')
-                            index = element.LookupParameter('ФОП_ВИС_Позиция').AsString()
-                            if note:
-                              note.Set(str('{:g}'.format(fitting_dict[index])) + ' м²')
-
-
-
-
-                if doAreas and not doNumbers:
-                    elements = FilteredElementCollector(doc, doc.ActiveView.Id)
-                    for element in elements:
-                        element.LookupParameter('ФОП_ВИС_Позиция').Set("")
-
-
-    else:
-        print "Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации"
-        print 'С добавленными параметрами "ФОП_ВИС_Позиция", "ФОП_ВИС_Группирование" и "ФОП_ВИС_Примечание"'
