@@ -26,8 +26,6 @@ from collections import defaultdict
 from unmodeling_class_library import  *
 from dosymep_libs.bim4everyone import *
 
-
-#Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
@@ -35,7 +33,15 @@ selected_ids = uidoc.Selection.GetElementIds()
 unmodeling_factory = UnmodelingFactory()
 
 
-def get_new_position(family_symbol, rows_number):
+def process_new_position(family_symbol, rows_number):
+    """
+    Создает новые позиции в спецификации
+
+    Args:
+        family_symbol: Символ семейства, для которого мы создадим экземпляры
+        rows_number: Количество строк в спецификации
+
+    """
     element = doc.GetElement(selected_ids[0])
     location = unmodeling_factory.get_base_location(doc)
 
@@ -93,6 +99,6 @@ def script_execute(plugin_logger):
     with revit.Transaction("BIM: Добавление пустого элемента"):
         family_symbol.Activate()
 
-        get_new_position(family_symbol, rows_number)
+        process_new_position(family_symbol, rows_number)
 
 script_execute()

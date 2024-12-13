@@ -27,13 +27,20 @@ from Microsoft.Office.Interop import Excel
 from Redomine import *
 from rpw.ui.forms import select_file
 
-
-#Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 unmodeling_factory = UnmodelingFactory()
 view = doc.ActiveView
 
 def find_column(worksheet, search_value):
+    """
+    Ищет номер колонки на листе
+
+    Args:
+        worksheet: Рабочий лист
+        search_value: Заголовок колонки. Скрипт прервется, если не найдет такую.
+    Returns:
+        int: Номер колонки
+    """
     found_cell = worksheet.Cells.Find(What=search_value)
     if found_cell is not None:
         return found_cell.Column

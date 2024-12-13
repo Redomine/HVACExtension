@@ -19,17 +19,25 @@ from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
 
-from unmodeling_class_library import  *
+from unmodeling_class_library import *
 from dosymep_libs.bim4everyone import *
 
-#Исходные данные
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 material_calculator = MaterialCalculator()
 unmodeling_factory = UnmodelingFactory()
 
-# Проверяет для типов элементов включен ли в них определенный расчет. Если включен - возвращает список экземпляров
 def get_material_hosts(element_types, calculation_name, builtin_category):
+    """ Проверяет для типов элементов можно ли на их базе создать расходники
+
+    Args:
+        element_types: Типы элементов
+        calculation_name: Имя расчета
+        builtin_category: Категория для которой ведется расчет
+
+    Returns:
+        list: Лист элементов-основ на базе которых будут считаться расходники
+    """
     result_list = []
 
     for element_type in element_types:
@@ -42,8 +50,16 @@ def get_material_hosts(element_types, calculation_name, builtin_category):
 
     return result_list
 
-# Разделяем список элементов на подсписки из тех элементов, у которых одинаковая функция и система
 def split_calculation_elements_list(elements):
+    """ Разделяем список элементов на подсписки из тех элементов, у которых одинаковая функция и система
+
+    Args:
+        elements: Список элементов которые нужно поделить по функции-системе
+
+    Returns:
+        Массив из списков с уникальным значение функции-системы
+    """
+
     # Создаем словарь для группировки элементов по ключу
     grouped_elements = defaultdict(list)
 
@@ -62,8 +78,16 @@ def split_calculation_elements_list(elements):
 
     return lists
 
-# Вычисление количественного значения расходника
 def get_material_number_value(element, operation_name):
+    """Вычисление количественного значения расходника
+
+    Args:
+        element: Элемент, для которого можно вычислить количество расходников
+        operation_name: Имя операции текущего вычисления, в зависимости от которого выбирается расчет
+
+    Returns:
+        double: Количественное значение для расходного материала
+    """
     diameter = 0
     width = 0
     height = 0
@@ -84,7 +108,8 @@ def get_material_number_value(element, operation_name):
             element.GetParamValue(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM),
             UnitTypeId.Millimeters)
 
-    if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Rectangular:
+    if element.Category.IsId(
+            BuiltInCategory.OST_DuctCurves) and element.DuctType.Shape == ConnectorProfileType.Rectangular:
         width = UnitUtils.ConvertFromInternalUnits(
             element.GetParamValue(BuiltInParameter.RBS_CURVE_WIDTH_PARAM),
             UnitTypeId.Millimeters)
@@ -111,13 +136,19 @@ def get_material_number_value(element, operation_name):
 
     return 0
 
-# Удаление уже размещенных в модели расходников и материалов перед новой генерацией
 def remove_old_models():
+    """ Удаление уже размещенных в модели расходников и материалов перед новой генерацией"""
     unmodeling_factory.remove_models(doc, unmodeling_factory.material_description)
     unmodeling_factory.remove_models(doc, unmodeling_factory.consumable_description)
 
-# Обработка предопределенного списка материалов
 def process_materials(family_symbol, material_description):
+    """ Обработка предопределенного списка материалов
+
+    Args:
+        family_symbol: Символ семейства якорного элемента для создания новых экземпляров
+        material_description: Описание расходника с которым он будет создан и по которому будет удален
+    """
+
     def process_pipe_clamps(elements, system, function, rule_set, material_description, family_symbol):
         pipes = []
         pipe_dict = {}
@@ -152,14 +183,14 @@ def process_materials(family_symbol, material_description):
 
             material_location = unmodeling_factory.update_location(material_location)
 
-
             for element in pipe_dict[pipe_row]:
                 new_row.number += get_material_number_value(element, rule_set.name)
             unmodeling_factory.create_new_position(doc, new_row, family_symbol, material_description, material_location)
 
     def process_other_rules(elements, system, function, rule_set, material_description,
                             material_location, family_symbol):
-        new_row = unmodeling_factory.create_material_row_class_instance(system, function, rule_set, material_description)
+        new_row = unmodeling_factory.create_material_row_class_instance(system, function, rule_set,
+                                                                        material_description)
         for element in elements:
             new_row.number += get_material_number_value(element, rule_set.name)
 
@@ -185,8 +216,13 @@ def process_materials(family_symbol, material_description):
                 process_other_rules(elements, system, function, rule_set, material_description,
                                     material_location, family_symbol)
 
-# Обработка расходников изоляции
 def process_insulation_consumables(family_symbol, consumable_description):
+    """ Обработка расходников изоляции
+
+    Args:
+        family_symbol: Символ семейства якорного элемента для создания новых экземпляров
+        consumable_description: Описание расходника с которым он будет создан и по которому будет удален
+    """
     consumable_location = unmodeling_factory.get_base_location(doc)
     insulation_list = get_insulation_elements_list()
     split_insulation_lists = split_calculation_elements_list(insulation_list)
@@ -198,8 +234,8 @@ def process_insulation_consumables(family_symbol, consumable_description):
     # кэшируем данные по расходникам изоляции для ее типов
     for insulation_type in insulation_types:
         if insulation_type not in consumables_by_insulation_type:
-             consumables_by_insulation_type[insulation_type.Id] = material_calculator.get_consumables_class_instances(
-                 insulation_type)
+            consumables_by_insulation_type[insulation_type.Id] = material_calculator.get_consumables_class_instances(
+                insulation_type)
 
     # Разбили изоляцию по системе-функции и дробим по типам чтоб их сопоставить
     for insulation_elements in split_insulation_lists:
@@ -214,7 +250,6 @@ def process_insulation_consumables(family_symbol, consumable_description):
             if insulation_type.Id not in insulation_elements_by_type:
                 insulation_elements_by_type[insulation_type.Id] = []
             insulation_elements_by_type[insulation_type.Id].append(insulation_element)
-
 
         # Сравниваем словарь по расходникам изоляции и словарь по типам изоляции в этой функции-системе
         for insulation_type_id, elements in insulation_elements_by_type.items():
@@ -244,8 +279,13 @@ def process_insulation_consumables(family_symbol, consumable_description):
                     unmodeling_factory.create_new_position(doc, new_consumable_row, family_symbol,
                                                            consumable_description, consumable_location)
 
-# Получаем список элементов изоляции труб и воздуховодов
 def get_insulation_elements_list():
+    """
+    Получаем список элементов изоляции труб и воздуховодов
+
+    Returns:
+        list: Лист из элементов изоляции
+    """
     insulations = []
     insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
     insulations += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_DuctInsulations)
@@ -259,11 +299,11 @@ def script_execute(plugin_logger):
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         family_symbol.Activate()
 
-
         # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
         remove_old_models()
 
         process_materials(family_symbol, unmodeling_factory.material_description)
         process_insulation_consumables(family_symbol, unmodeling_factory.consumable_description)
+
 
 script_execute()
