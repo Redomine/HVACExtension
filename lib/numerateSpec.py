@@ -69,18 +69,18 @@ class SpecificationSettings:
             i += 1
 
 def get_sort_rules(definition):
-    sortGroupInd = []
+    sorting_params_indexes = []
     posInShed = False
-    groupingInd = False
+    grouping_index = False
     index = 0
 
     for scheduleGroupField in definition.GetFieldOrder():
         scheduleField = definition.GetField(scheduleGroupField)
         if scheduleField.GetName() == "ФОП_ВИС_Позиция":
             posInShed = True
-            FOP_pos_ind = index
+            position_index = index
         if scheduleField.GetName() == "ФОП_ВИС_Группирование":
-            groupingInd = index
+            grouping_index = index
 
         index += 1
 
@@ -88,15 +88,15 @@ def get_sort_rules(definition):
     for field in definition.GetFieldOrder():
         for scheduleSortGroupField in definition.GetSortGroupFields():
             if scheduleSortGroupField.FieldId.ToString() == field.ToString():
-                sortGroupInd.append(index)
+                sorting_params_indexes.append(index)
 
         index += 1
 
-    if posInShed == False or groupingInd == False:
+    if posInShed == False or grouping_index == False:
 
         forms.alert('С добавленными параметрами "ФОП_ВИС_Позиция", "ФОП_ВИС_Группирование" и "ФОП_ВИС_Примечание"',
                     "Ошибка", exitscript=True)
-    return [sortGroupInd, FOP_pos_ind, groupingInd]
+    return [sorting_params_indexes, position_index, grouping_index]
 
 # возвращает значение данных по которым идет сортировка слитыми в единую строку
 def get_sort_rule_string(row, specification_settings, vs):
