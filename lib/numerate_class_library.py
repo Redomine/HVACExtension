@@ -20,10 +20,13 @@ from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
 from dosymep.Bim4Everyone.SharedParams import *
 from dosymep.Bim4Everyone import ElementExtensions
+
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep_libs.bim4everyone import *
 from dosymep.Revit import *
+from dosymep.Revit.Geometry import *
+
 
 class SpecificationSettings:
     """
@@ -243,7 +246,8 @@ class SpecificationFiller:
     def __get_fitting_area(self, element):
         area = 0
 
-        for solid in element.GetSolid():
+        print dosymep.Revit.Geometry.ElementExtensions.GetSolids(element)
+        for solid in element.GetSolids():
             for face in solid.faces:
                 area += face.area
 
@@ -254,9 +258,11 @@ class SpecificationFiller:
             connectors = element.get_connectors()
             for connector in connectors:
                 if connector.shape == ConnectorProfileType.Rectangular:
-                    false_area += UnitUtils.ConvertFromInternalUnits(connector.height * connector.width, UnitTypeId.SquareMeters)
+                    false_area += UnitUtils.ConvertFromInternalUnits(
+                        connector.height * connector.width, UnitTypeId.SquareMeters)
                 if connector.shape == ConnectorProfileType.Round:
-                    false_area += UnitUtils.ConvertFromInternalUnits(connector.radius * connector.radius * math.pi, UnitTypeId.SquareMeters)
+                    false_area += UnitUtils.ConvertFromInternalUnits(
+                        connector.radius * connector.radius * math.pi, UnitTypeId.SquareMeters)
                 if connector.shape == ConnectorProfileType.Oval:
                     false_area += 0
 
@@ -270,8 +276,6 @@ class SpecificationFiller:
             duct.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
             UnitTypeId.SquareMeters)
 
-    def __set_area(self, elements):
-
     def __process_areas(self):
         """
         Обрабатывает площади воздуховодов, их фитингов, и обновляет параметр VISNote.
@@ -281,15 +285,18 @@ class SpecificationFiller:
         info = self.doc.ProjectInformation
         fill_fitting_areas = info.GetParamValueOrDefault(SharedParamsConfig.Instance.VISConsiderDuctFittings) == 1
 
-        area_elements = FilteredElementCollector(
+        area_elements = []
+
+        area_elements.extend(FilteredElementCollector(
             self.doc,
-            self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctCurves).ToElements()
+            self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctCurves).ToElements())
 
         if fill_fitting_areas:
             duct_fittings = FilteredElementCollector(
             self.doc,
             self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctFitting).ToElements()
-            area_elements = area_elements + duct_fittings
+
+            area_elements.extend(duct_fittings)
 
 
         duct_dict = {}
