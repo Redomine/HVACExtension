@@ -243,27 +243,38 @@ class SpecificationFiller:
                               .format(", ".join(report_rows)))
             forms.alert(report_message, "Ошибка", exitscript=True)
 
+    def __get_connectors(self, element):
+        connectors = []
+
+        if isinstance(element, FamilyInstance) and element.MEPModel.ConnectorManager is not None:
+            connectors.extend(element.MEPModel.ConnectorManager.Connectors)
+
+        if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves]) and \
+           isinstance(element, MEPCurve) and element.ConnectorManager is not None:
+            connectors.extend(element.ConnectorManager.Connectors)
+
+        return connectors
+
     def __get_fitting_area(self, element):
         area = 0
 
-        print dosymep.Revit.Geometry.ElementExtensions.GetSolids(element)
-        for solid in element.GetSolids():
-            for face in solid.faces:
-                area += face.area
+        for solid in dosymep.Revit.Geometry.ElementExtensions.GetSolids(element):
+            for face in solid.Faces:
+                area += face.Area
 
         area = UnitUtils.ConvertFromInternalUnits(area, UnitTypeId.SquareMeters)
 
         if area > 0:
             false_area = 0
-            connectors = element.get_connectors()
+            connectors = self.__get_connectors(element)
             for connector in connectors:
-                if connector.shape == ConnectorProfileType.Rectangular:
+                if connector.Shape == ConnectorProfileType.Rectangular:
                     false_area += UnitUtils.ConvertFromInternalUnits(
-                        connector.height * connector.width, UnitTypeId.SquareMeters)
-                if connector.shape == ConnectorProfileType.Round:
+                        connector.Height * connector.Width, UnitTypeId.SquareMeters)
+                if connector.Shape == ConnectorProfileType.Round:
                     false_area += UnitUtils.ConvertFromInternalUnits(
-                        connector.radius * connector.radius * math.pi, UnitTypeId.SquareMeters)
-                if connector.shape == ConnectorProfileType.Oval:
+                        connector.Radius * connector.Radius * math.pi, UnitTypeId.SquareMeters)
+                if connector.Shape == ConnectorProfileType.Oval:
                     false_area += 0
 
             # Вычитаем площадь пустоты на местах коннекторов
