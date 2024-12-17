@@ -265,39 +265,51 @@ class SpecificationFiller:
 
         return area
 
+    def __get_duct_area(self, duct):
+        return UnitUtils.ConvertFromInternalUnits(
+            duct.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
+            UnitTypeId.SquareMeters)
+
+    def __set_area(self, elements):
+
     def __process_areas(self):
         """
-        Обрабатывает площади воздуховодов и обновляет параметр VISNote.
+        Обрабатывает площади воздуховодов, их фитингов, и обновляет параметр VISNote.
         """
 
         # Заполняем площади фитингов, если включен их учет. Иначе - металл и так идет в м2
         info = self.doc.ProjectInformation
         fill_fitting_areas = info.GetParamValueOrDefault(SharedParamsConfig.Instance.VISConsiderDuctFittings) == 1
 
-
-        ducts = FilteredElementCollector(
+        area_elements = FilteredElementCollector(
             self.doc,
             self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctCurves).ToElements()
 
+        if fill_fitting_areas:
+            duct_fittings = FilteredElementCollector(
+            self.doc,
+            self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctFitting).ToElements()
+            area_elements = area_elements + duct_fittings
 
 
         duct_dict = {}
 
-        for duct in ducts:
-            duct_position = duct.GetParamValue(SharedParamsConfig.Instance.VISPosition)
-            duct_area = UnitUtils.ConvertFromInternalUnits(
-                duct.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA),
-                UnitTypeId.SquareMeters)
-
-            if duct_position in duct_dict:
-                duct_dict[duct_position] += duct_area
+        for area_element in area_elements:
+            element_position = area_element.GetParamValue(SharedParamsConfig.Instance.VISPosition)
+            if area_element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+                element_area = self.__get_duct_area(area_element)
             else:
-                duct_dict[duct_position] = duct_area
+                element_area = self.__get_fitting_area(area_element)
 
-        for duct in ducts:
-            duct_position = duct.GetParamValue(SharedParamsConfig.Instance.VISPosition)
-            formatted_area = "{:.2f}".format(duct_dict[duct_position]).rstrip('0').rstrip('.') + ' м²'
-            duct.SetParamValue(SharedParamsConfig.Instance.VISNote, formatted_area)
+            if element_position in duct_dict:
+                duct_dict[element_position] += element_area
+            else:
+                duct_dict[element_position] = element_area
+
+        for area_element in area_elements:
+            element_position = area_element.GetParamValue(SharedParamsConfig.Instance.VISPosition)
+            formatted_area = "{:.2f}".format(duct_dict[element_position]).rstrip('0').rstrip('.') + ' м²'
+            area_element.SetParamValue(SharedParamsConfig.Instance.VISNote, formatted_area)
 
     def __fill_id_to_schedule_param(self, specification_settings, elements):
         """
