@@ -49,9 +49,6 @@ class SpecificationSettings:
     sort_para_group_indexes = None
     position_index = None
     group_index = None
-    elements = []
-    ducts = []
-    duct_fittings = []
 
     def __init__(self, definition):
         """
@@ -331,7 +328,6 @@ class SpecificationFiller:
 
             self.__set_if_not_ro(area_element, SharedParamsConfig.Instance.VISNote, formatted_area)
 
-
     def __set_if_not_ro(self, element, shared_param, value):
         """
          Заполняет значение параметра, если он не ридонли.
@@ -358,7 +354,6 @@ class SpecificationFiller:
 
             for element in elements:
                 self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, str(element.Id.IntegerValue))
-
 
     def __fill_values(self, specification_settings, elements, fill_areas, fill_numbers):
         """
@@ -423,6 +418,14 @@ class SpecificationFiller:
                     "Внимание")
                 return
 
+    def __setup_params(self):
+
+        revit_params = [SharedParamsConfig.Instance.VISNote,
+                        SharedParamsConfig.Instance.VISPosition]
+
+        project_parameters = ProjectParameters.Create(self.doc.Application)
+        project_parameters.SetupRevitParams(self.doc, revit_params)
+
     def fill_position_and_notes(self, fill_numbers=False, fill_areas=False):
         """
         Основной метод для заполнения позиций и примечаний в спецификации.
@@ -438,6 +441,9 @@ class SpecificationFiller:
             forms.alert("Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации",
                         "Ошибка", exitscript=True)
 
+        # На всякий случай выполняем настройку параметров - в теории уже должны быть на месте, но лучше продублировать
+        self.__setup_params()
+
         elements = FilteredElementCollector(self.doc, self.doc.ActiveView.Id)
 
         # Проверяем параметры
@@ -452,5 +458,5 @@ class SpecificationFiller:
         # Заполняем айди в параметр позиции элементов для их чтения
         self.__fill_id_to_schedule_param(specification_settings, elements)
 
-        # заполням значения нумерации и примечаний для воздуховодов
+        # заполняем значения нумерации и примечаний для воздуховодов
         self.__fill_values(specification_settings, elements, fill_areas, fill_numbers)
