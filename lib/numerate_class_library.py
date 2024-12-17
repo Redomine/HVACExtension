@@ -57,7 +57,7 @@ class SpecificationSettings:
         """
         Инициализация экземпляра класса SpecificationSettings.
 
-        Аргументы:
+        Args:
             definition (ScheduleDefinition): Определение спецификации.
         """
         self.definition = definition
@@ -122,7 +122,7 @@ class SpecificationSettings:
         """
         Возвращает индекс параметра спецификации по имени.
 
-        Аргументы:
+        Args:
             name (str): Имя параметра.
 
         Возвращает:
@@ -155,7 +155,7 @@ class SpecificationFiller:
         """
         Инициализация экземпляра класса SpecificationFiller.
 
-        Аргументы:
+        Args:
             doc (Document): Документ, в котором происходит заполнение спецификаций.
             active_view (View): Активный вид, используемый для заполнения спецификаций.
         """
@@ -166,7 +166,7 @@ class SpecificationFiller:
         """
         Возвращает значение данных по которым идет сортировка слитыми в единую строку.
 
-        Аргументы:
+        Args:
             row (int): Номер строки.
             specification_settings (SpecificationSettings): Настройки спецификации.
             vs (ViewSchedule): Активный вид спецификации.
@@ -180,7 +180,7 @@ class SpecificationFiller:
         """
         Обрабатывает строку спецификации.
 
-        Аргументы:
+        Args:
             row (int): Номер строки.
             specification_settings (SpecificationSettings): Настройки спецификации.
             old_schedule_string (str): Старая строка сортировки.
@@ -198,9 +198,10 @@ class SpecificationFiller:
                 position_number += 1
 
             if '_Узел_' not in group:
-                element.SetParamValue(SharedParamsConfig.Instance.VISPosition, str(position_number))
+                self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, str(position_number))
             else:
-                element.SetParamValue(SharedParamsConfig.Instance.VISPosition, '')
+                self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, '')
+
 
         return new_sort_rule, position_number
 
@@ -208,14 +209,14 @@ class SpecificationFiller:
         """
         Проверяет, заняты ли элементы другими пользователями.
 
-        Аргументы:
+        Args:
             elements (list): Список элементов для проверки.
         """
         def get_element_editor_name(element):
             """
             Возвращает имя пользователя, занявшего элемент, или None.
 
-            Аргументы:
+            Args:
                 element (Element): Элемент для проверки.
 
             Возвращает:
@@ -327,13 +328,28 @@ class SpecificationFiller:
         for area_element in area_elements:
             element_position = area_element.GetParamValue(SharedParamsConfig.Instance.VISPosition)
             formatted_area = "{:.2f}".format(duct_dict[element_position]).rstrip('0').rstrip('.') + ' м²'
-            area_element.SetParamValue(SharedParamsConfig.Instance.VISNote, formatted_area)
+
+            self.__set_if_not_ro(area_element, SharedParamsConfig.Instance.VISNote, formatted_area)
+
+
+    def __set_if_not_ro(self, element, shared_param, value):
+        """
+         Заполняет значение параметра, если он не ридонли.
+
+         Args:
+             element (Element): Элемент спецификации
+             shared_param: RevitParam с платформы
+             value: Устанавливаемое значение
+         """
+        param = element.GetParam(shared_param)
+        if not param.IsReadOnly:
+            element.SetParamValue(shared_param, value)
 
     def __fill_id_to_schedule_param(self, specification_settings, elements):
         """
         Заполняет параметр позиции айди элементов.
 
-        Аргументы:
+        Args:
             specification_settings (SpecificationSettings): Настройки спецификации.
             elements (list): Список элементов для заполнения.
         """
@@ -341,13 +357,14 @@ class SpecificationFiller:
             specification_settings.show_all_specification()
 
             for element in elements:
-                element.SetParamValue(SharedParamsConfig.Instance.VISPosition, str(element.Id.IntegerValue))
+                self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, str(element.Id.IntegerValue))
+
 
     def __fill_values(self, specification_settings, elements, fill_areas, fill_numbers):
         """
         Заполняет позицию и примечания для элементов.
 
-        Аргументы:
+        Args:
             specification_settings (SpecificationSettings): Настройки спецификации.
             elements (list): Список элементов для заполнения.
             fill_areas (bool): Флаг для заполнения площадей.
@@ -373,20 +390,20 @@ class SpecificationFiller:
 
             if fill_numbers is False:
                 for element in elements:
-                    element.SetParamValue(SharedParamsConfig.Instance.VISPosition, '')
+                    self.__set_if_not_ro(element, SharedParamsConfig.Instance.VISPosition, '')
 
     def __check_position_param(self, elements):
         """
         Проверяет наличие параметра позиции у элементов.
 
-        Аргументы:
+        Args:
             elements (list): Список элементов для проверки.
         """
         for element in elements:
-            if not element.IsExistsParam(SharedParamsConfig.Instance.VISPosition):
+            if not element.IsExistsSharedParam(SharedParamsConfig.Instance.VISPosition.Name):
                 forms.alert(
-                    'Параметр "ФОП_ВИС_Позиция" для некоторых элементов спецификации является параметром типа. '
-                    'Нумерация этих элементов будет пропущена.',
+                    'Параметр "ФОП_ВИС_Позиция" для некоторых элементов спецификации не найден в экземпляре. '
+                    'Обработка этих элементов будет пропущена.',
                     "Внимание")
                 return
 
@@ -394,13 +411,14 @@ class SpecificationFiller:
         """
         Проверяет наличие параметра примечания у воздуховодов.
 
-        Аргументы:
+        Args:
             elements (list): Список элементов для проверки.
         """
         for element in elements:
-            if element.Category.IsId(BuiltInCategory.OST_DuctCurves) and not element.IsExistsParam(SharedParamsConfig.Instance.VISNote):
+            if (element.Category.IsId(BuiltInCategory.OST_DuctCurves)
+                    and not element.IsExistsSharedParam(SharedParamsConfig.Instance.VISNote.Name)):
                 forms.alert(
-                    'Параметр "ФОП_ВИС_Примечание" является параметром типа воздуховодов. '
+                    'Параметр "ФОП_ВИС_Примечание" не найден в экземпляре воздуховодов/труб. '
                     'Примечания не будут заполнены',
                     "Внимание")
                 return
@@ -409,9 +427,9 @@ class SpecificationFiller:
         """
         Основной метод для заполнения позиций и примечаний в спецификации.
 
-        Аргументы:
-            fill_numbers (bool): Флаг для заполнения номеров.
-            fill_areas (bool): Флаг для заполнения площадей.
+        Args:
+            fill_numbers (bool): Флаг для заполнения номеров
+            fill_areas (bool): Флаг для заполнения площадей
         """
         if self.doc.IsFamilyDocument:
             forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
@@ -436,4 +454,3 @@ class SpecificationFiller:
 
         # заполням значения нумерации и примечаний для воздуховодов
         self.__fill_values(specification_settings, elements, fill_areas, fill_numbers)
-
