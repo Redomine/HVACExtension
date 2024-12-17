@@ -46,6 +46,9 @@ class SpecificationSettings:
     sort_para_group_indexes = None
     position_index = None
     group_index = None
+    elements = []
+    ducts = []
+    duct_fittings = []
 
     def __init__(self, definition):
         """
@@ -237,13 +240,46 @@ class SpecificationFiller:
                               .format(", ".join(report_rows)))
             forms.alert(report_message, "Ошибка", exitscript=True)
 
+    def __get_fitting_area(self, element):
+        area = 0
+
+        for solid in element.GetSolid():
+            for face in solid.faces:
+                area += face.area
+
+        area = UnitUtils.ConvertFromInternalUnits(area, UnitTypeId.SquareMeters)
+
+        if area > 0:
+            false_area = 0
+            connectors = element.get_connectors()
+            for connector in connectors:
+                if connector.shape == ConnectorProfileType.Rectangular:
+                    false_area += UnitUtils.ConvertFromInternalUnits(connector.height * connector.width, UnitTypeId.SquareMeters)
+                if connector.shape == ConnectorProfileType.Round:
+                    false_area += UnitUtils.ConvertFromInternalUnits(connector.radius * connector.radius * math.pi, UnitTypeId.SquareMeters)
+                if connector.shape == ConnectorProfileType.Oval:
+                    false_area += 0
+
+            # Вычитаем площадь пустоты на местах коннекторов
+            area -= false_area
+
+        return area
+
     def __process_areas(self):
         """
         Обрабатывает площади воздуховодов и обновляет параметр VISNote.
         """
+
+        # Заполняем площади фитингов, если включен их учет. Иначе - металл и так идет в м2
+        info = self.doc.ProjectInformation
+        fill_fitting_areas = info.GetParamValueOrDefault(SharedParamsConfig.Instance.VISConsiderDuctFittings) == 1
+
+
         ducts = FilteredElementCollector(
             self.doc,
             self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctCurves).ToElements()
+
+
 
         duct_dict = {}
 
@@ -277,7 +313,7 @@ class SpecificationFiller:
             for element in elements:
                 element.SetParamValue(SharedParamsConfig.Instance.VISPosition, str(element.Id.IntegerValue))
 
-    def __fill_position_and_note(self, specification_settings, elements, fill_areas, fill_numbers):
+    def __fill_values(self, specification_settings, elements, fill_areas, fill_numbers):
         """
         Заполняет позицию и примечания для элементов.
 
@@ -356,14 +392,18 @@ class SpecificationFiller:
 
         elements = FilteredElementCollector(self.doc, self.doc.ActiveView.Id)
 
+        # Проверяем параметры
         self.__check_position_param(elements)
         self.__check_duct_note_param(elements)
 
+        # Если хоть один элемент спеки на редактировании - отменяем выполнение, нужно освобождать
         self.__check_edited_elements(elements)
 
         specification_settings = SpecificationSettings(self.active_view.Definition)
 
+        # Заполняем айди в параметр позиции элементов для их чтения
         self.__fill_id_to_schedule_param(specification_settings, elements)
 
-        self.__fill_position_and_note(specification_settings, elements, fill_areas, fill_numbers)
+        # заполням значения нумерации и примечаний для воздуховодов
+        self.__fill_values(specification_settings, elements, fill_areas, fill_numbers)
 
