@@ -517,5 +517,5 @@ class SpecificationFiller:
         # Заполняем айди в параметр позиции элементов для их чтения
         self.__fill_id_to_schedule_param(specification_settings, elements)
 
-        # заполняем значения нумерации и примечаний для воздуховодов
+        # заполняем значения нумерации и, для воздуховодов их фитингов, примечаний
         self.__fill_values(specification_settings, elements, fill_areas, fill_numbers, first_index)
