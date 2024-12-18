@@ -102,7 +102,7 @@ class SpecificationSettings:
         """
         Возвращает индексы параметров сортировки.
 
-        Возвращает:
+        Returns:
             list: Список индексов параметров сортировки.
         """
         sorting_params_indexes = []
@@ -123,7 +123,7 @@ class SpecificationSettings:
         Args:
             name (str): Имя параметра.
 
-        Возвращает:
+        Returns:
             int: Индекс параметра.
         """
         index = 0
@@ -173,7 +173,7 @@ class SpecificationFiller:
             specification_settings (SpecificationSettings): Настройки спецификации.
             vs (ViewSchedule): Активный вид спецификации.
 
-        Возвращает:
+        Returns:
             str: Строка, содержащая значения данных для сортировки.
         """
         return ''.join(vs.GetCellText(SectionType.Body, row, ind) for ind in specification_settings.sort_para_group_indexes)
@@ -188,7 +188,7 @@ class SpecificationFiller:
             old_schedule_string (str): Старая строка сортировки.
             position_number (int): Текущий номер позиции.
 
-        Возвращает:
+        Returns:
             tuple: Новая строка сортировки и обновленный номер позиции.
         """
         new_sort_rule = self.__get_sort_rule_string(row, specification_settings, self.active_view)
@@ -221,7 +221,7 @@ class SpecificationFiller:
             Args:
                 element (Element): Элемент для проверки.
 
-            Возвращает:
+            Returns:
                 str или None: Имя пользователя или None, если элемент не занят.
             """
             user_name = __revit__.Application.Username
