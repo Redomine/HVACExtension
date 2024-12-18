@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import math
+import sys
 
 import clr
 
@@ -12,6 +13,7 @@ clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
 from Autodesk.Revit.DB import *
+import Autodesk.Revit.Exceptions
 
 from pyrevit import forms
 from pyrevit import revit
@@ -26,7 +28,6 @@ from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep_libs.bim4everyone import *
 from dosymep.Revit import *
 from dosymep.Revit.Geometry import *
-
 
 class SpecificationSettings:
     """
@@ -133,7 +134,7 @@ class SpecificationSettings:
                 return index
             index += 1
 
-        forms.alert('В таблице нет параметра {}.'.format(name),
+        forms.alert('В таблице нет параметра {}. Выполнение невозможно.'.format(name),
                     "Ошибка", exitscript=True)
 
 class SpecificationFiller:
@@ -147,6 +148,7 @@ class SpecificationFiller:
 
     doc = None
     active_view = None
+    duct_stock = 0
 
     def __init__(self, doc, active_view):
         """
@@ -158,6 +160,8 @@ class SpecificationFiller:
         """
         self.doc = doc
         self.active_view = active_view
+        info = self.doc.ProjectInformation
+        self.duct_stock = float(info.GetParamValueOrDefault(SharedParamsConfig.Instance.VISPipeDuctReserve))
 
     def __get_sort_rule_string(self, row, specification_settings, vs):
         """
@@ -224,21 +228,27 @@ class SpecificationFiller:
             if edited_by is None:
                 return None
 
-            if edited_by.lower() == user_name.lower():
+            if edited_by.lower() in user_name.lower():
                 return None
             return edited_by
 
-        report_rows = []
+        edited_reports = []
+        status_report = ''
+        edited_report = ''
 
         for element in elements:
-            name = get_element_editor_name(element)
-            if name is not None:
-                report_rows.append(name)
+            update_status =  WorksharingUtils.GetModelUpdatesStatus(self.doc, element.Id)
 
-        if len(report_rows) > 0:
-            report_message = (("Нумерация/заполнение примечаний не были выполнены, "
-                              "так как часть элементов спецификации занята пользователями: {}")
-                              .format(", ".join(report_rows)))
+            if update_status == ModelUpdatesStatus.UpdatedInCentral:
+                status_report = "Вы владеете элементами, но ваш файл устарел. Выполните синхронизацию. \n"
+
+            name = get_element_editor_name(element)
+            if name is not None and name not in edited_reports:
+                edited_reports.append(name)
+        if len(edited_reports) > 0:
+            edited_report = "Часть элементов спецификации занята пользователями: {}".format(", ".join(edited_reports))
+        if edited_report != '' or status_report != '':
+            report_message = status_report + edited_report
             forms.alert(report_message, "Ошибка", exitscript=True)
 
     def __get_connectors(self, element):
@@ -326,7 +336,7 @@ class SpecificationFiller:
             element_position = area_element.GetParamValue(SharedParamsConfig.Instance.VISPosition)
             formatted_area = "{:.2f}".format(duct_dict[element_position]).rstrip('0').rstrip('.') + ' м²'
 
-            self.__set_if_not_ro(area_element, SharedParamsConfig.Instance.VISNote, formatted_area)
+            self.__set_if_not_ro(area_element, SharedParamsConfig.Instance.VISNote, duct_dict[element_position])
 
     def __set_if_not_ro(self, element, shared_param, value):
         """
@@ -337,6 +347,22 @@ class SpecificationFiller:
              shared_param: RevitParam с платформы
              value: Устанавливаемое значение
          """
+
+        # Если у нас заполняется примечание, проверяем индивидуальный запас и общий запас на воздуховоды. Увеличиваем
+        # значение на него и форматируем под м2
+        if shared_param == SharedParamsConfig.Instance.VISNote:
+            if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctFitting]):
+                individual_stock = element.GetElementType().GetParamValueOrDefault(SharedParamsConfig.Instance.VISIndividualStock)
+
+                if ((individual_stock == 0 or individual_stock is None)
+                        and (self.duct_stock != 0  and self.duct_stock is not None)):
+                    value = value + value * (self.duct_stock/100)
+
+                if individual_stock != 0 and individual_stock is not None:
+                    value = value + value * (individual_stock/100)
+
+                value = "{:.2f}".format(value).rstrip('0').rstrip('.') + ' м²'
+
         param = element.GetParam(shared_param)
         if not param.IsReadOnly:
             element.SetParamValue(shared_param, value)
@@ -355,7 +381,7 @@ class SpecificationFiller:
             for element in elements:
                 self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, str(element.Id.IntegerValue))
 
-    def __fill_values(self, specification_settings, elements, fill_areas, fill_numbers):
+    def __fill_values(self, specification_settings, elements, fill_areas, fill_numbers, first_index):
         """
         Заполняет позицию и примечания для элементов.
 
@@ -369,7 +395,7 @@ class SpecificationFiller:
             section_data = self.active_view.GetTableData().GetSectionData(SectionType.Body)
             row = section_data.FirstRowNumber
 
-            position_number = 0
+            position_number = first_index - 1
             old_sort_rule = ''
             while row <= section_data.LastRowNumber:
                 old_sort_rule, position_number = self.__process_row(row,
@@ -387,44 +413,66 @@ class SpecificationFiller:
                 for element in elements:
                     self.__set_if_not_ro(element, SharedParamsConfig.Instance.VISPosition, '')
 
-    def __check_position_param(self, elements):
+    def __check_params_instance(self, elements):
         """
-        Проверяет наличие параметра позиции у элементов.
+        Проверяем наличие параметров в экземпляре. Это может быть сделано специально, поэтому не падаем
 
         Args:
-            elements (list): Список элементов для проверки.
+            elements: Все элементы с активного вида
         """
-        for element in elements:
-            if not element.IsExistsSharedParam(SharedParamsConfig.Instance.VISPosition.Name):
-                forms.alert(
-                    'Параметр "ФОП_ВИС_Позиция" для некоторых элементов спецификации не найден в экземпляре. '
-                    'Обработка этих элементов будет пропущена.',
-                    "Внимание")
-                return
+        def check_param(elements, revit_param):
+            for element in elements:
+                if not element.IsExistsSharedParam(revit_param.Name):
+                    return revit_param.Name
+            return None
 
-    def __check_duct_note_param(self, elements):
-        """
-        Проверяет наличие параметра примечания у воздуховодов.
+        result1 = check_param(elements, SharedParamsConfig.Instance.VISPosition)
+        result2 = check_param(elements, SharedParamsConfig.Instance.VISNote)
 
-        Args:
-            elements (list): Список элементов для проверки.
-        """
-        for element in elements:
-            if (element.Category.IsId(BuiltInCategory.OST_DuctCurves)
-                    and not element.IsExistsSharedParam(SharedParamsConfig.Instance.VISNote.Name)):
-                forms.alert(
-                    'Параметр "ФОП_ВИС_Примечание" не найден в экземпляре воздуховодов/труб. '
-                    'Примечания не будут заполнены',
-                    "Внимание")
-                return
+        results = [result for result in [result1, result2] if result is not None]
+
+        if results:
+            forms.alert(
+                'Параметры {} не найдены не у всех экземпляров воздуховодов/труб.'.format(', '.join(results)),
+                "Внимание")
 
     def __setup_params(self):
-
         revit_params = [SharedParamsConfig.Instance.VISNote,
-                        SharedParamsConfig.Instance.VISPosition]
+                        SharedParamsConfig.Instance.VISPosition,
+                        SharedParamsConfig.Instance.VISPipeDuctReserve,
+                        SharedParamsConfig.Instance.VISIndividualStock,
+                        SharedParamsConfig.Instance.VISConsiderDuctFittings,
+                        ]
 
         project_parameters = ProjectParameters.Create(self.doc.Application)
         project_parameters.SetupRevitParams(self.doc, revit_params)
+
+    def __get_first_index(self, fill_numbers):
+        """
+        Получение начала нумерации. Если окошко было закрыто - прерываем скрипт.
+
+        Args:
+            fill_numbers: Флаг отвечающий за вызов нумерации
+        """
+        first_index = 1
+        if fill_numbers:
+            first_index = forms.ask_for_string(
+                default='1',
+                prompt='С какого числа стартуем нумерация:',
+                title="Нумерация"
+            )
+
+            try:
+                if first_index is None:
+                    sys.exit()
+                first_index = int(first_index)
+            except ValueError:
+                forms.alert(
+                    "Нужно ввести число.",
+                    "Ошибка",
+                    exitscript=True)
+
+        return first_index
 
     def fill_position_and_notes(self, fill_numbers=False, fill_areas=False):
         """
@@ -446,17 +494,20 @@ class SpecificationFiller:
 
         elements = FilteredElementCollector(self.doc, self.doc.ActiveView.Id)
 
-        # Проверяем параметры
-        self.__check_position_param(elements)
-        self.__check_duct_note_param(elements)
+        # Проверяем параметры. Они могли быть добавлены ранее или сидеть в семействах в типе
+        self.__check_params_instance(elements)
 
         # Если хоть один элемент спеки на редактировании - отменяем выполнение, нужно освобождать
         self.__check_edited_elements(elements)
 
+        # Выясняем с какого числа стартует нумерация
+        first_index = self.__get_first_index(fill_numbers)
+
+        # Получаем правила по которым работает спека
         specification_settings = SpecificationSettings(self.active_view.Definition)
 
         # Заполняем айди в параметр позиции элементов для их чтения
         self.__fill_id_to_schedule_param(specification_settings, elements)
 
         # заполняем значения нумерации и примечаний для воздуховодов
-        self.__fill_values(specification_settings, elements, fill_areas, fill_numbers)
+        self.__fill_values(specification_settings, elements, fill_areas, fill_numbers, first_index)
