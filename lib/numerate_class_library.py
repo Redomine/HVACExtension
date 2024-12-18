@@ -148,7 +148,8 @@ class SpecificationFiller:
 
     doc = None
     active_view = None
-    duct_stock = 0
+    duct_stock = 0 # Запас изоляции из сведений о проекте
+    types_cash = {} # Кэш данных по индивидуальным запасов из типов воздуховодов-фитингов
 
     def __init__(self, doc, active_view):
         """
@@ -334,7 +335,6 @@ class SpecificationFiller:
 
         for area_element in area_elements:
             element_position = area_element.GetParamValue(SharedParamsConfig.Instance.VISPosition)
-            formatted_area = "{:.2f}".format(duct_dict[element_position]).rstrip('0').rstrip('.') + ' м²'
 
             self.__set_if_not_ro(area_element, SharedParamsConfig.Instance.VISNote, duct_dict[element_position])
 
@@ -352,7 +352,15 @@ class SpecificationFiller:
         # значение на него и форматируем под м2
         if shared_param == SharedParamsConfig.Instance.VISNote:
             if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctFitting]):
-                individual_stock = element.GetElementType().GetParamValueOrDefault(SharedParamsConfig.Instance.VISIndividualStock)
+                element_type = element.GetElementType()
+
+                # Проверяем, существует ли уже айди типа в кэше
+                if element_type.Id in self.types_cash:
+                    individual_stock = self.types_cash[element_type.Id]
+                else:
+                    individual_stock = element_type.GetParamValueOrDefault(
+                        SharedParamsConfig.Instance.VISIndividualStock)
+                    self.types_cash[element_type.Id] = individual_stock
 
                 if ((individual_stock == 0 or individual_stock is None)
                         and (self.duct_stock != 0  and self.duct_stock is not None)):
@@ -375,7 +383,7 @@ class SpecificationFiller:
             specification_settings (SpecificationSettings): Настройки спецификации.
             elements (list): Список элементов для заполнения.
         """
-        with revit.Transaction("Запись айди"):
+        with revit.Transaction("BIM: Запись айди"):
             specification_settings.show_all_specification()
 
             for element in elements:
@@ -391,7 +399,7 @@ class SpecificationFiller:
             fill_areas (bool): Флаг для заполнения площадей.
             fill_numbers (bool): Флаг для заполнения номеров.
         """
-        with revit.Transaction("Запись номера"):
+        with revit.Transaction("BIM: Запись номера"):
             section_data = self.active_view.GetTableData().GetSectionData(SectionType.Body)
             row = section_data.FirstRowNumber
 
