@@ -241,7 +241,7 @@ class SpecificationFiller:
             update_status =  WorksharingUtils.GetModelUpdatesStatus(self.doc, element.Id)
 
             if update_status == ModelUpdatesStatus.UpdatedInCentral:
-                status_report = "Вы владеете элементами, но ваш файл устарел. Выполните синхронизацию. \n"
+                status_report = "Вы владеете элементами, но ваш файл устарел. Выполните синхронизацию. "
 
             name = get_element_editor_name(element)
             if name is not None and name not in edited_reports:
@@ -249,7 +249,7 @@ class SpecificationFiller:
         if len(edited_reports) > 0:
             edited_report = "Часть элементов спецификации занята пользователями: {}".format(", ".join(edited_reports))
         if edited_report != '' or status_report != '':
-            report_message = status_report + edited_report
+            report_message = status_report + ('\n' if (edited_report and status_report) else '') + edited_report
             forms.alert(report_message, "Ошибка", exitscript=True)
 
     def __get_connectors(self, element):
