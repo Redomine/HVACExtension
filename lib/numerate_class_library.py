@@ -29,6 +29,13 @@ from dosymep_libs.bim4everyone import *
 from dosymep.Revit import *
 from dosymep.Revit.Geometry import *
 
+position_param = SharedParamsConfig.Instance.VISPosition
+note_param = SharedParamsConfig.Instance.VISNote
+group_param = SharedParamsConfig.Instance.VISGrouping
+individual_stock_param = SharedParamsConfig.Instance.VISIndividualStock
+duct_stock_param = SharedParamsConfig.Instance.VISPipeDuctReserve
+use_duct_fittings_param = SharedParamsConfig.Instance.VISConsiderDuctFittings
+
 class SpecificationSettings:
     """
     Класс для настройки спецификаций в документе.
@@ -60,9 +67,9 @@ class SpecificationSettings:
         """
         self.definition = definition
 
-        self.position_index = self.__get_schedule_parameter_index(SharedParamsConfig.Instance.VISPosition.Name)
+        self.position_index = self.__get_schedule_parameter_index(position_param.Name)
 
-        self.group_index = self.__get_schedule_parameter_index(SharedParamsConfig.Instance.VISGrouping.Name)
+        self.group_index = self.__get_schedule_parameter_index(group_param.Name)
 
         self.sort_para_group_indexes = self.__get_sorting_params_indexes()
 
@@ -128,9 +135,9 @@ class SpecificationSettings:
         """
         index = 0
 
-        for schedule_parameter in self.definition.GetFieldOrder():
-            schedule_parameter = self.definition.GetField(schedule_parameter)
-            if schedule_parameter.GetName() == name:
+        for field in self.definition.GetFieldOrder():
+            field = self.definition.GetField(field)
+            if field.GetName() == name:
                 return index
             index += 1
 
@@ -162,7 +169,7 @@ class SpecificationFiller:
         self.doc = doc
         self.active_view = active_view
         info = self.doc.ProjectInformation
-        self.duct_stock = float(info.GetParamValueOrDefault(SharedParamsConfig.Instance.VISPipeDuctReserve))
+        self.duct_stock = float(info.GetParamValueOrDefault(duct_stock_param))
 
     def __get_sort_rule_string(self, row, specification_settings, vs):
         """
@@ -176,7 +183,13 @@ class SpecificationFiller:
         Returns:
             str: Строка, содержащая значения данных для сортировки.
         """
-        return ''.join(vs.GetCellText(SectionType.Body, row, ind) for ind in specification_settings.sort_para_group_indexes)
+
+        sort_texts = [vs.GetCellText(SectionType.Body, row, ind) for ind in
+                      specification_settings.sort_para_group_indexes]
+
+        result = ''.join(sort_texts)
+
+        return result
 
     def __process_row(self, row, specification_settings, old_schedule_string, position_number):
         """
@@ -200,12 +213,30 @@ class SpecificationFiller:
                 position_number += 1
 
             if '_Узел_' not in group:
-                self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, str(position_number))
+                self.__set_if_not_ro(element, position_param, str(position_number))
             else:
-                self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, '')
-
+                self.__set_if_not_ro(element, position_param, '')
 
         return new_sort_rule, position_number
+
+    def __get_element_editor_name(self, element):
+        """
+        Возвращает имя пользователя, занявшего элемент, или None.
+
+        Args:
+            element (Element): Элемент для проверки.
+
+        Returns:
+            str или None: Имя пользователя или None, если элемент не занят.
+        """
+        user_name = __revit__.Application.Username
+        edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+        if edited_by is None:
+            return None
+
+        if edited_by.lower() in user_name.lower():
+            return None
+        return edited_by
 
     def __check_edited_elements(self, elements):
         """
@@ -214,24 +245,6 @@ class SpecificationFiller:
         Args:
             elements (list): Список элементов для проверки.
         """
-        def get_element_editor_name(element):
-            """
-            Возвращает имя пользователя, занявшего элемент, или None.
-
-            Args:
-                element (Element): Элемент для проверки.
-
-            Returns:
-                str или None: Имя пользователя или None, если элемент не занят.
-            """
-            user_name = __revit__.Application.Username
-            edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
-            if edited_by is None:
-                return None
-
-            if edited_by.lower() in user_name.lower():
-                return None
-            return edited_by
 
         edited_reports = []
         status_report = ''
@@ -243,7 +256,7 @@ class SpecificationFiller:
             if update_status == ModelUpdatesStatus.UpdatedInCentral:
                 status_report = "Вы владеете элементами, но ваш файл устарел. Выполните синхронизацию. "
 
-            name = get_element_editor_name(element)
+            name = self.__get_element_editor_name(element)
             if name is not None and name not in edited_reports:
                 edited_reports.append(name)
         if len(edited_reports) > 0:
@@ -303,7 +316,7 @@ class SpecificationFiller:
 
         # Заполняем площади фитингов, если включен их учет. Иначе - металл и так идет в м2
         info = self.doc.ProjectInformation
-        fill_fitting_areas = info.GetParamValueOrDefault(SharedParamsConfig.Instance.VISConsiderDuctFittings) == 1
+        fill_fitting_areas = info.GetParamValueOrDefault(use_duct_fittings_param) == 1
 
         area_elements = []
 
@@ -322,7 +335,7 @@ class SpecificationFiller:
         duct_dict = {}
 
         for area_element in area_elements:
-            element_position = area_element.GetParamValue(SharedParamsConfig.Instance.VISPosition)
+            element_position = area_element.GetParamValue(position_param)
             if area_element.Category.IsId(BuiltInCategory.OST_DuctCurves):
                 element_area = self.__get_duct_area(area_element)
             else:
@@ -334,9 +347,9 @@ class SpecificationFiller:
                 duct_dict[element_position] = element_area
 
         for area_element in area_elements:
-            element_position = area_element.GetParamValue(SharedParamsConfig.Instance.VISPosition)
+            element_position = area_element.GetParamValue(position_param)
 
-            self.__set_if_not_ro(area_element, SharedParamsConfig.Instance.VISNote, duct_dict[element_position])
+            self.__set_if_not_ro(area_element, note_param, duct_dict[element_position])
 
     def __set_if_not_ro(self, element, shared_param, value):
         """
@@ -350,7 +363,7 @@ class SpecificationFiller:
 
         # Если у нас заполняется примечание, проверяем индивидуальный запас и общий запас на воздуховоды. Увеличиваем
         # значение на него и форматируем под м2
-        if shared_param == SharedParamsConfig.Instance.VISNote:
+        if shared_param == note_param:
             if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctFitting]):
                 element_type = element.GetElementType()
 
@@ -359,7 +372,7 @@ class SpecificationFiller:
                     individual_stock = self.types_cash[element_type.Id]
                 else:
                     individual_stock = element_type.GetParamValueOrDefault(
-                        SharedParamsConfig.Instance.VISIndividualStock)
+                        individual_stock_param)
                     self.types_cash[element_type.Id] = individual_stock
 
                 if ((individual_stock == 0 or individual_stock is None)
@@ -387,7 +400,7 @@ class SpecificationFiller:
             specification_settings.show_all_specification()
 
             for element in elements:
-                self.__set_if_not_ro(element,SharedParamsConfig.Instance.VISPosition, str(element.Id.IntegerValue))
+                self.__set_if_not_ro(element,position_param, str(element.Id.IntegerValue))
 
     def __fill_values(self, specification_settings, elements, fill_areas, fill_numbers, first_index):
         """
@@ -419,7 +432,7 @@ class SpecificationFiller:
 
             if fill_numbers is False:
                 for element in elements:
-                    self.__set_if_not_ro(element, SharedParamsConfig.Instance.VISPosition, '')
+                    self.__set_if_not_ro(element, position_param, '')
 
     def __check_params_instance(self, elements):
         """
@@ -434,8 +447,8 @@ class SpecificationFiller:
                     return revit_param.Name
             return None
 
-        result1 = check_param(elements, SharedParamsConfig.Instance.VISPosition)
-        result2 = check_param(elements, SharedParamsConfig.Instance.VISNote)
+        result1 = check_param(elements, position_param)
+        result2 = check_param(elements, note_param)
 
         results = [result for result in [result1, result2] if result is not None]
 
@@ -445,11 +458,11 @@ class SpecificationFiller:
                 "Внимание")
 
     def __setup_params(self):
-        revit_params = [SharedParamsConfig.Instance.VISNote,
-                        SharedParamsConfig.Instance.VISPosition,
-                        SharedParamsConfig.Instance.VISPipeDuctReserve,
-                        SharedParamsConfig.Instance.VISIndividualStock,
-                        SharedParamsConfig.Instance.VISConsiderDuctFittings,
+        revit_params = [note_param,
+                        position_param,
+                        duct_stock_param,
+                        individual_stock_param,
+                        use_duct_fittings_param,
                         ]
 
         project_parameters = ProjectParameters.Create(self.doc.Application)

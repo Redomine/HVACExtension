@@ -17,7 +17,6 @@ from pyrevit.script import output
 from pyrevit import script
 from pyrevit import HOST_APP
 from pyrevit import EXEC_PARAMS
-from numerate_class_library import *
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
