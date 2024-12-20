@@ -68,9 +68,7 @@ class SpecificationSettings:
         self.definition = definition
 
         self.position_index = self.__get_schedule_parameter_index(position_param.Name)
-
         self.group_index = self.__get_schedule_parameter_index(group_param.Name)
-
         self.sort_para_group_indexes = self.__get_sorting_params_indexes()
 
         # Если заголовки показаны изначально или если спека изначально развернута - сворачивать назад не нужно
@@ -155,8 +153,8 @@ class SpecificationFiller:
 
     doc = None
     active_view = None
-    duct_stock = 0 # Запас изоляции из сведений о проекте
-    types_cash = {} # Кэш данных по индивидуальным запасов из типов воздуховодов-фитингов
+    duct_stock = 0  # Запас изоляции из сведений о проекте
+    types_cash = {}  # Кэш данных по индивидуальным запасов из типов воздуховодов-фитингов
 
     def __init__(self, doc, active_view):
         """
@@ -183,7 +181,6 @@ class SpecificationFiller:
         Returns:
             str: Строка, содержащая значения данных для сортировки.
         """
-
         sort_texts = [vs.GetCellText(SectionType.Body, row, ind) for ind in
                       specification_settings.sort_para_group_indexes]
 
@@ -245,13 +242,12 @@ class SpecificationFiller:
         Args:
             elements (list): Список элементов для проверки.
         """
-
         edited_reports = []
         status_report = ''
         edited_report = ''
 
         for element in elements:
-            update_status =  WorksharingUtils.GetModelUpdatesStatus(self.doc, element.Id)
+            update_status = WorksharingUtils.GetModelUpdatesStatus(self.doc, element.Id)
 
             if update_status == ModelUpdatesStatus.UpdatedInCentral:
                 status_report = "Вы владеете элементами, но ваш файл устарел. Выполните синхронизацию. "
@@ -272,7 +268,7 @@ class SpecificationFiller:
             connectors.extend(element.MEPModel.ConnectorManager.Connectors)
 
         if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves]) and \
-           isinstance(element, MEPCurve) and element.ConnectorManager is not None:
+                isinstance(element, MEPCurve) and element.ConnectorManager is not None:
             connectors.extend(element.ConnectorManager.Connectors)
 
         return connectors
@@ -313,7 +309,6 @@ class SpecificationFiller:
         """
         Обрабатывает площади воздуховодов, их фитингов, и обновляет параметр VISNote.
         """
-
         # Заполняем площади фитингов, если включен их учет. Иначе - металл и так идет в м2
         info = self.doc.ProjectInformation
         fill_fitting_areas = info.GetParamValueOrDefault(use_duct_fittings_param) == 1
@@ -326,11 +321,10 @@ class SpecificationFiller:
 
         if fill_fitting_areas:
             duct_fittings = FilteredElementCollector(
-            self.doc,
-            self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctFitting).ToElements()
+                self.doc,
+                self.active_view.Id).OfCategory(BuiltInCategory.OST_DuctFitting).ToElements()
 
             area_elements.extend(duct_fittings)
-
 
         duct_dict = {}
 
@@ -349,41 +343,46 @@ class SpecificationFiller:
         for area_element in area_elements:
             element_position = area_element.GetParamValue(position_param)
 
-            self.__set_if_not_ro(area_element, note_param, duct_dict[element_position])
+            value = duct_dict[element_position]
+            formated_value = self.__format_area_value(area_element, value)
+
+            self.__set_if_not_ro(area_element, note_param, formated_value)
+
+    def __format_area_value(self, element, value):
+        # Если у нас заполняется примечание, проверяем индивидуальный запас и общий запас на воздуховоды. Увеличиваем
+        # значение на него и форматируем под м2
+
+        if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctFitting]):
+            element_type = element.GetElementType()
+
+            # Проверяем, существует ли уже айди типа в кэше
+            if element_type.Id in self.types_cash:
+                individual_stock = self.types_cash[element_type.Id]
+            else:
+                individual_stock = element_type.GetParamValueOrDefault(
+                    individual_stock_param)
+                self.types_cash[element_type.Id] = individual_stock
+
+            if ((individual_stock == 0 or individual_stock is None)
+                    and (self.duct_stock != 0 and self.duct_stock is not None)):
+                value = value + value * (self.duct_stock / 100)
+
+            if individual_stock != 0 and individual_stock is not None:
+                value = value + value * (individual_stock / 100)
+
+            value = "{:.2f}".format(value).rstrip('0').rstrip('.') + ' м²'
+
+        return value
 
     def __set_if_not_ro(self, element, shared_param, value):
         """
-         Заполняет значение параметра, если он не ридонли.
+        Заполняет значение параметра, если он не ридонли.
 
-         Args:
-             element (Element): Элемент спецификации
-             shared_param: RevitParam с платформы
-             value: Устанавливаемое значение
-         """
-
-        # Если у нас заполняется примечание, проверяем индивидуальный запас и общий запас на воздуховоды. Увеличиваем
-        # значение на него и форматируем под м2
-        if shared_param == note_param:
-            if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctFitting]):
-                element_type = element.GetElementType()
-
-                # Проверяем, существует ли уже айди типа в кэше
-                if element_type.Id in self.types_cash:
-                    individual_stock = self.types_cash[element_type.Id]
-                else:
-                    individual_stock = element_type.GetParamValueOrDefault(
-                        individual_stock_param)
-                    self.types_cash[element_type.Id] = individual_stock
-
-                if ((individual_stock == 0 or individual_stock is None)
-                        and (self.duct_stock != 0  and self.duct_stock is not None)):
-                    value = value + value * (self.duct_stock/100)
-
-                if individual_stock != 0 and individual_stock is not None:
-                    value = value + value * (individual_stock/100)
-
-                value = "{:.2f}".format(value).rstrip('0').rstrip('.') + ' м²'
-
+        Args:
+            element (Element): Элемент спецификации
+            shared_param: RevitParam с платформы
+            value: Устанавливаемое значение
+        """
         param = element.GetParam(shared_param)
         if not param.IsReadOnly:
             element.SetParamValue(shared_param, value)
@@ -400,7 +399,7 @@ class SpecificationFiller:
             specification_settings.show_all_specification()
 
             for element in elements:
-                self.__set_if_not_ro(element,position_param, str(element.Id.IntegerValue))
+                self.__set_if_not_ro(element, position_param, str(element.Id.IntegerValue))
 
     def __fill_values(self, specification_settings, elements, fill_areas, fill_numbers, first_index):
         """
@@ -416,7 +415,8 @@ class SpecificationFiller:
             section_data = self.active_view.GetTableData().GetSectionData(SectionType.Body)
             row = section_data.FirstRowNumber
 
-            position_number = first_index - 1
+            position_number = first_index
+
             old_sort_rule = ''
             while row <= section_data.LastRowNumber:
                 old_sort_rule, position_number = self.__process_row(row,
@@ -427,12 +427,26 @@ class SpecificationFiller:
 
             specification_settings.repair_specification()
 
-            if fill_areas is True:
+            if fill_areas:
                 self.__process_areas()
 
-            if fill_numbers is False:
+            if not fill_numbers:
                 for element in elements:
                     self.__set_if_not_ro(element, position_param, '')
+
+    def __check_param(self, elements, revit_param):
+        """ Проверяем все элементы из списка на наличие параметра
+
+        Args:
+            elements: Список элементов
+            revit_param: Параметр для проверки
+        Returns:
+            Имя параметра или None если все в норме
+        """
+        for element in elements:
+            if not element.IsExistsSharedParam(revit_param.Name):
+                return revit_param.Name
+        return None
 
     def __check_params_instance(self, elements):
         """
@@ -441,20 +455,14 @@ class SpecificationFiller:
         Args:
             elements: Все элементы с активного вида
         """
-        def check_param(elements, revit_param):
-            for element in elements:
-                if not element.IsExistsSharedParam(revit_param.Name):
-                    return revit_param.Name
-            return None
+        position_report = self.__check_param(elements, position_param)
+        note_report = self.__check_param(elements, note_param)
 
-        result1 = check_param(elements, position_param)
-        result2 = check_param(elements, note_param)
-
-        results = [result for result in [result1, result2] if result is not None]
+        results = [result for result in [position_report, note_report] if result is not None]
 
         if results:
             forms.alert(
-                'Параметры {} не найдены не у всех экземпляров воздуховодов/труб.'.format(', '.join(results)),
+                'Параметры {} найдены не у всех экземпляров воздуховодов/труб.'.format(', '.join(results)),
                 "Внимание")
 
     def __setup_params(self):
@@ -479,21 +487,17 @@ class SpecificationFiller:
         if fill_numbers:
             first_index = forms.ask_for_string(
                 default='1',
-                prompt='С какого числа стартуем нумерация:',
+                prompt='С какого числа стартует нумерация:',
                 title="Нумерация"
             )
 
-            try:
-                if first_index is None:
-                    sys.exit()
-                first_index = int(first_index)
-            except ValueError:
+            if first_index is None or not first_index.isdigit():
                 forms.alert(
                     "Нужно ввести число.",
                     "Ошибка",
                     exitscript=True)
 
-        return first_index
+        return int(first_index)
 
     def fill_position_and_notes(self, fill_numbers=False, fill_areas=False):
         """
@@ -507,8 +511,9 @@ class SpecificationFiller:
             forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
 
         if self.active_view.Category is None or not self.active_view.Category.IsId(BuiltInCategory.OST_Schedules):
-            forms.alert("Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации",
-                        "Ошибка", exitscript=True)
+            forms.alert(
+                "Нумерация и вынесение площади воздуховодов сработают только на активном виде целевой спецификации",
+                "Ошибка", exitscript=True)
 
         # На всякий случай выполняем настройку параметров - в теории уже должны быть на месте, но лучше продублировать
         self.__setup_params()
