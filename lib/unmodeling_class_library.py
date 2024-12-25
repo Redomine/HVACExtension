@@ -674,7 +674,7 @@ class MaterialCalculator:
             for face in solid.Faces:
                 area += face.Area
 
-        # Складываем площадь коннекторов хоста с учетом толщины изоляции
+        # Складываем площадь коннекторов хоста
         if area > 0:
             false_area = 0
             connectors = self.get_connectors(host)
