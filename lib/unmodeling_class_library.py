@@ -713,7 +713,6 @@ class MaterialCalculator:
         else:
             area = element.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
 
-        # Такая ситуация возможна только
         if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
             host = self.doc.GetElement(element.HostElementId)
             if host.Category.IsId(BuiltInCategory.OST_DuctFitting):
