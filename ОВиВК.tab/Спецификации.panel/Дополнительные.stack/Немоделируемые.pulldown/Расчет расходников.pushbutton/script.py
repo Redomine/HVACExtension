@@ -24,7 +24,7 @@ from dosymep_libs.bim4everyone import *
 
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
-material_calculator = MaterialCalculator()
+material_calculator = MaterialCalculator(doc)
 unmodeling_factory = UnmodelingFactory()
 
 def get_material_hosts(element_types, calculation_name, builtin_category):
@@ -268,11 +268,21 @@ def process_insulation_consumables(family_symbol, consumable_description):
 
                     for element in elements:
                         length, area = material_calculator.get_curve_len_area_parameters_values(element)
+
+                        if element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+                            stock = (doc.ProjectInformation
+                                     .GetParamValueOrDefault(SharedParamsConfig.Instance.VISPipeInsulationReserve))/100
+                        else:
+                            stock = (doc.ProjectInformation
+                                     .GetParamValueOrDefault(SharedParamsConfig.Instance.VISDuctInsulationReserve))/100
+
                         if (consumable.is_expenditure_by_linear_meter == 0
                                 or consumable.is_expenditure_by_linear_meter is None):
-                            new_consumable_row.number += consumable.expenditure * area
+                            value = consumable.expenditure * area + consumable.expenditure * area * stock
+                            new_consumable_row.number += value
                         else:
-                            new_consumable_row.number += consumable.expenditure * length
+                            value = consumable.expenditure * length + consumable.expenditure * length * stock
+                            new_consumable_row.number += value
 
                     consumable_location = unmodeling_factory.update_location(consumable_location)
 
