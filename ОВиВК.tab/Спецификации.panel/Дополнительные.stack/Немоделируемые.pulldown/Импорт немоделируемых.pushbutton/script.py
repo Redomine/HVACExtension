@@ -127,7 +127,7 @@ def script_execute(plugin_logger):
                 "Ошибка",
                 exitscript=True)
 
-        if type(mass) is not str:
+        if type(mass) is not str and mass is not None:
             error = "Значение массы в строке '{}' не является текстом.".format(row)
             forms.alert(
                 error,

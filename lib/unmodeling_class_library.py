@@ -650,6 +650,50 @@ class MaterialCalculator:
     """
     Класс-калькулятор для расходных элементов труб и воздуховодов.
     """
+    doc = None
+
+    def __init__(self, doc):
+        self.doc = doc
+
+    def get_connectors(self, element):
+        connectors = []
+
+        if isinstance(element, FamilyInstance) and element.MEPModel.ConnectorManager is not None:
+            connectors.extend(element.MEPModel.ConnectorManager.Connectors)
+
+        if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves]) and \
+                isinstance(element, MEPCurve) and element.ConnectorManager is not None:
+            connectors.extend(element.ConnectorManager.Connectors)
+
+        return connectors
+
+    def get_fitting_insulation_area(self, element, host):
+        area = 0
+
+        for solid in dosymep.Revit.Geometry.ElementExtensions.GetSolids(host):
+            for face in solid.Faces:
+                area += face.Area
+
+        # Складываем площадь коннекторов хоста
+        if area > 0:
+            false_area = 0
+            connectors = self.get_connectors(host)
+            for connector in connectors:
+                if connector.Shape == ConnectorProfileType.Rectangular:
+                    height = connector.Height
+                    width = connector.Width
+
+                    false_area += height * width
+                if connector.Shape == ConnectorProfileType.Round:
+                    radius = connector.Radius
+                    false_area += radius * radius * math.pi
+                if connector.Shape == ConnectorProfileType.Oval:
+                    false_area += 0
+
+            # Вычитаем площадь пустоты на местах коннекторов
+            area -= false_area
+
+        return area
 
     def get_curve_len_area_parameters_values(self, element):
         """
@@ -669,8 +713,19 @@ class MaterialCalculator:
         else:
             area = element.GetParamValueOrDefault(BuiltInParameter.RBS_CURVE_SURFACE_AREA)
 
-        if length is None or area is None:
-            return 0, 0
+        if element.Category.IsId(BuiltInCategory.OST_DuctInsulations):
+            host = self.doc.GetElement(element.HostElementId)
+            if host.Category.IsId(BuiltInCategory.OST_DuctFitting):
+                # Для залагавшей изоляции
+                if host is None:
+                    return 0, 0
+
+                area = self.get_fitting_insulation_area(element, host)
+
+        if length is None:
+            length = 0
+        if area is None:
+            area = 0
 
         length = UnitUtils.ConvertFromInternalUnits(length, UnitTypeId.Meters)
         area = UnitUtils.ConvertFromInternalUnits(area, UnitTypeId.SquareMeters)
