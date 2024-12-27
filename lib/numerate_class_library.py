@@ -206,10 +206,16 @@ class SpecificationFiller:
         if element_id.isdigit():
             group = self.active_view.GetCellText(SectionType.Body, row, specification_settings.group_index)
             element = self.doc.GetElement(ElementId(int(element_id)))
-            if new_sort_rule != old_schedule_string:
+
+            not_manifold = '_Узел_' not in group
+            spec_by_instance = not specification_settings.rollback_itemized
+
+            if spec_by_instance and not_manifold:
+                position_number += 1
+            elif new_sort_rule != old_schedule_string and not_manifold:
                 position_number += 1
 
-            if '_Узел_' not in group:
+            if not_manifold:
                 self.__set_if_not_ro(element, position_param, str(position_number))
             else:
                 self.__set_if_not_ro(element, position_param, '')
@@ -413,17 +419,18 @@ class SpecificationFiller:
         """
         with revit.Transaction("BIM: Запись номера"):
             section_data = self.active_view.GetTableData().GetSectionData(SectionType.Body)
-            row = section_data.FirstRowNumber
+            row_number = section_data.FirstRowNumber
 
-            position_number = first_index
+            position_number = first_index - 1 # Вычитать единицу нужно для первой строки.
+            # Скрипт сразу увеличивает значение на 1, т.к. предыдущая строка данных не имеет значения
 
             old_sort_rule = ''
-            while row <= section_data.LastRowNumber:
-                old_sort_rule, position_number = self.__process_row(row,
+            while row_number <= section_data.LastRowNumber:
+                old_sort_rule, position_number = self.__process_row(row_number,
                                                                     specification_settings,
                                                                     old_sort_rule,
                                                                     position_number)
-                row += 1
+                row_number += 1
 
             specification_settings.repair_specification()
 
