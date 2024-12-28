@@ -21,6 +21,11 @@ import System
 import math
 import CoefficientCalculator
 from pyrevit import forms
+from pyrevit import revit
+from pyrevit import script
+from pyrevit import HOST_APP
+from pyrevit import EXEC_PARAMS
+
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -34,6 +39,7 @@ from collections import namedtuple
 
 from dosymep.Bim4Everyone.Templates import ProjectParameters
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from dosymep_libs.bim4everyone import *
 
 class CalculationMethod:
     name = None
@@ -44,6 +50,56 @@ class CalculationMethod:
         self.name = name
         self.server = server
         self.server_id = server_id
+
+class EditorReport:
+    edited_reports = []
+    status_report = ''
+    edited_report = ''
+
+    def __get_element_editor_name(self, element):
+        """
+        Возвращает имя пользователя, занявшего элемент, или None.
+
+        Args:
+            element (Element): Элемент для проверки.
+
+        Returns:
+            str или None: Имя пользователя или None, если элемент не занят.
+        """
+        user_name = __revit__.Application.Username
+        edited_by = element.GetParamValueOrDefault(BuiltInParameter.EDITED_BY)
+        if edited_by is None:
+            return None
+
+        if edited_by.lower() in user_name.lower():
+            return None
+        return edited_by
+
+    def is_element_edited(self, element):
+        """
+        Проверяет, заняты ли элементы другими пользователями.
+
+        Args:
+            element: Элемент для проверки.
+        """
+
+        self.update_status = WorksharingUtils.GetModelUpdatesStatus(doc, element.Id)
+
+        if self.update_status == ModelUpdatesStatus.UpdatedInCentral:
+            self.status_report = "Вы владеете элементами, но ваш файл устарел. Выполните синхронизацию. "
+
+        name = self.__get_element_editor_name(element)
+        if name is not None and name not in edited_reports:
+            self.edited_reports.append(name)
+            return True
+
+    def show_report(self):
+        if len(self.edited_reports) > 0:
+            self.edited_report = ("Часть элементов спецификации занята пользователями: {}"
+                                  .format(", ".join(self.edited_reports)))
+        if self.edited_report != '' or self.status_report != '':
+            report_message = status_report + ('\n' if (edited_report and status_report) else '') + self.edited_report
+            forms.alert(report_message, "Ошибка", exitscript=True)
 
 def get_system_elements():
     selected_ids = uidoc.Selection.GetElementIds()
@@ -107,6 +163,7 @@ def split_elements(system_elements):
     fittings = []
     accessories = []
     for element in system_elements:
+        editor_report.is_element_edited(element)
         if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
             fittings.append(element)
         if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
@@ -114,19 +171,18 @@ def split_elements(system_elements):
     return fittings, accessories
 
 def get_local_coefficient(fitting):
-    local_section_coefficient = 0
+    part_type = fitting.MEPModel.PartType
 
-    if str(fitting.MEPModel.PartType) == 'Elbow':
+    if part_type == fitting.MEPModel.PartType.Elbow:
         local_section_coefficient = calculator.get_coef_elbow(fitting)
-
-    if str(fitting.MEPModel.PartType) == 'Transition':
+    elif part_type == fitting.MEPModel.PartType.Transition:
         local_section_coefficient = calculator.get_coef_transition(fitting)
-
-    if str(fitting.MEPModel.PartType) == 'Tee':
+    elif part_type == fitting.MEPModel.PartType.Tee:
         local_section_coefficient = calculator.get_coef_tee(fitting)
-
-    if str(fitting.MEPModel.PartType) == 'TapAdjustable':
+    elif part_type == fitting.MEPModel.PartType.TapAdjustable:
         local_section_coefficient = calculator.get_coef_tap_adjustable(fitting)
+    else:
+        local_section_coefficient = 0
 
     return local_section_coefficient
 
@@ -135,6 +191,7 @@ uidoc = __revit__.ActiveUIDocument
 view = doc.ActiveView
 
 calculator = CoefficientCalculator.Aerodinamiccoefficientcalculator(doc, uidoc, view)
+editor_report = EditorReport()
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -157,5 +214,6 @@ def script_execute(plugin_logger):
         for accessory in accessories:
             set_method(accessory)
 
+        editor_report.show_report()
 
 script_execute()
