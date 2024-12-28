@@ -75,8 +75,7 @@ def get_loss_methods():
     for server_id in server_ids:
         server = get_server_by_id(server_id, service_id)
         name = server.GetName()
-
-        if str(server_id) == "5a598293-1504-46cc-a9c0-de55c82848b9": # Это - Гуид "Определенный коэффициент". Вроде бы одинаков всегда
+        if str(server_id) == calculator.COEFF_GUID_CONST:
             calculation_method = CalculationMethod(name, server, server_id)
             return calculation_method
 
@@ -90,12 +89,14 @@ def get_server_by_id(server_guid, service_id):
 
 def set_method(element, value = 0):
     param = element.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
+    current_guid = param.AsString()
 
     method = get_loss_methods()
 
-    param.Set(method.server_id.ToString())
+    if current_guid != calculator.LOSS_GUID_CONST and current_guid != calculator.COEFF_GUID_CONST:
+        param.Set(method.server_id.ToString())
 
-    if value != 0:
+    if value != 0 and current_guid != calculator.LOSS_GUID_CONST:
         schema = method.server.GetDataSchema()
         entity = element.GetEntity(schema)
         coefficient_field = schema.GetField("Coefficient")
@@ -135,7 +136,9 @@ view = doc.ActiveView
 
 calculator = CoefficientCalculator.Aerodinamiccoefficientcalculator(doc, uidoc, view)
 
-def script_execute():
+@notification()
+@log_plugin(EXEC_PARAMS.command_name)
+def script_execute(plugin_logger):
     with revit.Transaction("BIM: Пересчет потерь напора"):
         system_elements = get_system_elements()
 
@@ -154,16 +157,5 @@ def script_execute():
         for accessory in accessories:
             set_method(accessory)
 
-    # with revit.Transaction("Выключение систем"):
-    #     col_systems = make_col(BuiltInCategory.OST_DuctSystem)
-    #     for el in col_systems:
-    #         sys_type = doc.GetElement(el.GetTypeId())
-    #         sys_type.CalculationLevel = sys_type.CalculationLevel.None
-    #
-    # with revit.Transaction("Включение систем"):
-    #     col_systems = make_col(BuiltInCategory.OST_DuctSystem)
-    #     for el in col_systems:
-    #         sys_type = doc.GetElement(el.GetTypeId())
-    #         sys_type.CalculationLevel = sys_type.CalculationLevel.All
 
 script_execute()
