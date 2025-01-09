@@ -31,6 +31,7 @@ from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
 from Autodesk.Revit.DB.ExternalService import *
 from Autodesk.Revit.DB.ExtensibleStorage import *
+from Autodesk.Revit.DB.Mechanical import *
 from Autodesk.Revit.UI.Selection import ObjectType, ISelectionFilter, Selection
 from System.Collections.Generic import List
 from System import Guid
@@ -101,6 +102,16 @@ class EditorReport:
             report_message = status_report + ('\n' if (edited_report and status_report) else '') + self.edited_report
             forms.alert(report_message, "Ошибка", exitscript=True)
 
+class SelectedSystem:
+    name = None
+    elements = None
+    system = None
+
+    def __init__(self, name, elements, system):
+        self.name = name
+        self.system = system
+        self.elements = elements
+
 def get_system_elements():
     selected_ids = uidoc.Selection.GetElementIds()
 
@@ -119,8 +130,11 @@ def get_system_elements():
             exitscript=True)
 
     duct_elements = system.DuctNetwork
+    system_name = system.GetParamValue(BuiltInParameter.RBS_SYSTEM_NAME_PARAM)
 
-    return duct_elements
+    selected_system = SelectedSystem(system_name, duct_elements, system)
+
+    return selected_system
 
 def get_loss_methods():
     service_id = ExternalServices.BuiltInExternalServices.DuctFittingAndAccessoryPressureDropService
@@ -186,6 +200,66 @@ def get_local_coefficient(fitting):
 
     return local_section_coefficient
 
+def get_network_element_name(element):
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+        name = 'Воздуховод'
+    elif element.Category.IsId(BuiltInCategory.OST_DuctTerminal):
+        name = 'Воздухораспределитель'
+    elif element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
+        name = 'Оборудование'
+    elif element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        name = 'Фасонный элемент воздуховода'
+        if str(element.MEPModel.PartType) == 'Elbow':
+            name = 'Отвод воздуховода'
+        if str(element.MEPModel.PartType) == 'Transition':
+            name = 'Переход между сечениями'
+        if str(element.MEPModel.PartType) == 'Tee':
+            name = 'Тройник'
+        if str(element.MEPModel.PartType) == 'TapAdjustable':
+            name = 'Врезка'
+    else:
+        name = 'Арматура'
+
+    return name
+
+def get_network_element_length(section, element_id):
+    length = '-'
+    try:
+        length = section.GetSegmentLength(element_id) * 304.8 / 1000
+        length = float('{:.2f}'.format(length))
+    except Exception:
+        pass
+    return length
+
+def get_network_element_coefficient(section, element):
+    coefficient = element.GetParamValueOrDefault('ФОП_ВИС_КМС')
+
+    if coefficient is None:
+        coefficient = section.GetCoefficient(element.Id)
+
+    return coefficient
+
+def get_network_element_real_size(element, element_type):
+    size = element.GetParamValueOrDefault('ФОП_ВИС_Живое сечение, м2', 0)
+    if size == 0:
+        element_type.GetParamValueOrDefault('ФОП_ВИС_Живое сечение, м2', 0)
+
+    if size == 0:
+        size = element.GetParamValueOrDefault(BuiltInParameter.RBS_CALCULATED_SIZE, "-")
+
+    return size
+
+def get_network_element_pressure_drop(section, element, size):
+    pressure_drop = 1
+
+    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+        pressure_drop = section.GetPressureDrop(element.Id) * 3.280839895
+
+    if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
+        pass
+
+    return pressure_drop
+
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 uidoc = __revit__.ActiveUIDocument
 view = doc.ActiveView
@@ -197,15 +271,15 @@ editor_report = EditorReport()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
     with revit.Transaction("BIM: Пересчет потерь напора"):
-        system_elements = get_system_elements()
+        selected_system = get_system_elements()
 
-        if system_elements is None:
+        if selected_system.elements is None:
             forms.alert(
                 "Не найдены элементы в системе.",
                 "Ошибка",
                 exitscript=True)
 
-        fittings, accessories = split_elements(system_elements)
+        fittings, accessories = split_elements(selected_system.elements)
 
         for fitting in fittings:
             local_section_coefficient = get_local_coefficient(fitting)
@@ -215,5 +289,87 @@ def script_execute(plugin_logger):
             set_method(accessory)
 
         editor_report.show_report()
+
+    with revit.Transaction("BIM: Вывод отчета"):
+        # заново забираем систему  через ID, мы в прошлой транзакции обновили потери напора на элементах, поэтому данные
+        # на системе могли измениться
+        system = doc.GetElement(selected_system.system.Id)
+        path_numbers = system.GetCriticalPathSectionNumbers()
+
+        path = []
+        for number in path_numbers:
+            path.append(number)
+        if system.SystemType == DuctSystemType.SupplyAir:
+            path.reverse()
+
+        data = []
+        count = 0
+        passed_taps = []
+        output = script.get_output()
+        flow = 0
+        velocity = 0
+        old_flow = 0
+
+
+        settings = DuctSettings.GetDuctSettings(doc)
+        density = settings.AirDensity * 35.3146667215
+        print 'Плотность воздушной среды: ' + str(density) + ' кг/м3'
+
+        pressure_total = 0
+        for number in path:
+            section = system.GetSectionByNumber(number)
+            elements_ids = section.GetElementIds()
+            for element_id in elements_ids:
+                element = doc.GetElement(element_id)
+                element_type = element.GetElementType()
+
+                name = get_network_element_name(element)
+
+                size = get_network_element_real_size(element, element_type)
+
+                length = get_network_element_length(section, element_id)
+
+                coefficient = get_network_element_coefficient(section, element)
+
+                real_size = get_network_element_real_size(element, element_type)
+
+                pressure_drop = get_network_element_pressure_drop(section, element, size)
+
+                #pressure_drop = float('{:.2f}'.format(pressure_drop))
+
+                pressure_total += pressure_drop
+
+                if pressure_drop == 0:
+                    continue
+                else:
+                    data.append([
+                        count,
+                        name,
+                        length,
+                        real_size,
+                        flow,
+                        velocity,
+                        coefficient,
+                        pressure_drop,
+                        pressure_total,
+                        output.linkify(element_id)])
+
+
+    output.print_table(table_data=data,
+                       title=("Отчет о расчете аэродинамики системы " + selected_system.name),
+                       columns=[
+                           "Номер участка",
+                           "Наименование элемента",
+                           "Длина, м.п.",
+                           "Размер",
+                           "Расход, м3/ч",
+                           "Скорость, м/с",
+                           "КМС",
+                           "Потери напора элемента, Па",
+                           "Суммарные потери напора, Па",
+                           "Id элемента"],
+                       formats=['', '', ''],
+                       )
+
 
 script_execute()
