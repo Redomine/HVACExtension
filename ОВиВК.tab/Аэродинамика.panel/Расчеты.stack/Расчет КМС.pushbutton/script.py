@@ -46,11 +46,16 @@ class CalculationMethod:
     name = None
     server_id = None
     server = None
+    schema = None
+    coefficient_field = None
 
     def __init__(self, name, server, server_id):
         self.name = name
         self.server = server
         self.server_id = server_id
+
+        self.schema = server.GetDataSchema()
+        self.coefficient_field = self.schema.GetField("Coefficient")
 
 class EditorReport:
     edited_reports = []
@@ -157,32 +162,38 @@ def get_server_by_id(server_guid, service_id):
             return server
     return None
 
-def set_method(element, value = 0):
+def set_method(element, method):
     param = element.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
     current_guid = param.AsString()
 
-    method = get_loss_methods()
-
-    if current_guid != calculator.LOSS_GUID_CONST and current_guid != calculator.COEFF_GUID_CONST:
+    if current_guid != calculator.LOSS_GUID_CONST:
         param.Set(method.server_id.ToString())
 
-    if value != 0 and current_guid != calculator.LOSS_GUID_CONST:
-        schema = method.server.GetDataSchema()
-        entity = element.GetEntity(schema)
-        coefficient_field = schema.GetField("Coefficient")
-        entity.Set[coefficient_field.ValueType](coefficient_field, str(value))
+def set_method_value(element, method, value = 0):
+    local_section_coefficient = 0
+
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        local_section_coefficient = get_local_coefficient(element)
+
+    param = element.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
+    current_guid = param.AsString()
+
+    if local_section_coefficient != 0 and current_guid != calculator.LOSS_GUID_CONST:
+        element = doc.GetElement(element.Id)
+
+        entity = element.GetEntity(method.schema)
+        entity.Set(method.coefficient_field, str(value))
         element.SetEntity(entity)
 
 def split_elements(system_elements):
-    fittings = []
-    accessories = []
+    elements = []
+
     for element in system_elements:
         editor_report.is_element_edited(element)
-        if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
-            fittings.append(element)
-        if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
-            accessories.append(element)
-    return fittings, accessories
+        if element.Category.IsId(BuiltInCategory.OST_DuctFitting) or element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
+            elements.append(element)
+
+    return elements
 
 def get_local_coefficient(fitting):
     part_type = fitting.MEPModel.PartType
@@ -240,13 +251,29 @@ def get_network_element_coefficient(section, element):
     return coefficient
 
 def get_network_element_real_size(element, element_type):
+    def convert_to_meters(value):
+        return UnitUtils.ConvertFromInternalUnits(
+            value,
+            UnitTypeId.Meters)
+
     size = element.GetParamValueOrDefault('ФОП_ВИС_Живое сечение, м2', 0)
     if size == 0:
         element_type.GetParamValueOrDefault('ФОП_ВИС_Живое сечение, м2', 0)
 
     if size == 0:
-        size = element.GetParamValueOrDefault(BuiltInParameter.RBS_CALCULATED_SIZE, "-")
 
+        connectors = calculator.get_connectors(element)
+        size_variants = []
+        for connector in connectors:
+            if connector.Shape == ConnectorProfileType.Rectangular:
+                size_variants.append(convert_to_meters(connector.Height) * convert_to_meters(connector.Width))
+            if connector.Shape == ConnectorProfileType.Round:
+                size_variants.append(2 * convert_to_meters(connector.Radius) * math.pi)
+
+        size = min(size_variants)
+        UnitUtils.ConvertFromInternalUnits(
+            size,
+            UnitTypeId.SquareMeters)
     return size
 
 def get_network_element_pressure_drop(section, element, size):
@@ -260,6 +287,42 @@ def get_network_element_pressure_drop(section, element, size):
 
     return pressure_drop
 
+def show_network_report(data, selected_system, output):
+
+    output.print_table(table_data=data,
+                       title=("Отчет о расчете аэродинамики системы " + selected_system.name),
+                       columns=[
+                           "Номер участка",
+                           "Наименование элемента",
+                           "Длина, м.п.",
+                           "Размер",
+                           "Расход, м3/ч",
+                           "Скорость, м/с",
+                           "КМС",
+                           "Потери напора элемента, Па",
+                           "Суммарные потери напора, Па",
+                           "Id элемента"],
+                       formats=['', '', ''],
+                       )
+
+def get_flow(section):
+    flow = section.Flow * 101.941317259
+    flow = int(flow)
+
+    return flow
+
+def get_velocity(flow, real_size):
+
+    velocity = (float(flow) * 1000000)/(3600 * real_size *1000000) #скорость в живом сечении
+
+    return velocity
+
+def round_floats(value):
+    if isinstance(value, float):
+        return round(value, 3)
+    return value
+
+
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 uidoc = __revit__.ActiveUIDocument
 view = doc.ActiveView
@@ -270,25 +333,33 @@ editor_report = EditorReport()
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
+
+    selected_system = get_system_elements()
+
+    if selected_system.elements is None:
+        forms.alert(
+            "Не найдены элементы в системе.",
+            "Ошибка",
+            exitscript=True)
+
+    network_elements = split_elements(selected_system.elements)
+
+    editor_report.show_report()
+
+    method = get_loss_methods()
+
+    with revit.Transaction("BIM: Установка метода расчета"):
+        # Необходимо сначала в отдельной транзакции переключиться на определенный коэффициент, где это нужно
+        for element in network_elements:
+            set_method(element, method)
+
     with revit.Transaction("BIM: Пересчет потерь напора"):
-        selected_system = get_system_elements()
+        for element in network_elements:
+            # устанавливаем 0 на арматуру, чтоб она не убивала расчеты и считаем на фитинги
+            set_method_value(element, method)
 
-        if selected_system.elements is None:
-            forms.alert(
-                "Не найдены элементы в системе.",
-                "Ошибка",
-                exitscript=True)
 
-        fittings, accessories = split_elements(selected_system.elements)
 
-        for fitting in fittings:
-            local_section_coefficient = get_local_coefficient(fitting)
-            set_method(fitting, local_section_coefficient)
-
-        for accessory in accessories:
-            set_method(accessory)
-
-        editor_report.show_report()
 
     with revit.Transaction("BIM: Вывод отчета"):
         # заново забираем систему  через ID, мы в прошлой транзакции обновили потери напора на элементах, поэтому данные
@@ -306,8 +377,7 @@ def script_execute(plugin_logger):
         count = 0
         passed_taps = []
         output = script.get_output()
-        flow = 0
-        velocity = 0
+
         old_flow = 0
 
 
@@ -333,16 +403,22 @@ def script_execute(plugin_logger):
 
                 real_size = get_network_element_real_size(element, element_type)
 
-                pressure_drop = get_network_element_pressure_drop(section, element, size)
+                flow = get_flow(section)
 
-                #pressure_drop = float('{:.2f}'.format(pressure_drop))
+                velocity = get_velocity(flow, real_size)
+
+                if old_flow < flow:
+                    old_flow = flow
+                    count += 1
+
+                pressure_drop = get_network_element_pressure_drop(section, element, size)
 
                 pressure_total += pressure_drop
 
                 if pressure_drop == 0:
                     continue
                 else:
-                    data.append([
+                    value = [
                         count,
                         name,
                         length,
@@ -352,24 +428,13 @@ def script_execute(plugin_logger):
                         coefficient,
                         pressure_drop,
                         pressure_total,
-                        output.linkify(element_id)])
+                        output.linkify(element_id)]
 
+                    rounded_value = [round_floats(item) for item in value]
 
-    output.print_table(table_data=data,
-                       title=("Отчет о расчете аэродинамики системы " + selected_system.name),
-                       columns=[
-                           "Номер участка",
-                           "Наименование элемента",
-                           "Длина, м.п.",
-                           "Размер",
-                           "Расход, м3/ч",
-                           "Скорость, м/с",
-                           "КМС",
-                           "Потери напора элемента, Па",
-                           "Суммарные потери напора, Па",
-                           "Id элемента"],
-                       formats=['', '', ''],
-                       )
+                    data.append(rounded_value)
+
+    show_network_report(data, selected_system, output)
 
 
 script_execute()

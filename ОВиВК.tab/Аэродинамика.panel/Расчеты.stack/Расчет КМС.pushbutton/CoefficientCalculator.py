@@ -49,19 +49,14 @@ class Aerodinamiccoefficientcalculator:
 
     def get_connectors(self, element):
         connectors = []
-        try:
-            a = element.ConnectorManager.Connectors.ForwardIterator()
-            while a.MoveNext():
-                connectors.append(a.Current)
-        except:
-            try:
-                a = element.MEPModel.ConnectorManager.Connectors.ForwardIterator()
-                while a.MoveNext():
-                    connectors.append(a.Current)
-            except:
-                a = element.MEPSystem.ConnectorManager.Connectors.ForwardIterator()
-                while a.MoveNext():
-                    connectors.append(a.Current)
+
+        if isinstance(element, FamilyInstance) and element.MEPModel.ConnectorManager is not None:
+            connectors.extend(element.MEPModel.ConnectorManager.Connectors)
+
+        if element.InAnyCategory([BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_PipeCurves]) and \
+                isinstance(element, MEPCurve) and element.ConnectorManager is not None:
+            connectors.extend(element.ConnectorManager.Connectors)
+
         return connectors
 
     def get_con_coords(self, connector):
@@ -117,7 +112,7 @@ class Aerodinamiccoefficientcalculator:
                 transition = 'Расширение'
                 F0 = S1
                 F1 = S2
-        if str(a[0].Direction) == "Out":
+        else:
             if S1 < S2:
                 transition = 'Заужение'
                 F0 = S1
