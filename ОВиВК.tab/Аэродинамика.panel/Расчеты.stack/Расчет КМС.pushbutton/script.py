@@ -182,6 +182,7 @@ def set_method_value(element, method, value = 0):
         element = doc.GetElement(element.Id)
 
         entity = element.GetEntity(method.schema)
+
         entity.Set(method.coefficient_field, str(value))
         element.SetEntity(entity)
 
@@ -209,9 +210,10 @@ def get_local_coefficient(fitting):
     else:
         local_section_coefficient = 0
 
+    fitting_coefficient_cash[fitting.Id.IntegerValue] = local_section_coefficient
     return local_section_coefficient
 
-def get_network_element_name(element):
+def get_network_element_name(element, changing_flow):
     if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
         name = 'Воздуховод'
     elif element.Category.IsId(BuiltInCategory.OST_DuctTerminal):
@@ -227,7 +229,11 @@ def get_network_element_name(element):
         if str(element.MEPModel.PartType) == 'Tee':
             name = 'Тройник'
         if str(element.MEPModel.PartType) == 'TapAdjustable':
-            name = 'Врезка'
+            passed_elements.Add(element.Id)
+            if changing_flow:
+                name = "Боковое ответвление"
+            else:
+                name = 'Врезка'
     else:
         name = 'Арматура'
 
@@ -247,6 +253,8 @@ def get_network_element_coefficient(section, element):
 
     if coefficient is None:
         coefficient = section.GetCoefficient(element.Id)
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        coefficient = fitting_coefficient_cash[element.Id.IntegerValue]  # КМС
 
     return coefficient
 
@@ -276,14 +284,14 @@ def get_network_element_real_size(element, element_type):
             UnitTypeId.SquareMeters)
     return size
 
-def get_network_element_pressure_drop(section, element, size):
-    pressure_drop = 1
+def get_network_element_pressure_drop(section, element, density, velocity):
+    if element.Category.IsId(BuiltInCategory.OST_DuctFitting):
+        Pd = (density * velocity * velocity) / 2  # Динамическое давление
 
-    if element.Category.IsId(BuiltInCategory.OST_DuctCurves):
+        K = fitting_coefficient_cash[element.Id.IntegerValue]  # КМС
+        pressure_drop = Pd * K
+    else:
         pressure_drop = section.GetPressureDrop(element.Id) * 3.280839895
-
-    if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
-        pass
 
     return pressure_drop
 
@@ -295,7 +303,7 @@ def show_network_report(data, selected_system, output):
                            "Номер участка",
                            "Наименование элемента",
                            "Длина, м.п.",
-                           "Размер",
+                           "Размер, м2",
                            "Расход, м3/ч",
                            "Скорость, м/с",
                            "КМС",
@@ -329,11 +337,12 @@ view = doc.ActiveView
 
 calculator = CoefficientCalculator.Aerodinamiccoefficientcalculator(doc, uidoc, view)
 editor_report = EditorReport()
+fitting_coefficient_cash = {}
+passed_elements = []
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
-
     selected_system = get_system_elements()
 
     if selected_system.elements is None:
@@ -358,9 +367,6 @@ def script_execute(plugin_logger):
             # устанавливаем 0 на арматуру, чтоб она не убивала расчеты и считаем на фитинги
             set_method_value(element, method)
 
-
-
-
     with revit.Transaction("BIM: Вывод отчета"):
         # заново забираем систему  через ID, мы в прошлой транзакции обновили потери напора на элементах, поэтому данные
         # на системе могли измениться
@@ -375,11 +381,10 @@ def script_execute(plugin_logger):
 
         data = []
         count = 0
-        passed_taps = []
+
         output = script.get_output()
 
         old_flow = 0
-
 
         settings = DuctSettings.GetDuctSettings(doc)
         density = settings.AirDensity * 35.3146667215
@@ -390,12 +395,10 @@ def script_execute(plugin_logger):
             section = system.GetSectionByNumber(number)
             elements_ids = section.GetElementIds()
             for element_id in elements_ids:
+                # if element_id in passed_elements:
+                #     continue
                 element = doc.GetElement(element_id)
                 element_type = element.GetElementType()
-
-                name = get_network_element_name(element)
-
-                size = get_network_element_real_size(element, element_type)
 
                 length = get_network_element_length(section, element_id)
 
@@ -407,34 +410,32 @@ def script_execute(plugin_logger):
 
                 velocity = get_velocity(flow, real_size)
 
+                name = get_network_element_name(element, old_flow < flow)
+
                 if old_flow < flow:
                     old_flow = flow
                     count += 1
 
-                pressure_drop = get_network_element_pressure_drop(section, element, size)
+                pressure_drop = get_network_element_pressure_drop(section, element, density, velocity)
 
                 pressure_total += pressure_drop
 
-                if pressure_drop == 0:
-                    continue
-                else:
-                    value = [
-                        count,
-                        name,
-                        length,
-                        real_size,
-                        flow,
-                        velocity,
-                        coefficient,
-                        pressure_drop,
-                        pressure_total,
-                        output.linkify(element_id)]
+                value = [
+                    count,
+                    name,
+                    length,
+                    real_size,
+                    flow,
+                    velocity,
+                    coefficient,
+                    pressure_drop,
+                    pressure_total,
+                    output.linkify(element_id)]
 
-                    rounded_value = [round_floats(item) for item in value]
+                rounded_value = [round_floats(item) for item in value]
 
-                    data.append(rounded_value)
+                data.append(rounded_value)
 
     show_network_report(data, selected_system, output)
-
 
 script_execute()

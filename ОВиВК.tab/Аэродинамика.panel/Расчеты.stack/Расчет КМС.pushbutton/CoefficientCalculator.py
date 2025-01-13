@@ -47,6 +47,22 @@ class Aerodinamiccoefficientcalculator:
         self.uidoc = uidoc
         self.view = view
 
+    def is_supply_air(self, connector):
+        return connector.DuctSystemType == DuctSystemType.SupplyAir
+
+    def is_exhaust_air(self, connector):
+        return (connector.DuctSystemType == DuctSystemType.ExhaustAir
+                or connector.DuctSystemType == DuctSystemType.ReturnAir)
+
+    def is_direction_inside(self, connector):
+        return connector.Direction == FlowDirectionType.In
+
+    def is_direction_bidirectonal(self, connector):
+        return connector.Direction == FlowDirectionType.Bidirectional
+
+    def is_direction_outside(self, connector):
+        return connector.Direction == FlowDirectionType.Out
+
     def get_connectors(self, element):
         connectors = []
 
@@ -91,75 +107,87 @@ class Aerodinamiccoefficientcalculator:
 
         return K
 
-    def get_coef_transition(self, element):
-        a = self.get_connectors(element)
-        try:
-            S1 = a[0].Height * 304.8 * a[0].Width * 304.8
-        except:
-            S1 = 3.14 * 304.8 * 304.8 * a[0].Radius ** 2
-        try:
-            S2 = a[1].Height * 304.8 * a[1].Width * 304.8
-        except:
-            S2 = 3.14 * 304.8 * 304.8 * a[1].Radius ** 2
-
-        # проверяем в какую сторону дует воздух чтоб выяснить расширение это или заужение
-        if str(a[0].Direction) == "In":
-            if S1 > S2:
-                transition = 'Заужение'
-                F0 = S2
-                F1 = S1
-            else:
-                transition = 'Расширение'
-                F0 = S1
-                F1 = S2
+    def get_connector_area(self, connector):
+        if connector.Shape == ConnectorProfileType.Round:
+            radius = self.convert_to_milimeters(connector.Radius)
+            area = math.pi * radius ** 2
         else:
-            if S1 < S2:
-                transition = 'Заужение'
-                F0 = S1
-                F1 = S2
+            height = self.convert_to_milimeters(connector.Height)
+            width = self.convert_to_milimeters(connector.Width)
+            area = height * width
+        return area
+
+    def convert_to_milimeters(self, value):
+        return  UnitUtils.ConvertFromInternalUnits(
+            value,
+            UnitTypeId.Millimeters)
+
+    def convert_to_square_meters(self, value):
+        return  UnitUtils.ConvertFromInternalUnits(
+            value,
+            UnitTypeId.SquareMeters)
+
+    def get_coef_transition(self, element):
+        connectors = self.get_connectors(element)
+
+        con1_area = self.get_connector_area(connectors[0])
+        con2_area = self.get_connector_area(connectors[1])
+
+        transition_extension = None # False - заужение, True - расширение
+        # Определяем тип перехода (расширение или сужение)
+        if self.is_direction_inside(connectors[0]):
+            transition_extension = True if con1_area <= con2_area else False
+            F0, F1 = (con1_area, con2_area) if con1_area <= con2_area else (con2_area, con1_area)
+        elif self.is_direction_outside(connectors[0]):
+            transition_extension = True if con1_area >= con2_area else False
+            F0, F1 = (con2_area, con1_area) if con1_area >= con2_area else (con1_area, con2_area)
+        else: # Если вызывается эта часть - поток двунаправленный. Принимаем для притока всегда заужение,
+            # для вытяжки всегда расширение
+            if self.is_supply_air(connectors[0]):
+                transition_extension = False
+                F0, F1 = (con2_area, con1_area) if con1_area > con2_area else (con1_area, con2_area)
             else:
-                transition = 'Расширение'
-                F0 = S2
-                F1 = S1
+                transition_extension = True
+                F0, F1 = (con1_area, con2_area) if con1_area < con2_area else (con2_area, con1_area)
 
         F = F0 / F1
 
-        if transition == 'Расширение':
+        if transition_extension:
             if F < 0.11:
-                K = 0.81
+                coefficient = 0.81
             elif F < 0.21:
-                K = 0.64
+                coefficient = 0.64
             elif F < 0.31:
-                K = 0.5
+                coefficient = 0.5
             elif F < 0.41:
-                K = 0.36
+                coefficient = 0.36
             elif F < 0.51:
-                K = 0.26
+                coefficient = 0.26
             elif F < 0.61:
-                K = 0.16
+                coefficient = 0.16
             elif F < 0.71:
-                K = 0.09
+                coefficient = 0.09
             else:
-                K = 0.04
-        if transition == 'Заужение':
+                coefficient = 0.04
+        else:
             if F < 0.11:
-                K = 0.45
+                coefficient = 0.45
             elif F < 0.21:
-                K = 0.4
+                coefficient = 0.4
             elif F < 0.31:
-                K = 0.35
+                coefficient = 0.35
             elif F < 0.41:
-                K = 0.3
+                coefficient = 0.3
             elif F < 0.51:
-                K = 0.25
+                coefficient = 0.25
             elif F < 0.61:
-                K = 0.2
+                coefficient = 0.2
             elif F < 0.71:
-                K = 0.15
+                coefficient = 0.15
             else:
-                K = 0.1
+                coefficient = 0.1
 
-        return K
+        return coefficient
 
     def get_duct_coords(self, in_tee_con, connector):
         main_con = []
@@ -178,10 +206,10 @@ class Aerodinamiccoefficientcalculator:
         exit_cons = []
         exhaust_air_cons = []
         for connector in connectors:
-            if str(connectors[0].DuctSystemType) == "SupplyAir":
+            if self.is_supply_air(connectors[0]):
                 if connector.Flow != max(connectors[0].Flow, connectors[1].Flow, connectors[2].Flow):
                     exit_cons.append(connector)
-            if str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir":
+            if self.is_exhaust_air(connectors[0]):
                 # а что делать если на на разветвлении расход одинаковы?
                 if connector.Flow == max(connectors[0].Flow, connectors[1].Flow, connectors[2].Flow):
                     exit_cons.append(connector)
@@ -189,7 +217,7 @@ class Aerodinamiccoefficientcalculator:
                     exhaust_air_cons.append(connector)
                 # для входа в тройник ищем координаты начала входящего воздуховода чтоб построить прямую через эти две точки
 
-            if str(connectors[0].DuctSystemType) == "SupplyAir":
+            if connectors[0].DuctSystemType == DuctSystemType.SupplyAir:
                 if str(connector.Direction) == "In":
                     in_tee_con = self.get_con_coords(connector)
                     # выбираем из коннектора подключенный воздуховод
@@ -199,8 +227,7 @@ class Aerodinamiccoefficientcalculator:
         # (максимальный точно выходной у вытяжной системы) и сравниваем. Тот что самый малый - ответветвление
         # а второй - точка вхождения потока воздуха из которой берем координаты для построения вектора
 
-        if str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir":
-
+        if (self.is_exhaust_air(connectors[0])):
             if exhaust_air_cons[0].Flow < exhaust_air_cons[1].Flow:
                 exit_cons.append(exhaust_air_cons[0])
                 in_tee_con = self.get_con_coords(exhaust_air_cons[1])
@@ -262,24 +289,22 @@ class Aerodinamiccoefficientcalculator:
 
         # тип 1
         # вытяжной воздуховод zп
-        if math.acos(cos_main) < 0.10 and (
-                str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir"):
+        if math.acos(cos_main) < 0.10 and (self.is_exhaust_air(connectors[0])):
             type = 1
 
         # тип 2
         # вытяжной воздуховод, zо
-        elif math.acos(cos_main) > 0.10 and (
-                str(connectors[0].DuctSystemType) == "ExhaustAir" or str(connectors[0].DuctSystemType) == "ReturnAir"):
+        elif math.acos(cos_main) > 0.10 and (self.is_exhaust_air(connectors[0])):
             type = 2
 
         # тип 3
         # подающий воздуховод, zп
-        elif math.acos(cos_main) < 0.10 and str(connectors[0].DuctSystemType) == "SupplyAir":
+        elif math.acos(cos_main) < 0.10 and self.is_supply_air(connectors[0]):
             type = 3
 
         # тип 4
         # подающий воздуховод, zо
-        elif math.acos(cos_main) > 0.10 and str(connectors[0].DuctSystemType) == "SupplyAir":
+        elif math.acos(cos_main) > 0.10 and self.is_supply_air(connectors[0]):
             type = 4
 
         return type
@@ -426,7 +451,8 @@ class Aerodinamiccoefficientcalculator:
         l0 = Lo / Lc
         fp = Fp / Fc
 
-        if str(con_set[0].DuctSystemType) == "ExhaustAir" or str(con_set[0].DuctSystemType) == "ReturnAir":
+        if self.is_exhaust_air(con_set[0]):
+
             if form == "Круглый отвод":
                 if Lc >= Lo * 2:
                     K = ((1 - fp ** 0.5) + 0.5 * l0 + 0.05) * (
@@ -443,7 +469,7 @@ class Aerodinamiccoefficientcalculator:
                     K = (f0 / l0) ** 2 * (4.1 * (fp / f0) ** 1.25 * l0 ** 1.5 * (fp + f0) ** (
                             0.3 * (f0 / fp) ** 0.5 / l0 - 2) - 0.5 * fp / f0)
 
-        if str(con_set[0].DuctSystemType) == "SupplyAir":
+        if self.is_supply_air(con_set[0]):
             if form == "Круглый отвод":
                 if Lc >= Lo * 2:
                     K = 0.45 * (fp / (1 - l0)) ** 2 + (0.6 - 1.7 * fp) * fp / (1 - l0) - (
