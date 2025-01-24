@@ -156,12 +156,17 @@ def get_elements():
 def get_elements_to_objective(elements):
     filtered_elements = []
     for element in elements:
+
         if element.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку") == 1:
             filtered_elements.append(element)
         else:
             element_type = element.GetElementType()
+            if element.Id.IntegerValue == 3189193:
+                print(element_type.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку"))
+                print(element_type.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку") == 1)
             if element_type.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку") == 1:
                 filtered_elements.append(element)
+
     return  filtered_elements
 
 def math_elements_to_old_data(elements, old_data):
@@ -190,6 +195,15 @@ def get_max_numbers(old_data):
 
     return max_numbers
 
+def check_edited_elements(elements):
+    edited_report = EditedReport(doc)
+
+    for element in elements:
+        edited_report.is_elemet_edited(element)
+
+    edited_report.show_report()
+
+
 operator = JsonOperator(doc, uiapp)
 
 @notification()
@@ -200,22 +214,30 @@ def script_execute(plugin_logger):
 
     file_folder_path = operator.get_document_path()
 
-    with revit.Transaction("BIM: Задание СС"):
+    # Получаем данные из последнего по дате редактирования файла
+    old_data = operator.get_json_data(file_folder_path)
 
-        # Получаем данные из последнего по дате редактирования файла
-        old_data = operator.get_json_data(file_folder_path)
+    # Получаем максимальные номера из старых данных для продолжения нумерации. Если данных нет то пустой словарь
+    max_numbers = get_max_numbers(old_data)
 
-        # Получаем максимальные номера из старых данных для продолжения нумерации
-        max_numbers = get_max_numbers(old_data)
+    # Получаем список элементов, без фильтрации
+    raw_collection = get_elements()
 
-        # Получаем список элементов, без фильтрации
-        raw_collection = get_elements()
+    # Если часть элементов занята, то задание может выйти не актуальным. Сразу останавливаемся,  если так
+    check_edited_elements(raw_collection)
 
-        # Матчим с старыми элементами для фильтрации тех что являются новыми
-        new_elements = math_elements_to_old_data(raw_collection, old_data)
+    # Матчим с старыми элементами для фильтрации тех что являются новыми
+    new_elements = math_elements_to_old_data(raw_collection, old_data)
 
-        # Оставляем только те новые элементы, у которых стоит галочка о формировании задания
-        elements_to_objective = get_elements_to_objective(new_elements)
+    # Оставляем только те новые элементы, у которых стоит галочка о формировании задания
+    elements_to_objective = get_elements_to_objective(new_elements)
+
+    with revit.Transaction("BIM: Обновление задания"):
+        # Очищаем марку у элементов которые не идут в задание, на случай если они были скопированы
+        for raw_element in raw_collection:
+            if raw_element not in elements_to_objective:
+                raw_element.SetParamValue("ФОП_ВИС_СС Марка задания", "")
+                raw_element.SetParamValue("ФОП_ВИС_СС Дата задания", "")
 
         # если новых элементов для задания нет то на этом можно остановиться
         if len(elements_to_objective) == 0:
@@ -227,7 +249,7 @@ def script_execute(plugin_logger):
             return
 
         # Делим новые элементы по спискам для применения отдельных алгоритмов
-        open_valves, closed_valves, equipment_elements = split_collection(new_elements)
+        open_valves, closed_valves, equipment_elements = split_collection(elements_to_objective)
 
         open_valves_data = use_open_algorithm(open_valves, max_numbers)
         closed_valves_data = use_closed_algorithm(closed_valves)
