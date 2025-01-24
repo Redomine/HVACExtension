@@ -121,15 +121,12 @@ def use_closed_algorithm(valves):
     return result
 
 def split_collection(equipment_collection):
-    ''' Делим список элементов на открытые клапана, закрытые и оборудование '''
+    ''' Делим список элементов на открытые клапана, закрытые и оборудование. Если один из элементов '''
     open_valves = []
     closed_valves = []
     equipment_elements = []
-    edited_report = EditedReport(doc)
 
     for element in equipment_collection:
-        if edited_report.is_elemet_edited(element):
-            continue
 
         if element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
             equipment_elements.append(element)
@@ -142,7 +139,7 @@ def split_collection(equipment_collection):
                 if "НЗ" in mark:
                     closed_valves.append(element)
 
-    edited_report.show_report()
+
     return open_valves, closed_valves, equipment_elements
 
 def get_elements():
@@ -257,6 +254,7 @@ def script_execute(plugin_logger):
             for data in old_data:
                 data.insert(doc, operator.get_moscow_date())
 
+            # Проверяем все элементы на предмет ложно-заполненности(У элемента есть марка, но его не было в старых заданиях)
             clear_param_false_values(raw_collection, old_data)
 
             # Записываем в json-файл
@@ -286,7 +284,7 @@ def script_execute(plugin_logger):
             # Записываем в json-файл
             operator.send_json_data(json_data, file_folder_path)
 
-        # Очищаем марку у элементов которые не идут в задание, на случай если они были скопированы
+        # Проверяем все элементы на предмет ложно-заполненности(У элемента есть марка, но его не было в старых заданиях или в новых данных для json)
         clear_param_false_values(raw_collection, json_data)
 
 script_execute()
