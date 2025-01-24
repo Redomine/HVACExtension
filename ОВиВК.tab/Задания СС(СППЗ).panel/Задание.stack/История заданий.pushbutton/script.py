@@ -61,6 +61,7 @@ def script_execute(plugin_logger):
 
     output_data = []
 
+    # Добавляем только элементы у которых заполнена дата удаления. Заполняется при обновлении задания
     for data in old_data:
         if data.deletion_date != "":
             output_data.append([data.deletion_date, data.creation_date, data.json_name])

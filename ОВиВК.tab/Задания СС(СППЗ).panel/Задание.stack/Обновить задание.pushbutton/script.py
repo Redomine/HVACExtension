@@ -46,6 +46,7 @@ uidoc = __revit__.ActiveUIDocument
 uiapp = __revit__.Application
 
 def split_valves_by_floors(valves):
+    ''' Делим список элементов на словарь, ключ - номер этажа, значение - экземпляр LowVoltageSystemData '''
     valves_by_floors = {}
 
     for valve in valves:
@@ -67,13 +68,14 @@ def split_valves_by_floors(valves):
         valve_base_name = system_name + "-" + floor_name
 
         valves_by_floors[floor_name].append(LowVoltageSystemData(valve.Id,
-                                                                 creation_date=operator.get_moscow_time(),
+                                                                 creation_date=operator.get_moscow_date(),
                                                                  valve_base_name= valve_base_name),
                                                                 )
 
     return valves_by_floors
 
 def use_open_algorithm(valves, max_numbers):
+    ''' Создаем имена для списка элементов используя алгоритм для открытых клапанов от СППЗ '''
     valves_by_floors = split_valves_by_floors(valves)
 
     result = []
@@ -95,6 +97,7 @@ def use_open_algorithm(valves, max_numbers):
     return result
 
 def use_closed_algorithm(valves):
+    ''' Создаем имена для списка элементов используя алгоритм для закрытых клапанов от СППЗ '''
     valves_by_floors = split_valves_by_floors(valves)
     result = []
 
@@ -118,6 +121,7 @@ def use_closed_algorithm(valves):
     return result
 
 def split_collection(equipment_collection):
+    ''' Делим список элементов на открытые клапана, закрытые и оборудование '''
     open_valves = []
     closed_valves = []
     equipment_elements = []
@@ -142,6 +146,7 @@ def split_collection(equipment_collection):
     return open_valves, closed_valves, equipment_elements
 
 def get_elements():
+    ''' Забираем список элементов арматуры и оборудования '''
     categories = [
         BuiltInCategory.OST_DuctAccessory,
         BuiltInCategory.OST_MechanicalEquipment,
@@ -160,6 +165,7 @@ def get_elements():
     return elements
 
 def get_elements_to_objective(elements):
+    ''' Фильтруем, у каких элементов модели стоит галочка для добавления в задание '''
     filtered_elements = []
     for element in elements:
 
@@ -173,6 +179,7 @@ def get_elements_to_objective(elements):
     return  filtered_elements
 
 def math_elements_to_old_data(elements, old_data):
+    ''' Сравниваем список элементов с данными из json-файла, возвращая только те которых в нем нет '''
     new_elements = []
 
     for element in elements:
@@ -182,6 +189,7 @@ def math_elements_to_old_data(elements, old_data):
     return new_elements
 
 def get_max_numbers(old_data):
+    ''' Вычисляем для каждого базового имени в json-файле максимальный номер, с которого будет продолжаться нумерация '''
     # Словарь для хранения максимальных порядковых номеров
     max_numbers = defaultdict(int)
 
@@ -199,6 +207,7 @@ def get_max_numbers(old_data):
     return max_numbers
 
 def check_edited_elements(elements):
+    ''' Проверяем занят ли элемент '''
     edited_report = EditedReport(doc)
 
     for element in elements:
@@ -207,6 +216,8 @@ def check_edited_elements(elements):
     edited_report.show_report()
 
 def clear_param_false_values(elements, json_data):
+    ''' Проверяем что в данных которые мы получили/будем загружать в json существуют айди оборудования.
+    Если их не существует - обнуляем значения марок, считается что это ошибка '''
     for element in elements:
         if not any(element.Id == data.id for data in json_data):
             element.SetParamValue("ФОП_ВИС_СС Марка задания", "")
@@ -244,7 +255,7 @@ def script_execute(plugin_logger):
     if len(elements_to_objective) == 0:
         with revit.Transaction("BIM: Обновление задания"):
             for data in old_data:
-                data.insert(doc, operator.get_moscow_time())
+                data.insert(doc, operator.get_moscow_date())
 
             clear_param_false_values(raw_collection, old_data)
 
@@ -270,7 +281,7 @@ def script_execute(plugin_logger):
 
             # вставляем новые данные в проект. Если элемента нет в проекте - указываем для него дату удаления. Если дата удаления совпадает с сегодняшней - игнорируем, это просто рабочие правки
             for low_voltage_system_data in json_data:
-                low_voltage_system_data.insert(doc, operator.get_moscow_time())
+                low_voltage_system_data.insert(doc, operator.get_moscow_date())
 
             # Записываем в json-файл
             operator.send_json_data(json_data, file_folder_path)

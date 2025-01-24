@@ -109,12 +109,22 @@ class LowVoltageSystemData:
     def __init__(self,
                  id,
                  creation_date='',
-                 valve_base_name = '',
-                 autor_name = __revit__.Application.Username,
-                 json_name = '',
-                 deletion_date = ''
+                 valve_base_name='',
+                 autor_name=__revit__.Application.Username,
+                 json_name='',
+                 deletion_date=''
                  ):
+        """
+        Инициализация объекта LowVoltageSystemData.
 
+        Args:
+            id (ElementId): Идентификатор элемента.
+            creation_date (str, optional): Дата создания. По умолчанию пустая строка.
+            valve_base_name (str, optional): Базовое имя клапана. По умолчанию пустая строка.
+            autor_name (str, optional): Имя автора. По умолчанию имя текущего пользователя.
+            json_name (str, optional): Имя JSON файла. По умолчанию пустая строка.
+            deletion_date (str, optional): Дата удаления. По умолчанию пустая строка.
+        """
         self.id = id
         self.valve_base_name = valve_base_name
         self.autor_name = autor_name
@@ -123,6 +133,12 @@ class LowVoltageSystemData:
         self.deletion_date = deletion_date
 
     def to_dict(self):
+        """
+        Преобразует объект в словарь.
+
+        Returns:
+            dict: Словарь с данными объекта.
+        """
         return {
             "id": str(self.id),
             "valve_base_name": self.valve_base_name,
@@ -133,6 +149,9 @@ class LowVoltageSystemData:
         }
 
     def insert(self, doc, time):
+        """
+        Вставляет данные в элемент документа.
+        """
         element = doc.GetElement(self.id)
 
         if element is not None:
@@ -143,11 +162,17 @@ class LowVoltageSystemData:
                 self.deletion_date = time
 
 class JsonOperator:
-    def __init__(self,doc, uiapp):
+    def __init__(self, doc, uiapp):
         self.doc = doc
         self.uiapp = uiapp
 
     def get_document_path(self):
+        """
+        Возвращает путь к документу.
+
+        Returns:
+            str: Путь к документу.
+        """
         path = \
             "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/EquipmentNumbering/"
 
@@ -169,8 +194,6 @@ class JsonOperator:
             if result == 6:  # IDYES
                 os.startfile(path)
 
-
-
         project_name = self.get_project_name()
         project_path = path + project_name
 
@@ -179,13 +202,26 @@ class JsonOperator:
         return project_path
 
     def create_folder_if_not_exist(self, project_path):
+        """
+        Создает папку, если она не существует.
+
+        Args:
+            project_path (str): Путь к папке проекта.
+        """
         if not os.path.exists(project_path):
             os.makedirs(project_path)
 
     def send_json_data(self, data, new_file_path):
+        """
+        Отправляет данные в JSON файл.
+
+        Args:
+            data (list): Список объектов LowVoltageSystemData.
+            new_file_path (str): Путь к новому JSON файлу.
+        """
         project_name = self.get_project_name()
 
-        time = self.get_moscow_time()
+        time = self.get_moscow_date()
 
         new_file_path = new_file_path + "\СС(СППЗ)_" + project_name + "_" + time + ".json"
 
@@ -197,6 +233,15 @@ class JsonOperator:
             json.dump(data_dicts, json_file, ensure_ascii=False, indent=4)
 
     def get_json_data(self, project_path):
+        """
+        Получает данные из JSON файла.
+
+        Args:
+            project_path (str): Путь к папке проекта.
+
+        Returns:
+            list: Список объектов LowVoltageSystemData.
+        """
         # Находим все JSON-файлы в директории
         json_files = glob.glob(os.path.join(project_path, "*.json"))
         if not json_files:
@@ -225,7 +270,13 @@ class JsonOperator:
                 ]
         return []  # Если файл не найден, возвращаем пустой список
 
-    def get_moscow_time(self):
+    def get_moscow_date(self):
+        """
+        Возвращает текущую дату в часовом поясе Москвы (UTC+3).
+
+        Returns:
+            str: Текущая дата в формате "YYYY-MM-DD".
+        """
         # Получаем текущее время в UTC
         utc_time = datetime.utcnow()
 
@@ -238,6 +289,12 @@ class JsonOperator:
         return formatted_time
 
     def get_project_name(self):
+        """
+        Возвращает имя проекта.
+
+        Returns:
+            str: Имя проекта.
+        """
         # Получаем имя пользователя
         username = __revit__.Application.Username
 
@@ -259,5 +316,11 @@ class JsonOperator:
         return project_name
 
     def create_folder_if_not_exist(self, project_path):
+        """
+        Создает папку, если она не существует.
+
+        Args:
+            project_path (str): Путь к папке проекта.
+        """
         if not os.path.exists(project_path):
             os.makedirs(project_path)

@@ -59,7 +59,7 @@ def script_execute(plugin_logger):
     # Находим все JSON-файлы в директории
     json_files = glob.glob(os.path.join(file_folder_path, "*.json"))
     if not json_files:
-        return {}
+        forms.alert("Ревизии не найдены", "Ошибка", exitscript=True)
 
     # Находим файл с самым поздним временем модификации
     latest_file = max(json_files, key=os.path.getmtime)
