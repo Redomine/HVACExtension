@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+from tarfile import TUEXEC
 
 import clr
 
@@ -51,8 +52,13 @@ def split_valves_by_floors(valves):
         floor_name = valve.GetParamValueOrDefault("ФОП_Этаж")
         system_name = valve.GetParamValueOrDefault("ФОП_ВИС_Имя системы")
 
-        if floor_name is None or (system_name is None or system_name == "!Нет системы"):
-            continue
+        is_floor_name_exists = floor_name is None or floor_name == ""
+        is_system_name_exists = system_name is None or system_name == "!Нет системы" or system_name == ""
+
+        if is_floor_name_exists or is_system_name_exists:
+            forms.alert("У части отмеченного для задания оборудования не заполнено ФОП_ВИС_Имя системы или ФОП_Этаж. "
+                        "Устраните проблему и повторите запуск скрипта.", "Ошибка", exitscript=True)
+
 
         if floor_name not in valves_by_floors:
             valves_by_floors[floor_name] = []
@@ -161,9 +167,6 @@ def get_elements_to_objective(elements):
             filtered_elements.append(element)
         else:
             element_type = element.GetElementType()
-            if element.Id.IntegerValue == 3189193:
-                print(element_type.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку"))
-                print(element_type.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку") == 1)
             if element_type.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку") == 1:
                 filtered_elements.append(element)
 
@@ -203,6 +206,11 @@ def check_edited_elements(elements):
 
     edited_report.show_report()
 
+def clear_param_false_values(elements, json_data):
+    for element in elements:
+        if not any(element.Id == data.id for data in json_data):
+            element.SetParamValue("ФОП_ВИС_СС Марка задания", "")
+            element.SetParamValue("ФОП_ВИС_СС Дата задания", "")
 
 operator = JsonOperator(doc, uiapp)
 
@@ -232,29 +240,27 @@ def script_execute(plugin_logger):
     # Оставляем только те новые элементы, у которых стоит галочка о формировании задания
     elements_to_objective = get_elements_to_objective(new_elements)
 
-    with revit.Transaction("BIM: Обновление задания"):
-        # Очищаем марку у элементов которые не идут в задание, на случай если они были скопированы
-        for raw_element in raw_collection:
-            if raw_element not in elements_to_objective:
-                raw_element.SetParamValue("ФОП_ВИС_СС Марка задания", "")
-                raw_element.SetParamValue("ФОП_ВИС_СС Дата задания", "")
-
-        # если новых элементов для задания нет то на этом можно остановиться
-        if len(elements_to_objective) == 0:
+    # если новых элементов для задания нет то на этом можно остановиться
+    if len(elements_to_objective) == 0:
+        with revit.Transaction("BIM: Обновление задания"):
             for data in old_data:
                 data.insert(doc, operator.get_moscow_time())
+
+            clear_param_false_values(raw_collection, old_data)
 
             # Записываем в json-файл
             operator.send_json_data(old_data, file_folder_path)
             return
 
-        # Делим новые элементы по спискам для применения отдельных алгоритмов
-        open_valves, closed_valves, equipment_elements = split_collection(elements_to_objective)
 
-        open_valves_data = use_open_algorithm(open_valves, max_numbers)
-        closed_valves_data = use_closed_algorithm(closed_valves)
-        equipment_elements_data = use_open_algorithm(equipment_elements, max_numbers)
+    # Делим новые элементы по спискам для применения отдельных алгоритмов
+    open_valves, closed_valves, equipment_elements = split_collection(elements_to_objective)
 
+    open_valves_data = use_open_algorithm(open_valves, max_numbers)
+    closed_valves_data = use_closed_algorithm(closed_valves)
+    equipment_elements_data = use_open_algorithm(equipment_elements, max_numbers)
+
+    with revit.Transaction("BIM: Обновление задания"):
         if open_valves_data or closed_valves_data or equipment_elements_data:
             json_data = []
             json_data.extend(old_data)
@@ -268,5 +274,8 @@ def script_execute(plugin_logger):
 
             # Записываем в json-файл
             operator.send_json_data(json_data, file_folder_path)
+
+        # Очищаем марку у элементов которые не идут в задание, на случай если они были скопированы
+        clear_param_false_values(raw_collection, json_data)
 
 script_execute()
