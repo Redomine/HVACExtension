@@ -48,12 +48,11 @@ class GenericPipe:
         self.length = length
         self.thickness = thickness
 
-class PipeTypesCash:
+class TypesCash:
     def __init__(self, dn, id, variants_pool):
         self.dn = dn
         self.id = id
         self.variants_pool = variants_pool
-
 
 def create_folder_if_not_exist(project_path):
     """
@@ -148,12 +147,14 @@ def get_variants_pool(element, variants, type_comment, dn):
     result = []
 
     is_pipe = element.Category.IsId(BuiltInCategory.OST_PipeCurves)
+    is_insulation = element.Category.IsId(BuiltInCategory.OST_PipeInsulation)
 
     # Проверяем, есть ли совпадение по комментарию типоразмера
     for variant in variants:
         if is_pipe:
             if type_comment == variant.type_comment and dn == variant.dn:
                 result.append(variant)
+
 
     return result
 
@@ -184,6 +185,35 @@ def create_new_row(element, variant, number):
     )
 
     return new_row
+
+def separate_element(ai_pipe, variants_pool, family_symbol):
+    ai_pipe_len = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))
+    sorted_variants_pool = sorted(variants_pool, key=lambda x: x.length, reverse=True)
+
+    material_location = unmodeling_factory.get_base_location(doc)
+    for variant in sorted_variants_pool:
+        if ai_pipe_len <= 0:
+            break
+
+        number = ai_pipe_len // variant.length
+
+        if number >= 1:
+            ai_pipe_len = ai_pipe_len % variant.length
+
+        len_not_minimal = ai_pipe_len > 50  # Принято что не считаем обрезки труб меньше 50мм
+        last_variant = variant == sorted_variants_pool[-1]  # Проверка есть ли еще вариаты
+
+        if last_variant and len_not_minimal:
+            number += 1
+            ai_pipe_len -= variant.length
+
+        if number > 0:
+            material_location = unmodeling_factory.update_location(material_location)
+            new_row = create_new_row(ai_pipe, variant, number)
+
+            unmodeling_factory.create_new_position(doc, new_row, family_symbol,
+                                                   unmodeling_factory.ai_description,
+                                                   material_location)
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -221,44 +251,14 @@ def script_execute(plugin_logger):
             else:
                 # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
                 variants_pool = get_variants_pool(ai_pipe, pipe_variants, type_comment, ai_pipe_dn)
-                new_item = PipeTypesCash(ai_pipe_dn, id, variants_pool)
+                new_item = TypesCash(ai_pipe_dn, id, variants_pool)
                 cash.append(new_item)
 
             # Если нет совпадений по комментарию типоразмера - продолжаем перебор
-            if len(variants_pool) == 0:
-                continue
-
             # Если заявленная длина в каталоге 0 - элемент не бьется на части, можно пропускать
-            if variants_pool[0].length == 0:
+            if len(variants_pool) == 0 or variants_pool[0].length == 0:
                 continue
 
-            ai_pipe_len = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))
-            sorted_variants_pool = sorted(variants_pool, key=lambda x: x.length, reverse=True)
-
-            material_location = unmodeling_factory.get_base_location(doc)
-            for variant in sorted_variants_pool:
-                if ai_pipe_len <= 0:
-                    break
-
-                number = ai_pipe_len // variant.length
-                rest = ai_pipe_len % variant.length
-
-                if number >= 1:
-                    ai_pipe_len = rest
-
-                len_not_minimal = ai_pipe_len > 50  # Принято что не считаем обрезки труб меньше 50мм
-                last_variant = variant == sorted_variants_pool[-1]  # Проверка есть ли еще вариаты
-
-                if last_variant and len_not_minimal:
-                    number += 1
-                    ai_pipe_len -= variant.length
-
-                if number > 0:
-                    material_location = unmodeling_factory.update_location(material_location)
-                    new_row = create_new_row(ai_pipe, variant, number)
-
-                    unmodeling_factory.create_new_position(doc, new_row, family_symbol,
-                                                           unmodeling_factory.ai_description,
-                                                           material_location)
+            separate_element(ai_pipe, variants_pool, family_symbol)
 
 script_execute()
