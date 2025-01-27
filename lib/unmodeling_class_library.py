@@ -157,6 +157,7 @@ class UnmodelingFactory:
     import_description = 'Импорт немоделируемых'
     material_description = 'Расчет краски и креплений'
     consumable_description = 'Расходники изоляции'
+    ai_description = 'Элементы АИ'
 
     # Значение группирования для элементов
     consumable_group = '12. Расходники изоляции'
