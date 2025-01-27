@@ -83,7 +83,8 @@ class CSVRules:
     thickness_column = 0
 
 class GenericPipe:
-    def __init__(self, name, dn, code, length, thickness):
+    def __init__(self, type_comment, name, dn, code, length, thickness):
+        self.type_comment = type_comment
         self.name = name
         self.dn = dn
         self.code = code
@@ -98,9 +99,7 @@ def filter_elements_ai(elements):
 
     return result
 
-@notification()
-@log_plugin(EXEC_PARAMS.command_name)
-def script_execute(plugin_logger):
+def get_pipe_variants():
     path = get_document_path()
 
     with codecs.open(path + '/Трубопроводы АИ.csv', 'r', encoding='cp1251') as csvfile:
@@ -111,6 +110,7 @@ def script_execute(plugin_logger):
 
         rules = CSVRules()
 
+        rules.type_comment_column = headers.index('Комментарий к типоразмеру')
         rules.name_column = headers.index('Наименование')
         rules.d_column = headers.index('Диаметр условный')
         rules.code_column = headers.index('Артикул')
@@ -121,6 +121,7 @@ def script_execute(plugin_logger):
         for row in csvreader:
             pipe_variants.append(
                 GenericPipe(
+                    row[rules.type_comment_column],
                     row[rules.name_column],
                     row[rules.d_column],
                     row[rules.code_column],
@@ -129,13 +130,45 @@ def script_execute(plugin_logger):
                 )
             )
 
+    return pipe_variants
+
+def convert_to_mms(value):
+    result = UnitUtils.ConvertFromInternalUnits(value,
+        UnitTypeId.Millimeters)
+    return result
+
+@notification()
+@log_plugin(EXEC_PARAMS.command_name)
+def script_execute(plugin_logger):
+
+    pipe_variants = get_pipe_variants()
+
     family_symbol = unmodeling_factory.startup_checks(doc)
 
     pipes = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeCurves)
 
     ai_pipes = filter_elements_ai(pipes)
 
-    print(ai_pipes)
+    for ai_pipe in ai_pipes:
+        ai_pipe_type = ai_pipe.GetElementType()
+
+        type_comment = ai_pipe_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
+
+
+
+
+        shared_function = ai_pipe.GetSharedParamValueOrDefault(
+            SharedParamsConfig.Instance.EconomicFunction.Name, unmodeling_factory.out_of_function_value)
+        shared_system = ai_pipe.GetSharedParamValueOrDefault(
+            SharedParamsConfig.Instance.VISSystemName.Name, unmodeling_factory.out_of_system_value)
+
+
+        ai_pipe_dn = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+        ai_pipe_len =convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))
+
+
+
+
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         family_symbol.Activate()
 
