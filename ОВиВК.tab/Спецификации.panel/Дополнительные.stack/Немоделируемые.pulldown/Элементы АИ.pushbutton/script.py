@@ -136,8 +136,17 @@ def get_pipe_variants(file_name):
         rules.len_column = get_column_index(headers,'Длина трубы')
         rules.thickness_column = get_column_index(headers,'Толщина трубы')
 
+
+
         # Итерируемся по строкам в файле
         for row in csvreader:
+            lenght = get_float_value(row[rules.len_column], rules.len_column)
+            if lenght == 0:
+                forms.alert('В типоразмерных таблицах недопустимы элементы с нулевой длиной. \n'
+                            'Переместите данные в таблицу "Элементы АИ".',
+                            "Ошибка",
+                            exitscript=True)
+
             material_variants.append(
                 GenericPipe(
                     row[rules.type_comment_column],
@@ -236,6 +245,35 @@ def separate_element(ai_pipe, variants_pool, family_symbol):
             )
     return result
 
+def process_pipe(ai_pipe, cash, elements_to_generation, pipe_variants, family_symbol):
+    ai_pipe_type = ai_pipe.GetElementType()
+    id = ai_pipe_type.Id
+
+    type_comment = ai_pipe_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
+    ai_pipe_dn = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+
+    # Проверяем наличие объекта в кэше
+    cached_item = next((item for item in cash if item.dn == ai_pipe_dn and item.id == id), None)
+
+    if cached_item:
+        # Если объект найден в кэше, используем его данные
+        variants_pool = cached_item.variants_pool
+    else:
+        # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
+        variants_pool = get_variants_pool(ai_pipe, pipe_variants, type_comment, ai_pipe_dn)
+        new_item = TypesCash(ai_pipe_dn, id, variants_pool)
+        cash.append(new_item)
+
+    # Если нет совпадений по комментарию типоразмера - продолжаем перебор
+    # Если заявленная длина в каталоге 0 - элемент не бьется на части, можно пропускать
+    if len(variants_pool) == 0 or variants_pool[0].length == 0:
+        return cash, elements_to_generation
+
+    generic_elements = separate_element(ai_pipe, variants_pool, family_symbol)
+    elements_to_generation.extend(generic_elements)
+
+    return cash, elements_to_generation
+
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
@@ -248,36 +286,10 @@ def script_execute(plugin_logger):
 
     ai_pipes = filter_elements_ai(pipes)
 
-
-
     cash = [] # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
     elements_to_generation = []
     for ai_pipe in ai_pipes:
-        ai_pipe_type = ai_pipe.GetElementType()
-        id = ai_pipe_type.Id
-
-        type_comment = ai_pipe_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
-        ai_pipe_dn = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
-
-        # Проверяем наличие объекта в кэше
-        cached_item = next((item for item in cash if item.dn == ai_pipe_dn and item.id == id), None)
-
-        if cached_item:
-            # Если объект найден в кэше, используем его данные
-            variants_pool = cached_item.variants_pool
-        else:
-            # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
-            variants_pool = get_variants_pool(ai_pipe, pipe_variants, type_comment, ai_pipe_dn)
-            new_item = TypesCash(ai_pipe_dn, id, variants_pool)
-            cash.append(new_item)
-
-        # Если нет совпадений по комментарию типоразмера - продолжаем перебор
-        # Если заявленная длина в каталоге 0 - элемент не бьется на части, можно пропускать
-        if len(variants_pool) == 0 or variants_pool[0].length == 0:
-            continue
-
-        generic_elements = separate_element(ai_pipe, variants_pool, family_symbol)
-        elements_to_generation.extend(generic_elements)
+        cash, elements_to_generation = process_pipe(ai_pipe, cash, elements_to_generation, pipe_variants, family_symbol)
 
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
