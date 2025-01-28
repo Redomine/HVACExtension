@@ -19,6 +19,7 @@ clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
 from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from itertools import chain
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
@@ -40,13 +41,12 @@ class CSVRules:
     thickness_column = 0
 
 class GenericPipe:
-    def __init__(self, type_comment, name, dn, code, length, thickness):
+    def __init__(self, type_comment, name, dn, code, length):
         self.type_comment = type_comment
         self.name = name
         self.dn = dn
         self.code = code
         self.length = length
-        self.thickness = thickness
 
 class TypesCash:
     def __init__(self, dn, id, variants_pool):
@@ -118,10 +118,10 @@ def get_float_value(value, column_number):
                     "Ошибка",
                     exitscript=True)
 
-def get_pipe_variants(file_name):
-    path = get_document_path()
+def get_pipe_variants():
+    path = get_document_path() + '/Линейные элементы АИ.csv'
 
-    with codecs.open(path + file_name, 'r', encoding='utf-8-sig') as csvfile:
+    with codecs.open(path, 'r', encoding='utf-8-sig') as csvfile:
         material_variants = []
         # Создаем объект reader
         csvreader = csv.reader(csvfile, delimiter=";")
@@ -134,12 +134,15 @@ def get_pipe_variants(file_name):
         rules.d_column = get_column_index(headers,'Диаметр')
         rules.code_column = get_column_index(headers,'Артикул')
         rules.len_column = get_column_index(headers,'Длина трубы')
-        rules.thickness_column = get_column_index(headers,'Толщина трубы')
-
-
 
         # Итерируемся по строкам в файле
         for row in csvreader:
+            type_comment = row[rules.type_comment_column]
+
+            # если комментария к типоразмеру нет - скорее всего пустая строка или ошибка заполнения. Пропускаем
+            if type_comment is None or type_comment == '':
+                continue
+
             lenght = get_float_value(row[rules.len_column], rules.len_column)
             if lenght == 0:
                 forms.alert('В типоразмерных таблицах недопустимы элементы с нулевой длиной. \n'
@@ -153,8 +156,7 @@ def get_pipe_variants(file_name):
                     row[rules.name_column],
                     get_float_value(row[rules.d_column], rules.d_column),
                     row[rules.code_column],
-                    get_float_value(row[rules.len_column], rules.len_column),
-                    row[rules.thickness_column]
+                    get_float_value(row[rules.len_column], rules.len_column)
                 )
             )
 
@@ -170,13 +172,31 @@ def get_variants_pool(element, variants, type_comment, dn):
     result = []
 
     is_pipe = element.Category.IsId(BuiltInCategory.OST_PipeCurves)
-    #is_insulation = element.Category.IsId(BuiltInCategory.OST_PipeInsulation)
+    is_insulation = element.Category.IsId(BuiltInCategory.OST_PipeInsulations)
 
     # Проверяем, есть ли совпадение по комментарию типоразмера
-    for variant in variants:
-        if is_pipe:
+    if is_pipe:
+        for variant in variants:
             if type_comment == variant.type_comment and dn == variant.dn:
                 result.append(variant)
+
+    if is_insulation:
+        for i, variant in enumerate(variants):
+            if type_comment == variant.type_comment:
+                if i == 0:
+                    # Для первого элемента сравниваем с текущим - 10
+                    if dn > (variant.dn - 10) and dn <= variant.dn:
+                        result.append(variant)
+                elif i == len(variants) - 1:
+                    # Для последнего элемента пропускаем, если dn больше текущего
+                    if dn > variants[i-1].dn and dn <= variant.dn:
+                        result.append(variant)
+                else:
+                    # Для остальных элементов проверяем диапазон между предыдущим и текущим
+                    if dn > variants[i-1].dn and dn <= variant.dn:
+                        print(variant.name)
+
+                        result.append(variant)
 
     if len(result) == 0:
         forms.alert("Часть элементов в модели, помеченных как B4E_АИ, не обнаружена в согласованных каталогах, "
@@ -187,6 +207,13 @@ def get_variants_pool(element, variants, type_comment, dn):
                     exitscript=True)
 
     return result
+
+def get_dn(ai_element):
+    if ai_element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        return convert_to_mms(ai_element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+    if ai_element.Category.IsId(BuiltInCategory.OST_PipeInsulations) and ai_element.HostElementId is not None:
+        pipe = doc.GetElement(ai_element.HostElementId)
+        return convert_to_mms(pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER))
 
 def create_new_row(element, variant, number):
     shared_function = element.GetParamValueOrDefault(
@@ -236,6 +263,7 @@ def separate_element(ai_pipe, variants_pool, family_symbol):
         if last_variant and len_not_minimal:
             number += 1
             ai_pipe_len -= variant.length
+            print(ai_pipe_len)
 
         if number > 0:
             new_row = create_new_row(ai_pipe, variant, number)
@@ -245,23 +273,23 @@ def separate_element(ai_pipe, variants_pool, family_symbol):
             )
     return result
 
-def process_pipe(ai_pipe, cash, elements_to_generation, pipe_variants, family_symbol):
-    ai_pipe_type = ai_pipe.GetElementType()
-    id = ai_pipe_type.Id
+def process_ai_element(ai_element, cash, elements_to_generation, pipe_variants, family_symbol):
+    ai_element_type = ai_element.GetElementType()
+    id = ai_element_type.Id
 
-    type_comment = ai_pipe_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
-    ai_pipe_dn = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+    type_comment = ai_element_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
+    ai_element_dn = get_dn(ai_element)
 
     # Проверяем наличие объекта в кэше
-    cached_item = next((item for item in cash if item.dn == ai_pipe_dn and item.id == id), None)
+    cached_item = next((item for item in cash if item.dn == ai_element_dn and item.id == id), None)
 
     if cached_item:
         # Если объект найден в кэше, используем его данные
         variants_pool = cached_item.variants_pool
     else:
         # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
-        variants_pool = get_variants_pool(ai_pipe, pipe_variants, type_comment, ai_pipe_dn)
-        new_item = TypesCash(ai_pipe_dn, id, variants_pool)
+        variants_pool = get_variants_pool(ai_element, pipe_variants, type_comment, ai_element_dn)
+        new_item = TypesCash(ai_element_dn, id, variants_pool)
         cash.append(new_item)
 
     # Если нет совпадений по комментарию типоразмера - продолжаем перебор
@@ -269,7 +297,7 @@ def process_pipe(ai_pipe, cash, elements_to_generation, pipe_variants, family_sy
     if len(variants_pool) == 0 or variants_pool[0].length == 0:
         return cash, elements_to_generation
 
-    generic_elements = separate_element(ai_pipe, variants_pool, family_symbol)
+    generic_elements = separate_element(ai_element, variants_pool, family_symbol)
     elements_to_generation.extend(generic_elements)
 
     return cash, elements_to_generation
@@ -278,18 +306,28 @@ def process_pipe(ai_pipe, cash, elements_to_generation, pipe_variants, family_sy
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
 
-    pipe_variants = get_pipe_variants('/Трубопроводы АИ.csv')
+    pipe_variants = get_pipe_variants()
 
     family_symbol = unmodeling_factory.startup_checks(doc)
 
-    pipes = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeCurves)
+    # elements = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeCurves)
+    # elements += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
 
-    ai_pipes = filter_elements_ai(pipes)
+    elements = list(chain(
+        unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeCurves),
+        unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
+    ))
+
+    ai_elements = filter_elements_ai(elements)
 
     cash = [] # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
     elements_to_generation = []
-    for ai_pipe in ai_pipes:
-        cash, elements_to_generation = process_pipe(ai_pipe, cash, elements_to_generation, pipe_variants, family_symbol)
+    for ai_element in ai_elements:
+        cash, elements_to_generation = process_ai_element(ai_element,
+                                                          cash,
+                                                          elements_to_generation,
+                                                          pipe_variants,
+                                                          family_symbol)
 
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
