@@ -464,7 +464,7 @@ class UnmodelingFactory:
                 current_description = element.GetParamValueOrDefault(self.description_param_name)
 
                 if current_name == self.family_name:
-                    if description in current_description:
+                    if current_description is None or description in current_description:
                         doc.Delete(element.Id)
 
     def create_new_position(self, doc, new_row_data, family_symbol, description, loc):
