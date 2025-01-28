@@ -104,38 +104,52 @@ def filter_elements_ai(elements):
 
     return result
 
-def get_pipe_variants():
+def get_column_index(headers, name):
+    if name in headers:
+        return headers.index(name)
+    else:
+        forms.alert("Следующие заголовки не были найдены: " + name, "Ошибка", exitscript=True)
+
+def get_float_value(value, column_number):
+    try:
+        return float(value)
+    except:
+        forms.alert("Ошибка при попытке получить числовое значение из столбца {}".format(column_number),
+                    "Ошибка",
+                    exitscript=True)
+
+def get_pipe_variants(file_name):
     path = get_document_path()
 
-    with codecs.open(path + '/Трубопроводы АИ.csv', 'r', encoding='cp1251') as csvfile:
-        pipe_variants = []
+    with codecs.open(path + file_name, 'r', encoding='utf-8-sig') as csvfile:
+        material_variants = []
         # Создаем объект reader
         csvreader = csv.reader(csvfile, delimiter=";")
         headers = next(csvreader)
 
         rules = CSVRules()
 
-        rules.type_comment_column = headers.index('Комментарий к типоразмеру')
-        rules.name_column = headers.index('Наименование')
-        rules.d_column = headers.index('Диаметр условный')
-        rules.code_column = headers.index('Артикул')
-        rules.len_column = headers.index('Длина трубы')
-        rules.thickness_column = headers.index('Толщина трубы')
+        rules.type_comment_column = get_column_index(headers,'Комментарий к типоразмеру')
+        rules.name_column = get_column_index(headers,'Наименование')
+        rules.d_column = get_column_index(headers,'Диаметр')
+        rules.code_column = get_column_index(headers,'Артикул')
+        rules.len_column = get_column_index(headers,'Длина трубы')
+        rules.thickness_column = get_column_index(headers,'Толщина трубы')
 
         # Итерируемся по строкам в файле
         for row in csvreader:
-            pipe_variants.append(
+            material_variants.append(
                 GenericPipe(
                     row[rules.type_comment_column],
                     row[rules.name_column],
-                    float(row[rules.d_column]),
+                    get_float_value(row[rules.d_column], rules.d_column),
                     row[rules.code_column],
-                    float(row[rules.len_column]),
+                    get_float_value(row[rules.len_column], rules.len_column),
                     row[rules.thickness_column]
                 )
             )
 
-    return pipe_variants
+    return material_variants
 
 def convert_to_mms(value):
     result = UnitUtils.ConvertFromInternalUnits(value,
@@ -147,7 +161,7 @@ def get_variants_pool(element, variants, type_comment, dn):
     result = []
 
     is_pipe = element.Category.IsId(BuiltInCategory.OST_PipeCurves)
-    is_insulation = element.Category.IsId(BuiltInCategory.OST_PipeInsulation)
+    #is_insulation = element.Category.IsId(BuiltInCategory.OST_PipeInsulation)
 
     # Проверяем, есть ли совпадение по комментарию типоразмера
     for variant in variants:
@@ -155,6 +169,13 @@ def get_variants_pool(element, variants, type_comment, dn):
             if type_comment == variant.type_comment and dn == variant.dn:
                 result.append(variant)
 
+    if len(result) == 0:
+        forms.alert("Часть элементов в модели, помеченных как B4E_АИ, не обнаружена в согласованных каталогах, "
+                    "что может привести к не полному формированию спецификации. "
+                    "Устраните расхождения перед продолжением работы. \n"
+                    "Пример элемента - ID:{}".format(element.Id),
+                    "Ошибка",
+                    exitscript=True)
 
     return result
 
@@ -190,7 +211,7 @@ def separate_element(ai_pipe, variants_pool, family_symbol):
     ai_pipe_len = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))
     sorted_variants_pool = sorted(variants_pool, key=lambda x: x.length, reverse=True)
 
-    material_location = unmodeling_factory.get_base_location(doc)
+    result = []
     for variant in sorted_variants_pool:
         if ai_pipe_len <= 0:
             break
@@ -208,18 +229,18 @@ def separate_element(ai_pipe, variants_pool, family_symbol):
             ai_pipe_len -= variant.length
 
         if number > 0:
-            material_location = unmodeling_factory.update_location(material_location)
             new_row = create_new_row(ai_pipe, variant, number)
 
-            unmodeling_factory.create_new_position(doc, new_row, family_symbol,
-                                                   unmodeling_factory.ai_description,
-                                                   material_location)
+            result.append(
+                new_row
+            )
+    return result
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
 
-    pipe_variants = get_pipe_variants()
+    pipe_variants = get_pipe_variants('/Трубопроводы АИ.csv')
 
     family_symbol = unmodeling_factory.startup_checks(doc)
 
@@ -228,37 +249,48 @@ def script_execute(plugin_logger):
     ai_pipes = filter_elements_ai(pipes)
 
 
-    with revit.Transaction("BIM: Добавление расчетных элементов"):
-        family_symbol.Activate()
 
+    cash = [] # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
+    elements_to_generation = []
+    for ai_pipe in ai_pipes:
+        ai_pipe_type = ai_pipe.GetElementType()
+        id = ai_pipe_type.Id
+
+        type_comment = ai_pipe_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
+        ai_pipe_dn = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+
+        # Проверяем наличие объекта в кэше
+        cached_item = next((item for item in cash if item.dn == ai_pipe_dn and item.id == id), None)
+
+        if cached_item:
+            # Если объект найден в кэше, используем его данные
+            variants_pool = cached_item.variants_pool
+        else:
+            # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
+            variants_pool = get_variants_pool(ai_pipe, pipe_variants, type_comment, ai_pipe_dn)
+            new_item = TypesCash(ai_pipe_dn, id, variants_pool)
+            cash.append(new_item)
+
+        # Если нет совпадений по комментарию типоразмера - продолжаем перебор
+        # Если заявленная длина в каталоге 0 - элемент не бьется на части, можно пропускать
+        if len(variants_pool) == 0 or variants_pool[0].length == 0:
+            continue
+
+        generic_elements = separate_element(ai_pipe, variants_pool, family_symbol)
+        elements_to_generation.extend(generic_elements)
+
+    with revit.Transaction("BIM: Добавление расчетных элементов"):
         # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
         unmodeling_factory.remove_models(doc, unmodeling_factory.ai_description)
 
-        cash = []
-        for ai_pipe in ai_pipes:
-            ai_pipe_type = ai_pipe.GetElementType()
-            id = ai_pipe_type.Id
+        family_symbol.Activate()
+        material_location = unmodeling_factory.get_base_location(doc)
 
-            type_comment = ai_pipe_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
-            ai_pipe_dn = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+        for element in elements_to_generation:
+            material_location = unmodeling_factory.update_location(material_location)
 
-            # Проверяем наличие объекта в кэше
-            cached_item = next((item for item in cash if item.dn == ai_pipe_dn and item.id == id), None)
-
-            if cached_item:
-                # Если объект найден в кэше, используем его данные
-                variants_pool = cached_item.variants_pool
-            else:
-                # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
-                variants_pool = get_variants_pool(ai_pipe, pipe_variants, type_comment, ai_pipe_dn)
-                new_item = TypesCash(ai_pipe_dn, id, variants_pool)
-                cash.append(new_item)
-
-            # Если нет совпадений по комментарию типоразмера - продолжаем перебор
-            # Если заявленная длина в каталоге 0 - элемент не бьется на части, можно пропускать
-            if len(variants_pool) == 0 or variants_pool[0].length == 0:
-                continue
-
-            separate_element(ai_pipe, variants_pool, family_symbol)
+            unmodeling_factory.create_new_position(doc, element, family_symbol,
+                                                   unmodeling_factory.ai_description,
+                                                   material_location)
 
 script_execute()
