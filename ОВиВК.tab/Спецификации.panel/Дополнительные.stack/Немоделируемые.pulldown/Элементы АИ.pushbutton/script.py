@@ -23,6 +23,7 @@ from itertools import chain
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
 from collections import defaultdict
+from System import Environment
 
 from unmodeling_class_library import *
 from dosymep_libs.bim4everyone import *
@@ -55,16 +56,6 @@ class TypesCash:
         self.id = id
         self.variants_pool = variants_pool
 
-def create_folder_if_not_exist(project_path):
-    """
-    Создает папку, если она не существует.
-
-    Args:
-        project_path (str): Путь к папке проекта.
-    """
-    if not os.path.exists(project_path):
-        os.makedirs(project_path)
-
 def get_document_path():
     """
     Возвращает путь к документу.
@@ -84,16 +75,16 @@ def get_document_path():
                             str(version),
                             'AIEquipment/')
 
-        create_folder_if_not_exist(path)
+        if not os.path.exists(path):
+            os.makedirs(path)
+            report = ('Нет доступа к сетевому диску. Разместите таблицы выбора по пути: {} \n'
+                      'Открыть папку?').format(path)
 
-        report = ('Нет доступа к сетевому диску. Разместите таблицы выбора по пути: {} \n'
-                  'Открыть папку?').format(path)
+            # Вызов MessageBox из Windows API
+            result = ctypes.windll.user32.MessageBoxW(0, report, "Внимание", 4)
 
-        # Вызов MessageBox из Windows API
-        result = ctypes.windll.user32.MessageBoxW(0, report, "Внимание", 4)
-
-        if result == 6:  # IDYES
-            os.startfile(path)
+            if result == 6:
+                os.startfile(path)
 
     return path
 
@@ -135,11 +126,15 @@ def get_ai_catalog():
     Изначально ищет в сетевых папках, если не получается - проверяем мои документы
 
     """
-    path = get_document_path() + '/Элементы АИ.csv'
+    path = get_document_path()
+    file_name = '/Элементы АИ.csv'
+    full_path = path + file_name
 
-    with codecs.open(path, 'r', encoding='utf-8-sig') as csvfile:
+    if not os.path.exists(full_path):
+        forms.alert("Файл таблиц выбора не обнаружен.", "Ошибка", exitscript=True)
+
+    with codecs.open(full_path, 'r', encoding='utf-8-sig') as csvfile:
         material_variants = []
-        # Создаем объект reader
         csvreader = csv.reader(csvfile, delimiter=";")
         headers = next(csvreader)
 
