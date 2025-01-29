@@ -40,7 +40,7 @@ class CSVRules:
     len_column = 0
     thickness_column = 0
 
-class GenericPipe:
+class GenericAI:
     def __init__(self, type_comment, name, dn, code, length):
         self.type_comment = type_comment
         self.name = name
@@ -118,8 +118,8 @@ def get_float_value(value, column_number):
                     "Ошибка",
                     exitscript=True)
 
-def get_pipe_variants():
-    path = get_document_path() + '/Линейные элементы АИ.csv'
+def get_ai_variants():
+    path = get_document_path() + '/Элементы АИ.csv'
 
     with codecs.open(path, 'r', encoding='utf-8-sig') as csvfile:
         material_variants = []
@@ -143,15 +143,8 @@ def get_pipe_variants():
             if type_comment is None or type_comment == '':
                 continue
 
-            lenght = get_float_value(row[rules.len_column], rules.len_column)
-            if lenght == 0:
-                forms.alert('В типоразмерных таблицах недопустимы элементы с нулевой длиной. \n'
-                            'Переместите данные в таблицу "Элементы АИ".',
-                            "Ошибка",
-                            exitscript=True)
-
             material_variants.append(
-                GenericPipe(
+                GenericAI(
                     row[rules.type_comment_column],
                     row[rules.name_column],
                     get_float_value(row[rules.d_column], rules.d_column),
@@ -180,23 +173,12 @@ def get_variants_pool(element, variants, type_comment, dn):
             if type_comment == variant.type_comment and dn == variant.dn:
                 result.append(variant)
 
+    # Для изоляции очень редок случай точного совпадения диаметров, проверяем с погрешностью
     if is_insulation:
-        for i, variant in enumerate(variants):
-            if type_comment == variant.type_comment:
-                if i == 0:
-                    # Для первого элемента сравниваем с текущим - 10
-                    if dn > (variant.dn - 10) and dn <= variant.dn:
-                        result.append(variant)
-                elif i == len(variants) - 1:
-                    # Для последнего элемента пропускаем, если dn больше текущего
-                    if dn > variants[i-1].dn and dn <= variant.dn:
-                        result.append(variant)
-                else:
-                    # Для остальных элементов проверяем диапазон между предыдущим и текущим
-                    if dn > variants[i-1].dn and dn <= variant.dn:
-                        print(variant.name)
-
-                        result.append(variant)
+        sorted_variants = sorted(variants, key=lambda x: x.dn, reverse=True)
+        for variant in sorted_variants:
+            if type_comment == variant.type_comment and  variant.dn - 5 <= dn <= variant.dn:
+                result.append(variant)
 
     if len(result) == 0:
         forms.alert("Часть элементов в модели, помеченных как B4E_АИ, не обнаружена в согласованных каталогах, "
@@ -243,37 +225,52 @@ def create_new_row(element, variant, number):
 
     return new_row
 
-def separate_element(ai_pipe, variants_pool, family_symbol):
-    ai_pipe_len = convert_to_mms(ai_pipe.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))
+def separate_element(
+                    ai_element,
+                    variants_pool,
+                    family_symbol,
+                    pipe_insulation_stock,
+                    pipe_stock):
+    ai_element_len = convert_to_mms(ai_element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))
+    if ai_element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+        ai_element_len = ai_element_len * pipe_stock
+    if ai_element.Category.IsId(BuiltInCategory.OST_PipeInsulations):
+        ai_element_len = ai_element_len * pipe_insulation_stock
+
     sorted_variants_pool = sorted(variants_pool, key=lambda x: x.length, reverse=True)
 
     result = []
     for variant in sorted_variants_pool:
-        if ai_pipe_len <= 0:
+        if ai_element_len <= 0:
             break
 
-        number = ai_pipe_len // variant.length
+        number = ai_element_len // variant.length
 
         if number >= 1:
-            ai_pipe_len = ai_pipe_len % variant.length
+            ai_element_len = ai_element_len % variant.length
 
-        len_not_minimal = ai_pipe_len > 50  # Принято что не считаем обрезки труб меньше 50мм
+        len_not_minimal = ai_element_len > 50  # Принято что не считаем обрезки труб меньше 50мм
         last_variant = variant == sorted_variants_pool[-1]  # Проверка есть ли еще вариаты
 
         if last_variant and len_not_minimal:
             number += 1
-            ai_pipe_len -= variant.length
-            print(ai_pipe_len)
+            ai_element_len -= variant.length
 
         if number > 0:
-            new_row = create_new_row(ai_pipe, variant, number)
+            new_row = create_new_row(ai_element, variant, number)
 
             result.append(
                 new_row
             )
     return result
 
-def process_ai_element(ai_element, cash, elements_to_generation, pipe_variants, family_symbol):
+def process_ai_element(ai_element,
+                       cash,
+                       elements_to_generation,
+                       pipe_variants,
+                       family_symbol,
+                       pipe_insulation_stock,
+                       pipe_stock):
     ai_element_type = ai_element.GetElementType()
     id = ai_element_type.Id
 
@@ -297,21 +294,40 @@ def process_ai_element(ai_element, cash, elements_to_generation, pipe_variants, 
     if len(variants_pool) == 0 or variants_pool[0].length == 0:
         return cash, elements_to_generation
 
-    generic_elements = separate_element(ai_element, variants_pool, family_symbol)
+    generic_elements = separate_element(
+                            ai_element,
+                            variants_pool,
+                            family_symbol,
+                            pipe_insulation_stock,
+                            pipe_stock)
     elements_to_generation.extend(generic_elements)
 
     return cash, elements_to_generation
 
+def get_stocks():
+    def get_percent_value(info, param):
+        percent = info.GetParamValueOrDefault(param)
+        if percent is None:
+            percent = 0
+        return percent
+
+    info = doc.ProjectInformation
+    insulation_percent = get_percent_value(info, SharedParamsConfig.Instance.VISPipeInsulationReserve)
+    duct_and_pipe_percent = get_percent_value(info, SharedParamsConfig.Instance.VISPipeDuctReserve)
+
+    pipe_insulation_stock = (1 + insulation_percent / 100)
+    duct_and_pipe_stock = (1 + duct_and_pipe_percent / 100)
+
+    return pipe_insulation_stock, duct_and_pipe_stock
+
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
+    pipe_insulation_stock, pipe_stock = get_stocks()
 
-    pipe_variants = get_pipe_variants()
+    ai_variants = get_ai_variants()
 
     family_symbol = unmodeling_factory.startup_checks(doc)
-
-    # elements = unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeCurves)
-    # elements += unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
 
     elements = list(chain(
         unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeCurves),
@@ -326,8 +342,10 @@ def script_execute(plugin_logger):
         cash, elements_to_generation = process_ai_element(ai_element,
                                                           cash,
                                                           elements_to_generation,
-                                                          pipe_variants,
-                                                          family_symbol)
+                                                          ai_variants,
+                                                          family_symbol,
+                                                          pipe_insulation_stock,
+                                                          pipe_stock)
 
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
