@@ -320,6 +320,35 @@ def get_stocks():
 
     return pipe_insulation_stock, duct_and_pipe_stock
 
+def optimize_generation_list(new_rows):
+    result = []
+    unique_rows = {}
+
+    for new_row in new_rows:
+        key = (new_row.system, new_row.function, new_row.group, new_row.name, new_row.mark,
+               new_row.code, new_row.maker, new_row.unit, new_row.local_description, new_row.mass, new_row.note)
+        if key in unique_rows:
+            unique_rows[key].number += new_row.number
+        else:
+            unique_rows[key] = RowOfSpecification(
+                system=new_row.system,
+                function=new_row.function,
+                group=new_row.group,
+                name=new_row.name,
+                mark=new_row.mark,
+                code=new_row.code,
+                maker=new_row.maker,
+                unit=new_row.unit,
+                local_description=new_row.local_description,
+                number=new_row.number,
+                mass=new_row.mass,
+                note=new_row.note
+            )
+
+    result.extend(unique_rows.values())
+    return result
+
+
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
@@ -353,6 +382,8 @@ def script_execute(plugin_logger):
 
         family_symbol.Activate()
         material_location = unmodeling_factory.get_base_location(doc)
+
+        elements_to_generation = optimize_generation_list(elements_to_generation)
 
         for element in elements_to_generation:
             material_location = unmodeling_factory.update_location(material_location)
