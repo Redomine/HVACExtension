@@ -34,13 +34,14 @@ material_calculator = MaterialCalculator(doc)
 unmodeling_factory = UnmodelingFactory()
 
 class CSVRules:
+    """ Класс-правило для нумерации столбцов в CSV """
     name_column = 0
     d_column = 0
     code_column = 0
     len_column = 0
     thickness_column = 0
 
-class GenericAI:
+class AICatalogElement:
     def __init__(self, type_comment, name, dn, code, length):
         self.type_comment = type_comment
         self.name = name
@@ -97,6 +98,11 @@ def get_document_path():
     return path
 
 def filter_elements_ai(elements):
+    """ Оставляет от исходного списка только те элементы, у которых есть _B4E_АИ в назвнии типа
+
+        Args:
+            elements: Список Element из модели
+    """
     result = []
     for element in elements:
         if '_B4E_АИ' in element.Name:
@@ -105,6 +111,12 @@ def filter_elements_ai(elements):
     return result
 
 def get_column_index(headers, name):
+    """ Возвращает индекс столбца, если нужного столбца нет - останавливает работу
+
+        Args:
+            headers: Заголовки из CSV файла
+            name: Имя искомого столбца
+            """
     if name in headers:
         return headers.index(name)
     else:
@@ -118,7 +130,11 @@ def get_float_value(value, column_number):
                     "Ошибка",
                     exitscript=True)
 
-def get_ai_variants():
+def get_ai_catalog():
+    """ Возвращает АИ каталог в виде списка из экземпляров AICatalogElement.
+    Изначально ищет в сетевых папках, если не получается - проверяем мои документы
+
+    """
     path = get_document_path() + '/Элементы АИ.csv'
 
     with codecs.open(path, 'r', encoding='utf-8-sig') as csvfile:
@@ -144,7 +160,7 @@ def get_ai_variants():
                 continue
 
             material_variants.append(
-                GenericAI(
+                AICatalogElement(
                     row[rules.type_comment_column],
                     row[rules.name_column],
                     get_float_value(row[rules.d_column], rules.d_column),
@@ -156,11 +172,20 @@ def get_ai_variants():
     return material_variants
 
 def convert_to_mms(value):
+    """ Конвертирует из внутренних значений ревита в миллиметры """
     result = UnitUtils.ConvertFromInternalUnits(value,
         UnitTypeId.Millimeters)
     return result
 
-def get_variants_pool(element, variants, type_comment, dn):
+def get_variants_pool(element, catalog, type_comment, dn):
+    """ Получаем пул вариантов каталожных значений для элементов. Если варианты не были найдены - останавливаем работу
+
+        Args:
+            element: Element для которого ищется пул вариантов
+            catalog: Каталог элементов АИ
+            type_comment: Комментарий к типоразмеру, по нему сверяемся с каталогом
+            dn: Диаметр, по нему сверяемся с каталогом
+    """
 
     result = []
 
@@ -169,14 +194,14 @@ def get_variants_pool(element, variants, type_comment, dn):
 
     # Проверяем, есть ли совпадение по комментарию типоразмера
     if is_pipe:
-        for variant in variants:
+        for variant in catalog:
             if type_comment == variant.type_comment and dn == variant.dn:
                 result.append(variant)
 
     # Для изоляции очень редок случай точного совпадения диаметров, проверяем с погрешностью
     if is_insulation:
-        sorted_variants = sorted(variants, key=lambda x: x.dn, reverse=True)
-        for variant in sorted_variants:
+        sorted_catalog = sorted(catalog, key=lambda x: x.dn, reverse=True)
+        for variant in sorted_catalog:
             if type_comment == variant.type_comment and  variant.dn - 5 <= dn <= variant.dn:
                 result.append(variant)
 
@@ -191,6 +216,7 @@ def get_variants_pool(element, variants, type_comment, dn):
     return result
 
 def get_dn(ai_element):
+    """ Получение диаметра элемента """
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return convert_to_mms(ai_element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeInsulations) and ai_element.HostElementId is not None:
@@ -198,13 +224,15 @@ def get_dn(ai_element):
         return convert_to_mms(pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER))
 
 def create_new_row(element, variant, number):
+    """ Создание нового элемента  RowOfSpecification на базе Element из модели для последующей генерации якоря"""
+
     shared_function = element.GetParamValueOrDefault(
         SharedParamsConfig.Instance.EconomicFunction, unmodeling_factory.out_of_function_value)
     shared_system = element.GetParamValueOrDefault(
         SharedParamsConfig.Instance.VISSystemName, unmodeling_factory.out_of_system_value)
     mark = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISMarkNumber, '')
     maker = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISManufacturer, '')
-    unit = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISUnit, '')
+    unit = 'шт.' # В этом плагине мы бьем элементы поштучно, поэтому блокируем это значение
     note = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISNote, '')
     group = '8. Трубопроводы'
 
@@ -228,9 +256,13 @@ def create_new_row(element, variant, number):
 def separate_element(
                     ai_element,
                     variants_pool,
-                    family_symbol,
                     pipe_insulation_stock,
                     pipe_stock):
+    """
+    Делим элемент по длине между вариантами в его пуле,
+    и на базе этих отрезков создаем новые RowOfSpecification
+    """
+
     ai_element_len = convert_to_mms(ai_element.GetParamValue(BuiltInParameter.CURVE_ELEM_LENGTH))
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         ai_element_len = ai_element_len * pipe_stock
@@ -267,10 +299,19 @@ def separate_element(
 def process_ai_element(ai_element,
                        cash,
                        elements_to_generation,
-                       pipe_variants,
-                       family_symbol,
+                       catalog,
                        pipe_insulation_stock,
                        pipe_stock):
+    """ Обработка элемента помеченного как B4E_АИ, наполняем список элементов для генерации и кэш типоразмеров для оптимизации
+
+        Args:
+            ai_element: Element помеченный как АИ
+            elements_to_generation: Список на базе которого будут созданы Якоря, должен обновляться
+            catalog: Каталог АИ
+            pipe_insulation_stock: Запас изоляции
+            pipe_stock: Запас трубопроводов
+    """
+
     ai_element_type = ai_element.GetElementType()
     id = ai_element_type.Id
 
@@ -285,7 +326,7 @@ def process_ai_element(ai_element,
         variants_pool = cached_item.variants_pool
     else:
         # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
-        variants_pool = get_variants_pool(ai_element, pipe_variants, type_comment, ai_element_dn)
+        variants_pool = get_variants_pool(ai_element, catalog, type_comment, ai_element_dn)
         new_item = TypesCash(ai_element_dn, id, variants_pool)
         cash.append(new_item)
 
@@ -297,7 +338,6 @@ def process_ai_element(ai_element,
     generic_elements = separate_element(
                             ai_element,
                             variants_pool,
-                            family_symbol,
                             pipe_insulation_stock,
                             pipe_stock)
     elements_to_generation.extend(generic_elements)
@@ -352,27 +392,31 @@ def optimize_generation_list(new_rows):
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
+    # Стартовые проверки и поиск семейства якоря
+    family_symbol = unmodeling_factory.startup_checks(doc)
+
+    # Получаем запасы из сведений. Если параметра нет - запасов тоже нет(1)
     pipe_insulation_stock, pipe_stock = get_stocks()
 
-    ai_variants = get_ai_variants()
-
-    family_symbol = unmodeling_factory.startup_checks(doc)
+    # Получаем согласованный каталог из сетевой папки или из моих документов при отсутствии доступа
+    ai_catalog = get_ai_catalog()
 
     elements = list(chain(
         unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeCurves),
         unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
     ))
 
+    # Фильтруем те элементы у которых в имени типа есть "_B4E_АИ"
     ai_elements = filter_elements_ai(elements)
 
     cash = [] # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
     elements_to_generation = []
     for ai_element in ai_elements:
+        # Собираем элементы для генерации через сопоставление комментария к типоразмеру и диаметра элемента
         cash, elements_to_generation = process_ai_element(ai_element,
                                                           cash,
                                                           elements_to_generation,
-                                                          ai_variants,
-                                                          family_symbol,
+                                                          ai_catalog,
                                                           pipe_insulation_stock,
                                                           pipe_stock)
 
@@ -381,8 +425,11 @@ def script_execute(plugin_logger):
         unmodeling_factory.remove_models(doc, unmodeling_factory.ai_description)
 
         family_symbol.Activate()
+
         material_location = unmodeling_factory.get_base_location(doc)
 
+        # На данном этапе элементы созданы для каждого прямого участка трубы.
+        # Для оптимизации работы превращаем одинаковые элементы в один, складывая их числа
         elements_to_generation = optimize_generation_list(elements_to_generation)
 
         for element in elements_to_generation:
