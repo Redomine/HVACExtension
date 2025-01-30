@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-
-
+import sys
 import clr
 
 clr.AddReference("RevitAPI")
@@ -10,7 +9,6 @@ clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
-import ctypes
 import os
 import csv
 import codecs
@@ -18,15 +16,14 @@ import codecs
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
 
-from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
-from itertools import chain
-from dosymep.Bim4Everyone import *
-from dosymep.Bim4Everyone.SharedParams import *
-from collections import defaultdict
-from System import Environment
-
-from unmodeling_class_library import *
 from dosymep_libs.bim4everyone import *
+from dosymep.Bim4Everyone.SharedParams import SharedParamsConfig
+from dosymep.Bim4Everyone import *
+
+from itertools import chain
+from System import Environment
+from Autodesk.Revit.UI import TaskDialog
+from unmodeling_class_library import *
 
 doc = __revit__.ActiveUIDocument.Document
 uiapp = __revit__.Application
@@ -34,21 +31,38 @@ view = doc.ActiveView
 material_calculator = MaterialCalculator(doc)
 unmodeling_factory = UnmodelingFactory()
 
+
 class CSVRules:
     """ Класс-правило для нумерации столбцов в CSV """
     name_column = 0
     d_column = 0
     code_column = 0
+    mark_column = 0
+    maker_column = 0
     len_column = 0
-    thickness_column = 0
+
 
 class AICatalogElement:
-    def __init__(self, type_comment, name, dn, code, length):
+    def __init__(self,
+                 type_comment,
+                 name,
+                 dn,
+                 code,
+                 length,
+                 mark,
+                 maker):
         self.type_comment = type_comment
         self.name = name
         self.dn = dn
         self.code = code
         self.length = length
+        self.mark = mark
+        self.maker = maker
+
+class UpdateElement:
+    def __init__(self, element, data):
+        self.element = element
+        self.data = data
 
 class TypesCash:
     def __init__(self, dn, id, variants_pool):
@@ -63,30 +77,37 @@ def get_document_path():
     Returns:
         str: Путь к документу.
     """
-    path = \
-        "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/AIEquipment/"
+    # Исходный путь к файлу
+    network_path = "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/AIEquipment/"
+    file_name = 'Элементы АИ.csv'
+    full_network_path = os.path.join(network_path, file_name)
 
-    if not (os.path.exists(path) and os.access(path, os.R_OK) and os.access(path, os.W_OK)):
-        version = uiapp.VersionNumber
-        documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+    # Проверка доступности сетевого пути
+    if os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK):
+        return full_network_path
 
-        path = os.path.join(documents_path,
-                            'dosymep',
-                            str(version),
-                            'AIEquipment/')
+    # Если сетевой путь недоступен, используем локальный путь
+    version = uiapp.VersionNumber
+    documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+    local_path = os.path.join(documents_path, 'dosymep', str(version), 'AIEquipment')
+    full_local_path = os.path.join(local_path, file_name)
 
-        if not os.path.exists(path):
-            os.makedirs(path)
-            report = ('Нет доступа к сетевому диску. Разместите таблицы выбора по пути: {} \n'
-                      'Открыть папку?').format(path)
+    # Создаем локальную директорию, если она не существует
+    if not os.path.exists(local_path):
+        os.makedirs(local_path)
 
-            # Вызов MessageBox из Windows API
-            result = ctypes.windll.user32.MessageBoxW(0, report, "Внимание", 4)
 
-            if result == 6:
-                os.startfile(path)
+    # Если файл отсутствует, уведомляем пользователя
+    if not os.path.exists(full_local_path):
+        report = ('Нет доступа к сетевому диску. Разместите таблицы выбора по пути: {} \n'
+                  'Открыть папку?').format(local_path)
 
-    return path
+        if show_dialog(report):
+            os.startfile(local_path)
+
+        sys.exit()
+
+    return full_local_path
 
 def filter_elements_ai(elements):
     """ Оставляет от исходного списка только те элементы, у которых есть _B4E_АИ в назвнии типа
@@ -126,14 +147,8 @@ def get_ai_catalog():
     Изначально ищет в сетевых папках, если не получается - проверяем мои документы
 
     """
-    path = get_document_path()
-    file_name = '/Элементы АИ.csv'
-    full_path = path + file_name
 
-    if not os.path.exists(full_path):
-        forms.alert("Файл таблиц выбора не обнаружен.", "Ошибка", exitscript=True)
-
-    with codecs.open(full_path, 'r', encoding='utf-8-sig') as csvfile:
+    with codecs.open(get_document_path(), 'r', encoding='utf-8-sig') as csvfile:
         material_variants = []
         csvreader = csv.reader(csvfile, delimiter=";")
         headers = next(csvreader)
@@ -141,9 +156,11 @@ def get_ai_catalog():
         rules = CSVRules()
 
         rules.type_comment_column = get_column_index(headers,'Комментарий к типоразмеру')
-        rules.name_column = get_column_index(headers,'Наименование')
         rules.d_column = get_column_index(headers,'Диаметр')
+        rules.name_column = get_column_index(headers,'Наименование')
+        rules.mark_column = get_column_index(headers, 'Марка')
         rules.code_column = get_column_index(headers,'Артикул')
+        rules.maker_column = get_column_index(headers, 'Завод-изготовитель')
         rules.len_column = get_column_index(headers,'Длина трубы')
 
         # Итерируемся по строкам в файле
@@ -160,7 +177,9 @@ def get_ai_catalog():
                     row[rules.name_column],
                     get_float_value(row[rules.d_column], rules.d_column),
                     row[rules.code_column],
-                    get_float_value(row[rules.len_column], rules.len_column)
+                    get_float_value(row[rules.len_column], rules.len_column),
+                    row[rules.mark_column],
+                    row[rules.maker_column]
                 )
             )
 
@@ -236,9 +255,9 @@ def create_new_row(element, variant, number):
         shared_function,
         group,
         name=variant.name,
-        mark=mark,
+        mark=variant.mark,
         code=variant.code,
-        maker=maker,
+        maker=variant.maker,
         unit=unit,
         local_description=unmodeling_factory.ai_description,
         number=number,
@@ -294,6 +313,7 @@ def separate_element(
 def process_ai_element(ai_element,
                        cash,
                        elements_to_generation,
+                       elements_to_update,
                        catalog,
                        pipe_insulation_stock,
                        pipe_stock):
@@ -302,6 +322,7 @@ def process_ai_element(ai_element,
         Args:
             ai_element: Element помеченный как АИ
             elements_to_generation: Список на базе которого будут созданы Якоря, должен обновляться
+            elements_to_update: Элементы которые будут обновлены без создания якорей, должен обновляться
             catalog: Каталог АИ
             pipe_insulation_stock: Запас изоляции
             pipe_stock: Запас трубопроводов
@@ -326,9 +347,17 @@ def process_ai_element(ai_element,
         cash.append(new_item)
 
     # Если нет совпадений по комментарию типоразмера - продолжаем перебор
+    if len(variants_pool) == 0:
+        return cash, elements_to_generation, elements_to_update
+
     # Если заявленная длина в каталоге 0 - элемент не бьется на части, можно пропускать
-    if len(variants_pool) == 0 or variants_pool[0].length == 0:
-        return cash, elements_to_generation
+    if variants_pool[0].length == 0:
+        elements_to_update.append(
+            UpdateElement(ai_element, variants_pool[0])
+            # Добавляем только 0-ой индекс, т.к.
+            # для элементов без длины нет вариативности по диаметрам
+        )
+        return cash, elements_to_generation, elements_to_update
 
     generic_elements = separate_element(
                             ai_element,
@@ -337,7 +366,7 @@ def process_ai_element(ai_element,
                             pipe_stock)
     elements_to_generation.extend(generic_elements)
 
-    return cash, elements_to_generation
+    return cash, elements_to_generation, elements_to_update
 
 def get_stocks():
     def get_percent_value(info, param):
@@ -383,6 +412,32 @@ def optimize_generation_list(new_rows):
     result.extend(unique_rows.values())
     return result
 
+def update_element(element, variant):
+    element.SetParamValue(SharedParamsConfig.Instance.VISCombinedName, variant.name)
+    element.SetParamValue(SharedParamsConfig.Instance.VISMarkNumber, variant.mark)
+    element.SetParamValue(SharedParamsConfig.Instance.VISItemCode, variant.code)
+    element.SetParamValue(SharedParamsConfig.Instance.VISManufacturer, variant.maker)
+
+def show_dialog(instr, content = ''):
+    # Создаем экземпляр TaskDialog
+    dialog = TaskDialog("Внимание")
+
+    # Устанавливаем заголовок и содержимое диалога
+    dialog.MainInstruction = instr
+    dialog.MainContent = content
+
+    # Устанавливаем кнопки
+    dialog.CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No
+
+    # Отображаем диалог и получаем результат
+    result = dialog.Show()
+
+    # Обрабатываем результат
+    if result == TaskDialogResult.Yes:
+        return True
+    elif result == TaskDialogResult.No:
+        return False
+
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -406,11 +461,13 @@ def script_execute(plugin_logger):
 
     cash = [] # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
     elements_to_generation = []
+    elements_to_update = []
     for ai_element in ai_elements:
         # Собираем элементы для генерации через сопоставление комментария к типоразмеру и диаметра элемента
-        cash, elements_to_generation = process_ai_element(ai_element,
+        cash, elements_to_generation, elements_to_update = process_ai_element(ai_element,
                                                           cash,
                                                           elements_to_generation,
+                                                          elements_to_update,
                                                           ai_catalog,
                                                           pipe_insulation_stock,
                                                           pipe_stock)
@@ -433,5 +490,9 @@ def script_execute(plugin_logger):
             unmodeling_factory.create_new_position(doc, element, family_symbol,
                                                    unmodeling_factory.ai_description,
                                                    material_location)
+
+        for element in elements_to_update:
+            update_element(element.element, element.data)
+
 
 script_execute()
