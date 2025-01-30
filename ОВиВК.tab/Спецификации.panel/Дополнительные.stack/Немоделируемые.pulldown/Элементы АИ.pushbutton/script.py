@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import sys
 import clr
-
 clr.AddReference("RevitAPI")
 clr.AddReference("RevitAPIUI")
 clr.AddReference("dosymep.Revit.dll")
@@ -31,9 +30,8 @@ view = doc.ActiveView
 material_calculator = MaterialCalculator(doc)
 unmodeling_factory = UnmodelingFactory()
 
-
 class CSVRules:
-    """ Класс-правило для нумерации столбцов в CSV """
+    """Класс-правило для нумерации столбцов в CSV"""
     name_column = 0
     d_column = 0
     code_column = 0
@@ -41,16 +39,8 @@ class CSVRules:
     maker_column = 0
     len_column = 0
 
-
 class AICatalogElement:
-    def __init__(self,
-                 type_comment,
-                 name,
-                 dn,
-                 code,
-                 length,
-                 mark,
-                 maker):
+    def __init__(self, type_comment, name, dn, code, length, mark, maker):
         self.type_comment = type_comment
         self.name = name
         self.dn = dn
@@ -96,7 +86,6 @@ def get_document_path():
     if not os.path.exists(local_path):
         os.makedirs(local_path)
 
-
     # Если файл отсутствует, уведомляем пользователя
     if not os.path.exists(full_local_path):
         report = ('Нет доступа к сетевому диску. Разместите таблицы выбора по пути: {} \n'
@@ -110,10 +99,10 @@ def get_document_path():
     return full_local_path
 
 def filter_elements_ai(elements):
-    """ Оставляет от исходного списка только те элементы, у которых есть _B4E_АИ в назвнии типа
+    """Оставляет от исходного списка только те элементы, у которых есть _B4E_АИ в назвнии типа
 
-        Args:
-            elements: Список Element из модели
+    Args:
+        elements: Список Element из модели
     """
     result = []
     for element in elements:
@@ -123,12 +112,12 @@ def filter_elements_ai(elements):
     return result
 
 def get_column_index(headers, name):
-    """ Возвращает индекс столбца, если нужного столбца нет - останавливает работу
+    """Возвращает индекс столбца, если нужного столбца нет - останавливает работу
 
-        Args:
-            headers: Заголовки из CSV файла
-            name: Имя искомого столбца
-            """
+    Args:
+        headers: Заголовки из CSV файла
+        name: Имя искомого столбца
+    """
     if name in headers:
         return headers.index(name)
     else:
@@ -143,9 +132,8 @@ def get_float_value(value, column_number):
                     exitscript=True)
 
 def get_ai_catalog():
-    """ Возвращает АИ каталог в виде списка из экземпляров AICatalogElement.
+    """Возвращает АИ каталог в виде списка из экземпляров AICatalogElement.
     Изначально ищет в сетевых папках, если не получается - проверяем мои документы
-
     """
 
     with codecs.open(get_document_path(), 'r', encoding='utf-8-sig') as csvfile:
@@ -155,13 +143,13 @@ def get_ai_catalog():
 
         rules = CSVRules()
 
-        rules.type_comment_column = get_column_index(headers,'Комментарий к типоразмеру')
-        rules.d_column = get_column_index(headers,'Диаметр')
-        rules.name_column = get_column_index(headers,'Наименование')
+        rules.type_comment_column = get_column_index(headers, 'Комментарий к типоразмеру')
+        rules.d_column = get_column_index(headers, 'Диаметр')
+        rules.name_column = get_column_index(headers, 'Наименование')
         rules.mark_column = get_column_index(headers, 'Марка')
-        rules.code_column = get_column_index(headers,'Артикул')
+        rules.code_column = get_column_index(headers, 'Артикул')
         rules.maker_column = get_column_index(headers, 'Завод-изготовитель')
-        rules.len_column = get_column_index(headers,'Длина трубы')
+        rules.len_column = get_column_index(headers, 'Длина трубы')
 
         # Итерируемся по строкам в файле
         for row in csvreader:
@@ -186,19 +174,19 @@ def get_ai_catalog():
     return material_variants
 
 def convert_to_mms(value):
-    """ Конвертирует из внутренних значений ревита в миллиметры """
+    """Конвертирует из внутренних значений ревита в миллиметры"""
     result = UnitUtils.ConvertFromInternalUnits(value,
-        UnitTypeId.Millimeters)
+                                               UnitTypeId.Millimeters)
     return result
 
 def get_variants_pool(element, catalog, type_comment, dn):
-    """ Получаем пул вариантов каталожных значений для элементов. Если варианты не были найдены - останавливаем работу
+    """Получаем пул вариантов каталожных значений для элементов. Если варианты не были найдены - останавливаем работу
 
-        Args:
-            element: Element для которого ищется пул вариантов
-            catalog: Каталог элементов АИ
-            type_comment: Комментарий к типоразмеру, по нему сверяемся с каталогом
-            dn: Диаметр, по нему сверяемся с каталогом
+    Args:
+        element: Element для которого ищется пул вариантов
+        catalog: Каталог элементов АИ
+        type_comment: Комментарий к типоразмеру, по нему сверяемся с каталогом
+        dn: Диаметр, по нему сверяемся с каталогом
     """
 
     result = []
@@ -216,7 +204,7 @@ def get_variants_pool(element, catalog, type_comment, dn):
     if is_insulation:
         sorted_catalog = sorted(catalog, key=lambda x: x.dn, reverse=True)
         for variant in sorted_catalog:
-            if type_comment == variant.type_comment and  variant.dn - 5 <= dn <= variant.dn:
+            if type_comment == variant.type_comment and variant.dn - 5 <= dn <= variant.dn:
                 result.append(variant)
 
     if len(result) == 0:
@@ -230,7 +218,7 @@ def get_variants_pool(element, catalog, type_comment, dn):
     return result
 
 def get_dn(ai_element):
-    """ Получение диаметра элемента """
+    """Получение диаметра элемента"""
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeCurves):
         return convert_to_mms(ai_element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeInsulations) and ai_element.HostElementId is not None:
@@ -238,7 +226,7 @@ def get_dn(ai_element):
         return convert_to_mms(pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER))
 
 def create_new_row(element, variant, number):
-    """ Создание нового элемента  RowOfSpecification на базе Element из модели для последующей генерации якоря"""
+    """Создание нового элемента RowOfSpecification на базе Element из модели для последующей генерации якоря"""
 
     shared_function = element.GetParamValueOrDefault(
         SharedParamsConfig.Instance.EconomicFunction, unmodeling_factory.out_of_function_value)
@@ -246,7 +234,7 @@ def create_new_row(element, variant, number):
         SharedParamsConfig.Instance.VISSystemName, unmodeling_factory.out_of_system_value)
     mark = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISMarkNumber, '')
     maker = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISManufacturer, '')
-    unit = 'шт.' # В этом плагине мы бьем элементы поштучно, поэтому блокируем это значение
+    unit = 'шт.'  # В этом плагине мы бьем элементы поштучно, поэтому блокируем это значение
     note = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISNote, '')
     group = '8. Трубопроводы'
 
@@ -267,11 +255,7 @@ def create_new_row(element, variant, number):
 
     return new_row
 
-def separate_element(
-                    ai_element,
-                    variants_pool,
-                    pipe_insulation_stock,
-                    pipe_stock):
+def separate_element(ai_element, variants_pool, pipe_insulation_stock, pipe_stock):
     """
     Делим элемент по длине между вариантами в его пуле,
     и на базе этих отрезков создаем новые RowOfSpecification
@@ -310,22 +294,17 @@ def separate_element(
             )
     return result
 
-def process_ai_element(ai_element,
-                       cash,
-                       elements_to_generation,
-                       elements_to_update,
-                       catalog,
-                       pipe_insulation_stock,
-                       pipe_stock):
-    """ Обработка элемента помеченного как B4E_АИ, наполняем список элементов для генерации и кэш типоразмеров для оптимизации
+def process_ai_element(ai_element, cash, elements_to_generation, elements_to_update, catalog,
+                       pipe_insulation_stock, pipe_stock):
+    """Обработка элемента помеченного как B4E_АИ, наполняем список элементов для генерации и кэш типоразмеров для оптимизации
 
-        Args:
-            ai_element: Element помеченный как АИ
-            elements_to_generation: Список на базе которого будут созданы Якоря, должен обновляться
-            elements_to_update: Элементы которые будут обновлены без создания якорей, должен обновляться
-            catalog: Каталог АИ
-            pipe_insulation_stock: Запас изоляции
-            pipe_stock: Запас трубопроводов
+    Args:
+        ai_element: Element помеченный как АИ
+        elements_to_generation: Список на базе которого будут созданы Якоря, должен обновляться
+        elements_to_update: Элементы которые будут обновлены без создания якорей, должен обновляться
+        catalog: Каталог АИ
+        pipe_insulation_stock: Запас изоляции
+        pipe_stock: Запас трубопроводов
     """
 
     ai_element_type = ai_element.GetElementType()
@@ -360,10 +339,10 @@ def process_ai_element(ai_element,
         return cash, elements_to_generation, elements_to_update
 
     generic_elements = separate_element(
-                            ai_element,
-                            variants_pool,
-                            pipe_insulation_stock,
-                            pipe_stock)
+        ai_element,
+        variants_pool,
+        pipe_insulation_stock,
+        pipe_stock)
     elements_to_generation.extend(generic_elements)
 
     return cash, elements_to_generation, elements_to_update
@@ -418,7 +397,7 @@ def update_element(element, variant):
     element.SetParamValue(SharedParamsConfig.Instance.VISItemCode, variant.code)
     element.SetParamValue(SharedParamsConfig.Instance.VISManufacturer, variant.maker)
 
-def show_dialog(instr, content = ''):
+def show_dialog(instr, content=''):
     dialog = TaskDialog("Внимание")
     dialog.MainInstruction = instr
     dialog.MainContent = content
@@ -430,7 +409,6 @@ def show_dialog(instr, content = ''):
         return True
     elif result == TaskDialogResult.No:
         return False
-
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -452,18 +430,18 @@ def script_execute(plugin_logger):
     # Фильтруем те элементы у которых в имени типа есть "_B4E_АИ"
     ai_elements = filter_elements_ai(elements)
 
-    cash = [] # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
+    cash = []  # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
     elements_to_generation = []
     elements_to_update = []
     for ai_element in ai_elements:
         # Собираем элементы для генерации через сопоставление комментария к типоразмеру и диаметра элемента
         cash, elements_to_generation, elements_to_update = process_ai_element(ai_element,
-                                                          cash,
-                                                          elements_to_generation,
-                                                          elements_to_update,
-                                                          ai_catalog,
-                                                          pipe_insulation_stock,
-                                                          pipe_stock)
+                                                                             cash,
+                                                                             elements_to_generation,
+                                                                             elements_to_update,
+                                                                             ai_catalog,
+                                                                             pipe_insulation_stock,
+                                                                             pipe_stock)
 
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
@@ -481,11 +459,10 @@ def script_execute(plugin_logger):
             material_location = unmodeling_factory.update_location(material_location)
 
             unmodeling_factory.create_new_position(doc, element, family_symbol,
-                                                   unmodeling_factory.ai_description,
-                                                   material_location)
+                                                  unmodeling_factory.ai_description,
+                                                  material_location)
 
         for element in elements_to_update:
             update_element(element.element, element.data)
-
 
 script_execute()
