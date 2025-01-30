@@ -419,20 +419,13 @@ def update_element(element, variant):
     element.SetParamValue(SharedParamsConfig.Instance.VISManufacturer, variant.maker)
 
 def show_dialog(instr, content = ''):
-    # Создаем экземпляр TaskDialog
     dialog = TaskDialog("Внимание")
-
-    # Устанавливаем заголовок и содержимое диалога
     dialog.MainInstruction = instr
     dialog.MainContent = content
-
-    # Устанавливаем кнопки
     dialog.CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No
 
-    # Отображаем диалог и получаем результат
     result = dialog.Show()
 
-    # Обрабатываем результат
     if result == TaskDialogResult.Yes:
         return True
     elif result == TaskDialogResult.No:
