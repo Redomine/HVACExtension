@@ -13,12 +13,9 @@ clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
 import glob
-import re
-import sys
-import json
 import os
-import ctypes
-import codecs
+import datetime
+import pytz
 
 clr.ImportExtensions(dosymep.Revit)
 clr.ImportExtensions(dosymep.Bim4Everyone)
@@ -33,13 +30,10 @@ from pyrevit import EXEC_PARAMS
 
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
-from collections import defaultdict
 
 from dosymep_libs.bim4everyone import *
-from System.Collections.Generic import List
 
-from datetime import datetime, timedelta
-from System import Environment
+
 
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
@@ -47,6 +41,7 @@ uidoc = __revit__.ActiveUIDocument
 uiapp = __revit__.Application
 
 operator = JsonOperator(doc, uiapp)
+
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
@@ -64,14 +59,14 @@ def script_execute(plugin_logger):
     # Находим файл с самым поздним временем модификации
     latest_file = max(json_files, key=os.path.getmtime)
 
-    file_exists = latest_file is not None and os.path.exists(latest_file)
+    date = operator.get_moscow_date()
 
-    if not file_exists:
-        forms.alert('Файлов-заданий не существует',
+    if date not in latest_file:
+        forms.alert('Файлов-заданий за сегодняшнее число не существует.',
                     "Ошибка", exitscript=True)
     else:
         report = ("Данное действие невозможно отменить. "
-                  "Данные последней ревизии будут удалены и могут быть только добавлены заново. Удалить файл?")
+                  "Данные сегодняшней ревизии будут удалены и могут быть только добавлены заново. Удалить файл?")
 
         result = operator.show_dialog(report)
 
