@@ -50,8 +50,8 @@ def split_valves_by_floors(valves):
     valves_by_floors = {}
 
     for valve in valves:
-        floor_name = valve.GetParamValueOrDefault("ФОП_Этаж")
-        system_name = valve.GetParamValueOrDefault("ФОП_ВИС_Имя системы")
+        floor_name = valve.GetParamValueOrDefault(FLOOR_PARAM)
+        system_name = valve.GetParamValueOrDefault(SYSTEM_PARAM)
 
         is_floor_name_exists = floor_name is None or floor_name == ""
         is_system_name_exists = system_name is None or system_name == "!Нет системы" or system_name == ""
@@ -67,10 +67,14 @@ def split_valves_by_floors(valves):
 
         valve_base_name = system_name + "-" + floor_name
 
-        valves_by_floors[floor_name].append(LowVoltageSystemData(valve.Id,
-                                                                 creation_date=operator.get_moscow_date(),
-                                                                 valve_base_name= valve_base_name),
-                                                                )
+        valves_by_floors[floor_name].append(LowVoltageSystemData
+            (
+                valve.Id,
+                creation_date=operator.get_moscow_date(),
+                valve_base_name= valve_base_name,
+                element=valve
+            )
+        )
 
     return valves_by_floors
 
@@ -82,7 +86,12 @@ def use_open_algorithm(valves, max_numbers):
     for floor_name, valve_data_instances in valves_by_floors.items():
         count = 0
         for valve_data in valve_data_instances:
-            key = "НО-" + valve_data.valve_base_name
+            if valve_data.element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
+                key = valve_data.valve_base_name
+            else:
+                key = "НО-" + valve_data.valve_base_name
+
+
 
             # Проверяем, существует ли ключ в словаре max_numbers
             if key in max_numbers and count < max_numbers[key]:
@@ -90,7 +99,7 @@ def use_open_algorithm(valves, max_numbers):
             else:
                 count += 1
 
-            valve_data.json_name = "НО-" + valve_data.valve_base_name + "." + str(count)
+            valve_data.json_name = key + "." + str(count)
 
             result.append(valve_data)
 
@@ -132,7 +141,7 @@ def split_collection(equipment_collection):
             equipment_elements.append(element)
 
         if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
-            mark = element.GetSharedParamValueOrDefault("ФОП_ВИС_Марка")
+            mark = element.GetSharedParamValueOrDefault(MARK_PARAM)
             if mark is not None and mark != "":
                 if "НО" in mark:
                     open_valves.append(element)
@@ -166,11 +175,11 @@ def get_elements_to_objective(elements):
     filtered_elements = []
     for element in elements:
 
-        if element.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку") == 1:
+        if element.GetParamValueOrDefault(CREATE_TASK_SS_PARAM) == 1:
             filtered_elements.append(element)
         else:
             element_type = element.GetElementType()
-            if element_type.GetParamValueOrDefault("ФОП_ВИС_СС Сформировать марку") == 1:
+            if element_type.GetParamValueOrDefault(CREATE_TASK_SS_PARAM) == 1:
                 filtered_elements.append(element)
 
     return  filtered_elements
@@ -217,8 +226,26 @@ def clear_param_false_values(elements, json_data):
     Если их не существует - обнуляем значения марок, считается что это ошибка '''
     for element in elements:
         if not any(element.Id == data.id for data in json_data):
-            element.SetParamValue("ФОП_ВИС_СС Марка задания", "")
-            element.SetParamValue("ФОП_ВИС_СС Дата задания", "")
+            element.SetParamValue(TASK_SS_PARAM, "")
+            element.SetParamValue(DATE_SS_PARAM, "")
+
+def setup_params():
+    revit_params = [MARK_PARAM,
+                    FLOOR_PARAM,
+                    SYSTEM_PARAM
+                    ]
+
+    project_parameters = ProjectParameters.Create(self.doc.Application)
+    project_parameters.SetupRevitParams(self.doc, revit_params)
+
+
+MARK_PARAM = SharedParamsConfig.Instance.VISMarkNumber
+FLOOR_PARAM = SharedParamsConfig.Instance.Level
+SYSTEM_PARAM = SharedParamsConfig.Instance.VISSystemName
+TASK_SS_PARAM = 'ФОП_ВИС_СС Марка задания'
+DATE_SS_PARAM = 'ФОП_ВИС_СС Дата задания'
+CREATE_TASK_SS_PARAM = 'ФОП_ВИС_СС Сформировать марку'
+
 
 operator = JsonOperator(doc, uiapp)
 

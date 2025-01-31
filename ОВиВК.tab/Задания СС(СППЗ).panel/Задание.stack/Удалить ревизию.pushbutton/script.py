@@ -73,10 +73,9 @@ def script_execute(plugin_logger):
         report = ("Данное действие невозможно отменить. "
                   "Данные последней ревизии будут удалены и могут быть только добавлены заново. Удалить файл?")
 
-        # Вызов MessageBox из Windows API
-        result = ctypes.windll.user32.MessageBoxW(0, report, "Внимание", 4)
+        result = operator.show_dialog(report)
 
-        if result == 6:  # IDYES
+        if result:
             os.remove(latest_file)
 
 script_execute()

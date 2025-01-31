@@ -99,12 +99,6 @@ class EditedReport:
             forms.alert(report_message, "Ошибка", exitscript=True)
 
 class LowVoltageSystemData:
-    id = ''
-    valve_base_name = ''
-    autor_name = ''
-    json_name = ''
-    creation_date = ''
-    deletion_date = ''
 
     def __init__(self,
                  id,
@@ -112,7 +106,8 @@ class LowVoltageSystemData:
                  valve_base_name='',
                  autor_name=__revit__.Application.Username,
                  json_name='',
-                 deletion_date=''
+                 deletion_date='',
+                 element=None
                  ):
         """
         Инициализация объекта LowVoltageSystemData.
@@ -131,6 +126,7 @@ class LowVoltageSystemData:
         self.json_name = json_name
         self.creation_date = creation_date
         self.deletion_date = deletion_date
+        self.element = element
 
     def to_dict(self):
         """
@@ -166,6 +162,19 @@ class JsonOperator:
         self.doc = doc
         self.uiapp = uiapp
 
+    def show_dialog(self, instr, content=''):
+        dialog = TaskDialog("Внимание")
+        dialog.MainInstruction = instr
+        dialog.MainContent = content
+        dialog.CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No
+
+        result = dialog.Show()
+
+        if result == TaskDialogResult.Yes:
+            return True
+        elif result == TaskDialogResult.No:
+            return False
+
     def get_document_path(self):
         """
         Возвращает путь к документу.
@@ -173,31 +182,39 @@ class JsonOperator:
         Returns:
             str: Путь к документу.
         """
-        path = \
-            "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/EquipmentNumbering/"
+        # Основной путь к сетевому диску
+        network_path = (
+            "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/"
+            "5-Надстройки/Bim4Everyone/A101/MEP/EquipmentNumbering/"
+        )
 
-        if not (os.path.exists(path) and os.access(path, os.R_OK) and os.access(path, os.W_OK)):
-            version = self.uiapp.VersionNumber
-            documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        # Проверяем доступность сетевого пути
+        if not (os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK)):
+            my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            # Если сетевой путь недоступен, используем локальный путь
+            local_path = os.path.join(
+                my_documents_path,
+                'dosymep',
+                str(self.uiapp.VersionNumber),
+                'RevitMEPNumeration'
+            )
+            path = local_path
 
-            path = os.path.join(documents_path,
-                                'dosymep',
-                                str(version),
-                                'RevitMEPNumeration/')
-
-            report = ('Нет доступа к сетевому диску. Файлы задания обрабатываются из папки: {} \n'
-                      'Открыть папку с файлами?').format(path)
-
-            # Вызов MessageBox из Windows API
-            result = ctypes.windll.user32.MessageBoxW(0, report, "Внимание", 4)
-
-            if result == 6:  # IDYES
+            # Уведомляем пользователя и открываем папку, если нужно
+            report = (
+                'Нет доступа к сетевому диску. Файлы задания обрабатываются из папки: {} \n'
+                'Открыть папку с файлами?'
+            ).format(path)
+            if self.show_dialog(report):
                 os.startfile(path)
+        else:
+            # Используем сетевой путь, если он доступен
+            path = network_path
 
-        project_name = self.get_project_name()
-        project_path = path + project_name
-
-        self.create_folder_if_not_exist(project_path)
+        # Добавляем имя проекта к пути и создаём папку, если её нет
+        project_path = os.path.join(path, self.get_project_name())
+        if not os.path.exists(project_path):
+            os.makedirs(project_path)
 
         return project_path
 
