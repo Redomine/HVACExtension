@@ -32,9 +32,11 @@ from pyrevit import EXEC_PARAMS
 
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
+from dosymep.Bim4Everyone.Templates import ProjectParameters
 from collections import defaultdict
 
 from dosymep_libs.bim4everyone import *
+
 from System.Collections.Generic import List
 
 from datetime import datetime, timedelta
@@ -141,7 +143,8 @@ def split_collection(equipment_collection):
             equipment_elements.append(element)
 
         if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
-            mark = element.GetSharedParamValueOrDefault(MARK_PARAM)
+            mark = element.GetParamValueOrDefault(MARK_PARAM)
+
             if mark is not None and mark != "":
                 if "НО" in mark:
                     open_valves.append(element)
@@ -174,7 +177,6 @@ def get_elements_to_objective(elements):
     ''' Фильтруем, у каких элементов модели стоит галочка для добавления в задание '''
     filtered_elements = []
     for element in elements:
-
         if element.GetParamValueOrDefault(CREATE_TASK_SS_PARAM) == 1:
             filtered_elements.append(element)
         else:
@@ -232,11 +234,14 @@ def clear_param_false_values(elements, json_data):
 def setup_params():
     revit_params = [MARK_PARAM,
                     FLOOR_PARAM,
-                    SYSTEM_PARAM
+                    SYSTEM_PARAM,
+                    TASK_SS_PARAM,
+                    DATE_SS_PARAM,
+                    CREATE_TASK_SS_PARAM
                     ]
 
-    project_parameters = ProjectParameters.Create(self.doc.Application)
-    project_parameters.SetupRevitParams(self.doc, revit_params)
+    project_parameters = ProjectParameters.Create(doc.Application)
+    project_parameters.SetupRevitParams(doc, revit_params)
 
 
 MARK_PARAM = SharedParamsConfig.Instance.VISMarkNumber
@@ -246,7 +251,6 @@ TASK_SS_PARAM = SharedParamsConfig.Instance.VISTaskSSMark
 DATE_SS_PARAM = SharedParamsConfig.Instance.VISTaskSSDate
 CREATE_TASK_SS_PARAM = SharedParamsConfig.Instance.VISTaskSSAdd
 
-
 operator = JsonOperator(doc, uiapp)
 
 @notification()
@@ -254,6 +258,8 @@ operator = JsonOperator(doc, uiapp)
 def script_execute(plugin_logger):
     if doc.IsFamilyDocument:
         forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
+
+    setup_params()
 
     file_folder_path = operator.get_document_path()
 
