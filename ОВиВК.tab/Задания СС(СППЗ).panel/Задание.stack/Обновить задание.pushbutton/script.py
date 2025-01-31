@@ -52,16 +52,8 @@ def split_equipment_by_floors(equipment_elements):
     equpment_by_floors = {}
 
     for equipment in equipment_elements:
-        floor_name = equipment.GetParamValueOrDefault(FLOOR_PARAM)
-        system_name = equipment.GetParamValueOrDefault(SYSTEM_PARAM)
-
-        is_floor_name_exists = floor_name is None or floor_name == ""
-        is_system_name_exists = system_name is None or system_name == "!Нет системы" or system_name == ""
-
-        if is_floor_name_exists or is_system_name_exists:
-            report = ("У части отмеченного для задания оборудования не заполнено ФОП_ВИС_Имя системы или ФОП_Этаж. "
-                      "Устраните проблему и повторите запуск скрипта. Пример элемента с ошибкой: {}").format(equipment.Id)
-            forms.alert(report, "Ошибка", exitscript=True)
+        floor_name = get_value_if_para_not_empty(equipment, FLOOR_PARAM)
+        system_name = get_value_if_para_not_empty(equipment, SYSTEM_PARAM)
 
         if floor_name not in equpment_by_floors:
             equpment_by_floors[floor_name] = []
@@ -78,6 +70,17 @@ def split_equipment_by_floors(equipment_elements):
         )
 
     return equpment_by_floors
+
+def get_value_if_para_not_empty(element, param):
+    value = element.GetParamValueOrDefault(param)
+    if value is None or value == "!Нет системы" or value == "":
+        report = (("У части отмеченного для задания оборудования не заполнен параметр {}. "
+                  "Выполните полное обновление и повторите запуск скрипта. Пример элемента с ошибкой: {}")
+                  .format(param.Name, element.Id))
+        forms.alert(report, "Ошибка", exitscript=True)
+
+    return value
+
 
 def use_open_algorithm(equipment_elements, max_numbers):
     ''' Создаем имена для списка элементов используя алгоритм для открытых клапанов от СППЗ '''
@@ -140,13 +143,12 @@ def split_collection(equipment_collection):
             equipment_elements.append(element)
 
         if element.Category.IsId(BuiltInCategory.OST_DuctAccessory):
-            mark = element.GetParamValueOrDefault(MARK_PARAM)
+            mark = get_value_if_para_not_empty(element, MARK_PARAM)
 
-            if mark is not None and mark != "":
-                if "НО" in mark:
-                    open_valves.append(element)
-                if "НЗ" in mark:
-                    closed_valves.append(element)
+            if "НО" in mark:
+                open_valves.append(element)
+            if "НЗ" in mark:
+                closed_valves.append(element)
 
 
     return open_valves, closed_valves, equipment_elements
@@ -174,6 +176,8 @@ def get_elements_to_objective(elements):
     ''' Фильтруем, у каких элементов модели стоит галочка для добавления в задание '''
     filtered_elements = []
     for element in elements:
+
+
         if element.GetParamValueOrDefault(CREATE_TASK_SS_PARAM) == 1:
             filtered_elements.append(element)
         else:
