@@ -31,7 +31,6 @@ material_calculator = MaterialCalculator(doc)
 unmodeling_factory = UnmodelingFactory()
 
 class CSVRules:
-    """Класс-правило для нумерации столбцов в CSV"""
     name_column = 0
     d_column = 0
     code_column = 0
@@ -99,14 +98,14 @@ def get_document_path():
     return full_local_path
 
 def filter_elements_ai(elements):
-    """Оставляет от исходного списка только те элементы, у которых есть _B4E_АИ в назвнии типа
+    """Оставляет от исходного списка только те элементы, у которых есть _B4E_AI в назвнии типа
 
     Args:
         elements: Список Element из модели
     """
     result = []
     for element in elements:
-        if '_B4E_АИ' in element.Name:
+        if '_B4E_AI' in element.Name:
             result.append(element)
 
     return result
@@ -208,7 +207,7 @@ def get_variants_pool(element, catalog, type_comment, dn):
                 result.append(variant)
 
     if len(result) == 0:
-        forms.alert("Часть элементов в модели, помеченных как B4E_АИ, не обнаружена в согласованных каталогах, "
+        forms.alert("Часть элементов в модели, помеченных как _B4E_AI, не обнаружена в согласованных каталогах, "
                     "что может привести к не полному формированию спецификации. "
                     "Устраните расхождения перед продолжением работы. \n"
                     "Пример элемента - ID:{}".format(element.Id),
@@ -296,7 +295,7 @@ def separate_element(ai_element, variants_pool, pipe_insulation_stock, pipe_stoc
 
 def process_ai_element(ai_element, cash, elements_to_generation, elements_to_update, catalog,
                        pipe_insulation_stock, pipe_stock):
-    """Обработка элемента помеченного как B4E_АИ, наполняем список элементов для генерации и кэш типоразмеров для оптимизации
+    """Обработка элемента помеченного как _B4E_AI, наполняем список элементов для генерации и кэш типоразмеров для оптимизации
 
     Args:
         ai_element: Element помеченный как АИ
@@ -427,7 +426,7 @@ def script_execute(plugin_logger):
         unmodeling_factory.get_elements_by_category(doc, BuiltInCategory.OST_PipeInsulations)
     ))
 
-    # Фильтруем те элементы у которых в имени типа есть "_B4E_АИ"
+    # Фильтруем те элементы у которых в имени типа есть "_B4E_AI"
     ai_elements = filter_elements_ai(elements)
 
     cash = []  # сохранение типоразмеров, чтоб не перебирать для каждой трубы каталог
