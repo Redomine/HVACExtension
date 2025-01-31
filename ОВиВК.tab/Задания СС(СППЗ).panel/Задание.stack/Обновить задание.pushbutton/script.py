@@ -47,53 +47,50 @@ view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 uiapp = __revit__.Application
 
-def split_valves_by_floors(valves):
+def split_equipment_by_floors(equipment_elements):
     ''' Делим список элементов на словарь, ключ - номер этажа, значение - экземпляр LowVoltageSystemData '''
-    valves_by_floors = {}
+    equpment_by_floors = {}
 
-    for valve in valves:
-        floor_name = valve.GetParamValueOrDefault(FLOOR_PARAM)
-        system_name = valve.GetParamValueOrDefault(SYSTEM_PARAM)
+    for equipment in equipment_elements:
+        floor_name = equipment.GetParamValueOrDefault(FLOOR_PARAM)
+        system_name = equipment.GetParamValueOrDefault(SYSTEM_PARAM)
 
         is_floor_name_exists = floor_name is None or floor_name == ""
         is_system_name_exists = system_name is None or system_name == "!Нет системы" or system_name == ""
 
         if is_floor_name_exists or is_system_name_exists:
-            forms.alert("У части отмеченного для задания оборудования не заполнено ФОП_ВИС_Имя системы или ФОП_Этаж. "
-                        "Устраните проблему и повторите запуск скрипта.", "Ошибка", exitscript=True)
+            report = ("У части отмеченного для задания оборудования не заполнено ФОП_ВИС_Имя системы или ФОП_Этаж. "
+                      "Устраните проблему и повторите запуск скрипта. Пример элемента с ошибкой: {}").format(equipment.Id)
+            forms.alert(report, "Ошибка", exitscript=True)
 
+        if floor_name not in equpment_by_floors:
+            equpment_by_floors[floor_name] = []
 
-        if floor_name not in valves_by_floors:
-            valves_by_floors[floor_name] = []
+        equipment_base_name = system_name + "-" + floor_name
 
-
-        valve_base_name = system_name + "-" + floor_name
-
-        valves_by_floors[floor_name].append(LowVoltageSystemData
+        equpment_by_floors[floor_name].append(LowVoltageSystemData
             (
-                valve.Id,
+                equipment.Id,
                 creation_date=operator.get_moscow_date(),
-                valve_base_name= valve_base_name,
-                element=valve
+                equipment_base_name= equipment_base_name,
+                element=equipment
             )
         )
 
-    return valves_by_floors
+    return equpment_by_floors
 
-def use_open_algorithm(valves, max_numbers):
+def use_open_algorithm(equipment_elements, max_numbers):
     ''' Создаем имена для списка элементов используя алгоритм для открытых клапанов от СППЗ '''
-    valves_by_floors = split_valves_by_floors(valves)
+    equipment_by_floors = split_equipment_by_floors(equipment_elements)
 
     result = []
-    for floor_name, valve_data_instances in valves_by_floors.items():
+    for floor_name, equipment_data_instances in equipment_by_floors.items():
         count = 0
-        for valve_data in valve_data_instances:
-            if valve_data.element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
-                key = valve_data.valve_base_name
+        for equipment_data in equipment_data_instances:
+            if equipment_data.element.Category.IsId(BuiltInCategory.OST_MechanicalEquipment):
+                key = equipment_data.equipment_base_name
             else:
-                key = "НО-" + valve_data.valve_base_name
-
-
+                key = "НО-" + equipment_data.equipment_base_name
 
             # Проверяем, существует ли ключ в словаре max_numbers
             if key in max_numbers and count < max_numbers[key]:
@@ -101,31 +98,31 @@ def use_open_algorithm(valves, max_numbers):
             else:
                 count += 1
 
-            valve_data.json_name = key + "." + str(count)
+            equipment_data.json_name = key + "." + str(count)
 
-            result.append(valve_data)
+            result.append(equipment_data)
 
     return result
 
 def use_closed_algorithm(valves):
     ''' Создаем имена для списка элементов используя алгоритм для закрытых клапанов от СППЗ '''
-    valves_by_floors = split_valves_by_floors(valves)
+    valves_by_floors = split_equipment_by_floors(valves)
     result = []
 
     for floor_name, valve_data_instances in valves_by_floors.items():
-        # Группировка valve_data_instances по valve_base_name
+        # Группировка valve_data_instances по equipment_base_name
         valve_groups = {}
         for valve_data in valve_data_instances:
-            if valve_data.valve_base_name not in valve_groups:
-                valve_groups[valve_data.valve_base_name] = []
-            valve_groups[valve_data.valve_base_name].append(valve_data)
+            if valve_data.equipment_base_name not in valve_groups:
+                valve_groups[valve_data.equipment_base_name] = []
+            valve_groups[valve_data.equipment_base_name].append(valve_data)
 
         # проходим по экземплярам НЗ сгруппированных по базовому имени(одинаковая система и этаж)
-        for valve_base_name, valve_data_instances_group in valve_groups.items():
+        for equipment_base_name, valve_data_instances_group in valve_groups.items():
             count = 0
             for valve_data in valve_data_instances_group:
                 count += 1
-                valve_data.json_name = "НЗ-" + valve_data.valve_base_name + "-" + str(count)
+                valve_data.json_name = "НЗ-" + valve_data.equipment_base_name + "-" + str(count)
 
                 result.append(valve_data)
 
@@ -317,7 +314,7 @@ def script_execute(plugin_logger):
             # Записываем в json-файл
             operator.send_json_data(json_data, file_folder_path)
 
-        # Проверяем все элементы на предмет ложно-заполненности(У элемента есть марка, но его не было в старых заданиях или в новых данных для json)
-        clear_param_false_values(raw_collection, json_data)
+            # Проверяем все элементы на предмет ложно-заполненности(У элемента есть марка, но его не было в старых заданиях или в новых данных для json)
+            clear_param_false_values(raw_collection, json_data)
 
 script_execute()

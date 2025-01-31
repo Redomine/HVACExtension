@@ -103,7 +103,7 @@ class LowVoltageSystemData:
     def __init__(self,
                  id,
                  creation_date='',
-                 valve_base_name='',
+                 equipment_base_name='',
                  autor_name=__revit__.Application.Username,
                  json_name='',
                  deletion_date='',
@@ -115,13 +115,13 @@ class LowVoltageSystemData:
         Args:
             id (ElementId): Идентификатор элемента.
             creation_date (str, optional): Дата создания. По умолчанию пустая строка.
-            valve_base_name (str, optional): Базовое имя клапана. По умолчанию пустая строка.
+            equipment_base_name (str, optional): Базовое имя клапана. По умолчанию пустая строка.
             autor_name (str, optional): Имя автора. По умолчанию имя текущего пользователя.
             json_name (str, optional): Имя JSON файла. По умолчанию пустая строка.
             deletion_date (str, optional): Дата удаления. По умолчанию пустая строка.
         """
         self.id = id
-        self.valve_base_name = valve_base_name
+        self.equipment_base_name = equipment_base_name
         self.autor_name = autor_name
         self.json_name = json_name
         self.creation_date = creation_date
@@ -137,7 +137,7 @@ class LowVoltageSystemData:
         """
         return {
             "id": str(self.id),
-            "valve_base_name": self.valve_base_name,
+            "equipment_base_name": self.equipment_base_name,
             "autor_name": self.autor_name,
             "json_name": self.json_name,
             "creation_date": self.creation_date,
@@ -278,7 +278,7 @@ class JsonOperator:
                     LowVoltageSystemData(
                         id=ElementId(int(item["id"])),
                         creation_date=item["creation_date"],
-                        valve_base_name=item["valve_base_name"],
+                        equipment_base_name=item["equipment_base_name"],
                         autor_name=item["autor_name"],
                         json_name=item["json_name"],
                         deletion_date=item["deletion_date"]

@@ -54,7 +54,7 @@ def script_execute(plugin_logger):
     # Находим все JSON-файлы в директории
     json_files = glob.glob(os.path.join(file_folder_path, "*.json"))
     if not json_files:
-        forms.alert("Ревизии не найдены", "Ошибка", exitscript=True)
+        forms.alert("Данные не найдены, обновите задание.", "Ошибка", exitscript=True)
 
     # Находим файл с самым поздним временем модификации
     latest_file = max(json_files, key=os.path.getmtime)
@@ -62,7 +62,7 @@ def script_execute(plugin_logger):
     date = operator.get_moscow_date()
 
     if date not in latest_file:
-        forms.alert('Файлов-заданий за сегодняшнее число не существует.',
+        forms.alert('Данные за сегодняшнее число не существуют.',
                     "Ошибка", exitscript=True)
     else:
         report = ("Данное действие невозможно отменить. "

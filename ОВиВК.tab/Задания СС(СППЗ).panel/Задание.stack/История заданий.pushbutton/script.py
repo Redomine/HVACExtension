@@ -73,7 +73,7 @@ def script_execute(plugin_logger):
     output = script.get_output()
 
     output.print_table(table_data=output_data,
-                       title=("Удаленные клапана"),
+                       title=("Удаленные элементы"),
                        columns=["Дата удаления", "Дата создания", "Имя элемента"],
                        formats=['', '', ''],
                        )
