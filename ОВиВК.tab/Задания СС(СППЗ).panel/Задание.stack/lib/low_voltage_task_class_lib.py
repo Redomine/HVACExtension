@@ -151,8 +151,8 @@ class LowVoltageSystemData:
         element = doc.GetElement(self.id)
 
         if element is not None:
-            element.SetParamValue("ФОП_ВИС_СС Марка задания", self.json_name)
-            element.SetParamValue("ФОП_ВИС_СС Дата задания", self.creation_date)
+            element.SetParamValue(SharedParamsConfig.Instance.VISTaskSSMark, self.json_name)
+            element.SetParamValue(SharedParamsConfig.Instance.VISTaskSSDate, self.creation_date)
         else:
             if self.deletion_date == '' and self.creation_date != time:
                 self.deletion_date = time
