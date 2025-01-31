@@ -5,19 +5,23 @@ title:
 tooltip:
   ru: Генерирует в модели элементы обобщенных моделей на основе таблиц выбора для архитектурных интерьеров.
     
-    1. Включите в типах труб/воздуховодов требуемые типы расчета
+    1. Отметьте трубопроводы или материалы изоляции для них как "_B4E_AI" в имени типоразмера.
 
-    2. Активируйте скрипт, старые элементы-расходники будут удалены, новые элементы будут сгенерированы в скрытый рабочий набор
+    2. Выполните полное обновление для актуальности систем и функций.
+  
+    3. В случае неактуальности данных в каталоге или его отсутствии направьте запрос в BIM-отдел.
 
-  en_us: Generates elements of generalized models in the model by entering calculated data into it.
+  en_us: Generates elements of generalized models in the model based on selection tables for architectural interiors.
+
+    1. Mark piping or insulation materials for them as "_B4E_AI" in the size name.
     
-    1. Enable the required calculation types in the pipe/duct types
-
-    2. Activate the script, old consumable elements will be deleted, new elements will be generated in a hidden workset
+    2. Perform a full update to ensure that systems and functions are up-to-date.
+    
+    3. If the data in the catalog is out of date or missing, send a request to the BIM department.
 
 
 author: Redomine
 help_url: "https://kb.a101.ru/pages/viewpage.action?pageId=110562607"
 
-min_revit_version: 2020
+min_revit_version: 2022
 max_revit_version: 2024
