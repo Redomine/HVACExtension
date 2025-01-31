@@ -242,9 +242,9 @@ def setup_params():
 MARK_PARAM = SharedParamsConfig.Instance.VISMarkNumber
 FLOOR_PARAM = SharedParamsConfig.Instance.Level
 SYSTEM_PARAM = SharedParamsConfig.Instance.VISSystemName
-TASK_SS_PARAM = 'ФОП_ВИС_СС Марка задания'
-DATE_SS_PARAM = 'ФОП_ВИС_СС Дата задания'
-CREATE_TASK_SS_PARAM = 'ФОП_ВИС_СС Сформировать марку'
+TASK_SS_PARAM = SharedParamsConfig.Instance.VISTaskSSMark
+DATE_SS_PARAM = SharedParamsConfig.Instance.VISTaskSSDate
+CREATE_TASK_SS_PARAM = SharedParamsConfig.Instance.VISTaskSSAdd
 
 
 operator = JsonOperator(doc, uiapp)
