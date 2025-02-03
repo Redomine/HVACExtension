@@ -30,13 +30,22 @@ view = doc.ActiveView
 material_calculator = MaterialCalculator(doc)
 unmodeling_factory = UnmodelingFactory()
 
+
 class CSVRules:
-    name_column = 0
-    d_column = 0
-    code_column = 0
-    mark_column = 0
-    maker_column = 0
-    len_column = 0
+    COMMENT = 'Комментарий к типоразмеру'
+    DIAMETER = 'Диаметр'
+    NAME = 'Наименование'
+    MARK = 'Марка'
+    CODE = 'Артикул'
+    MAKER = 'Завод-изготовитель'
+    LEN = 'Длина трубы'
+
+    name_column_index = 0
+    d_column_index = 0
+    code_column_index = 0
+    mark_column_index = 0
+    maker_column_index = 0
+    len_column_index = 0
 
 class AICatalogElement:
     def __init__(self, type_comment, name, dn, code, length, mark, maker):
@@ -66,9 +75,13 @@ def get_document_path():
     Returns:
         str: Путь к документу.
     """
-    # Исходный путь к файлу
-    network_path = "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/AIEquipment/"
+    DIR_NAME = 'Спецификации'
     file_name = 'Элементы АИ.csv'
+
+    # Исходный путь к файлу
+    network_path = ("W:/Проектный институт/Отд.стандарт.BIM и RD/"
+                    "BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/{}/").format(DIR_NAME)
+
     full_network_path = os.path.join(network_path, file_name)
 
     # Проверка доступности сетевого пути
@@ -78,7 +91,7 @@ def get_document_path():
     # Если сетевой путь недоступен, используем локальный путь
     version = uiapp.VersionNumber
     documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-    local_path = os.path.join(documents_path, 'dosymep', str(version), 'AIEquipment')
+    local_path = os.path.join(documents_path, 'dosymep', str(version), DIR_NAME)
     full_local_path = os.path.join(local_path, file_name)
 
     # Создаем локальную директорию, если она не существует
@@ -142,17 +155,17 @@ def get_ai_catalog():
 
         rules = CSVRules()
 
-        rules.type_comment_column = get_column_index(headers, 'Комментарий к типоразмеру')
-        rules.d_column = get_column_index(headers, 'Диаметр')
-        rules.name_column = get_column_index(headers, 'Наименование')
-        rules.mark_column = get_column_index(headers, 'Марка')
-        rules.code_column = get_column_index(headers, 'Артикул')
-        rules.maker_column = get_column_index(headers, 'Завод-изготовитель')
-        rules.len_column = get_column_index(headers, 'Длина трубы')
+        rules.type_comment_column_index = get_column_index(headers, rules.COMMENT)
+        rules.d_column_index = get_column_index(headers, rules.DIAMETER)
+        rules.name_column_index = get_column_index(headers, rules.NAME)
+        rules.mark_column_index = get_column_index(headers, rules.MARK)
+        rules.code_column_index = get_column_index(headers, rules.CODE)
+        rules.maker_column_index = get_column_index(headers, rules.MAKER)
+        rules.len_column_index = get_column_index(headers, rules.LEN)
 
         # Итерируемся по строкам в файле
         for row in csvreader:
-            type_comment = row[rules.type_comment_column]
+            type_comment = row[rules.type_comment_column_index]
 
             # если комментария к типоразмеру нет - скорее всего пустая строка или ошибка заполнения. Пропускаем
             if type_comment is None or type_comment == '':
@@ -160,13 +173,13 @@ def get_ai_catalog():
 
             material_variants.append(
                 AICatalogElement(
-                    row[rules.type_comment_column],
-                    row[rules.name_column],
-                    get_float_value(row[rules.d_column], rules.d_column),
-                    row[rules.code_column],
-                    get_float_value(row[rules.len_column], rules.len_column),
-                    row[rules.mark_column],
-                    row[rules.maker_column]
+                    row[rules.type_comment_column_index],
+                    row[rules.name_column_index],
+                    get_float_value(row[rules.d_column_index], rules.d_column_index),
+                    row[rules.code_column_index],
+                    get_float_value(row[rules.len_column_index], rules.len_column_index),
+                    row[rules.mark_column_index],
+                    row[rules.maker_column_index]
                 )
             )
 
@@ -219,10 +232,12 @@ def get_variants_pool(element, catalog, type_comment, dn):
 def get_dn(ai_element):
     """Получение диаметра элемента"""
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeCurves):
-        return convert_to_mms(ai_element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM))
+        pipe_diameter = ai_element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
+        return convert_to_mms(pipe_diameter)
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeInsulations) and ai_element.HostElementId is not None:
         pipe = doc.GetElement(ai_element.HostElementId)
-        return convert_to_mms(pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER))
+        pipe_diameter = pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER)
+        return convert_to_mms(pipe_diameter)
 
 def create_new_row(element, variant, number):
     """Создание нового элемента RowOfSpecification на базе Element из модели для последующей генерации якоря"""
@@ -307,18 +322,18 @@ def process_ai_element(ai_element, cash, elements_to_generation, elements_to_upd
     id = ai_element_type.Id
 
     type_comment = ai_element_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
-    ai_element_dn = get_dn(ai_element)
+    ai_element_dn_mm = get_dn(ai_element)
 
     # Проверяем наличие объекта в кэше
-    cached_item = next((item for item in cash if item.dn == ai_element_dn and item.id == id), None)
+    cached_item = next((item for item in cash if item.dn == ai_element_dn_mm and item.id == id), None)
 
     if cached_item:
         # Если объект найден в кэше, используем его данные
         variants_pool = cached_item.variants_pool
     else:
         # Если объект не найден в кэше, создаем новый объект и добавляем его в кэш
-        variants_pool = get_variants_pool(ai_element, catalog, type_comment, ai_element_dn)
-        new_item = TypesCash(ai_element_dn, id, variants_pool)
+        variants_pool = get_variants_pool(ai_element, catalog, type_comment, ai_element_dn_mm)
+        new_item = TypesCash(ai_element_dn_mm, id, variants_pool)
         cash.append(new_item)
 
     # Если нет совпадений по комментарию типоразмера - продолжаем перебор
