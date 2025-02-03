@@ -81,7 +81,7 @@ class EditedReport:
     def show_report(self):
         if len(self.edited_reports) > 0:
             self.edited_report = (
-                "Работа не может быть продолжена. Часть элементов спецификации занята пользователями: {}".format(
+                "Работа не может быть продолжена. Часть элементов занята пользователями: {}".format(
                     ", ".join(self.edited_reports)
                 )
             )
