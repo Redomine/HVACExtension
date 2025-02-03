@@ -231,10 +231,8 @@ def create_new_row(element, variant, number):
         SharedParamsConfig.Instance.EconomicFunction, unmodeling_factory.out_of_function_value)
     shared_system = element.GetParamValueOrDefault(
         SharedParamsConfig.Instance.VISSystemName, unmodeling_factory.out_of_system_value)
-    mark = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISMarkNumber, '')
-    maker = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISManufacturer, '')
     unit = 'шт.'  # В этом плагине мы бьем элементы поштучно, поэтому блокируем это значение
-    note = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISNote, '')
+    note = element.GetParamValueOrDefault(SharedParamsConfig.Instance.VISNote)
     group = '8. Трубопроводы'
 
     new_row = RowOfSpecification(
@@ -248,7 +246,6 @@ def create_new_row(element, variant, number):
         unit=unit,
         local_description=unmodeling_factory.ai_description,
         number=number,
-        mass='',
         note=note
     )
 
