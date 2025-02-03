@@ -2,13 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import clr
-
-clr.AddReference("RevitAPI")
-clr.AddReference("RevitAPIUI")
-clr.AddReference("dosymep.Revit.dll")
-clr.AddReference("dosymep.Bim4Everyone.dll")
-
-import dosymep
 import glob
 import re
 import sys
@@ -16,32 +9,31 @@ import json
 import os
 import ctypes
 import codecs
+from datetime import datetime, timedelta
+from System import Environment
+from collections import defaultdict
+from System.Collections.Generic import List
 
-clr.ImportExtensions(dosymep.Revit)
-clr.ImportExtensions(dosymep.Bim4Everyone)
+clr.AddReference("RevitAPI")
+clr.AddReference("RevitAPIUI")
+clr.AddReference("dosymep.Revit.dll")
+clr.AddReference("dosymep.Bim4Everyone.dll")
 clr.AddReference('System.Windows.Forms')
 clr.AddReference('System.Drawing')
 
-from pyrevit import forms
-from pyrevit import revit
-from pyrevit import script
-from pyrevit import HOST_APP
-from pyrevit import EXEC_PARAMS
-
+import dosymep
+from pyrevit import forms, revit, script, HOST_APP, EXEC_PARAMS
 from dosymep.Bim4Everyone import *
 from dosymep.Bim4Everyone.SharedParams import *
-from collections import defaultdict
-
 from dosymep_libs.bim4everyone import *
-from System.Collections.Generic import List
 
-from datetime import datetime, timedelta
-from System import Environment
+clr.ImportExtensions(dosymep.Revit)
+clr.ImportExtensions(dosymep.Bim4Everyone)
 
 class EditedReport:
     edited_reports = []
-    status_report = ''
-    edited_report = ''
+    status_report = None
+    edited_report = None
 
     def __init__(self, doc):
         self.doc = doc
@@ -72,7 +64,6 @@ class EditedReport:
         Args:
             elements (list): Список элементов для проверки.
         """
-
         update_status = WorksharingUtils.GetModelUpdatesStatus(self.doc, element.Id)
 
         if update_status == ModelUpdatesStatus.UpdatedInCentral:
@@ -89,36 +80,37 @@ class EditedReport:
 
     def show_report(self):
         if len(self.edited_reports) > 0:
-            self.edited_report = \
-                ("Работа не может быть продолжена. Часть элементов спецификации занята пользователями: {}".format(", ".join(self.edited_reports)))
+            self.edited_report = (
+                "Работа не может быть продолжена. Часть элементов спецификации занята пользователями: {}".format(
+                    ", ".join(self.edited_reports)
+                )
+            )
 
-        if self.edited_report != '' or self.status_report != '':
-            report_message = (self.status_report +
-                              ('\n' if (self.edited_report and self.status_report) else '') +
-                              self.edited_report)
+        if self.edited_report is not None or self.status_report is not None:
+            report_message = ''
+            if self.status_report is not None:
+                report_message += self.status_report
+            if self.edited_report is not None:
+                if report_message:
+                    report_message += '\n'
+                report_message += self.edited_report
+
             forms.alert(report_message, "Ошибка", exitscript=True)
 
 class LowVoltageSystemData:
-
-    def __init__(self,
-                 id,
-                 creation_date='',
-                 equipment_base_name='',
-                 autor_name=__revit__.Application.Username,
-                 json_name='',
-                 deletion_date='',
-                 element=None
-                 ):
+    def __init__(self, id, creation_date=None, equipment_base_name=None,
+                 autor_name=__revit__.Application.Username, json_name=None,
+                 deletion_date=None, element=None):
         """
         Инициализация объекта LowVoltageSystemData.
 
         Args:
             id (ElementId): Идентификатор элемента.
-            creation_date (str, optional): Дата создания. По умолчанию пустая строка.
-            equipment_base_name (str, optional): Базовое имя клапана. По умолчанию пустая строка.
+            creation_date (str, optional): Дата создания.
+            equipment_base_name (str, optional): Базовое имя клапана.
             autor_name (str, optional): Имя автора. По умолчанию имя текущего пользователя.
-            json_name (str, optional): Имя JSON файла. По умолчанию пустая строка.
-            deletion_date (str, optional): Дата удаления. По умолчанию пустая строка.
+            json_name (str, optional): Имя JSON файла.
+            deletion_date (str, optional): Дата удаления.
         """
         self.id = id
         self.equipment_base_name = equipment_base_name
@@ -154,7 +146,7 @@ class LowVoltageSystemData:
             element.SetParamValue(SharedParamsConfig.Instance.VISTaskSSMark, self.json_name)
             element.SetParamValue(SharedParamsConfig.Instance.VISTaskSSDate, self.creation_date)
         else:
-            if self.deletion_date == '' and self.creation_date != time:
+            if not self.deletion_date and self.creation_date != time:
                 self.deletion_date = time
 
 class JsonOperator:
@@ -182,36 +174,34 @@ class JsonOperator:
         Returns:
             str: Путь к документу.
         """
-        # Основной путь к сетевому диску
         network_path = (
             "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/"
-            "5-Надстройки/Bim4Everyone/A101/MEP/EquipmentNumbering/"
+            "5-Надстройки/Bim4Everyone/A101/MEP/Задания СС(СППЗ)/"
         )
 
-        # Проверяем доступность сетевого пути
         if not (os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK)):
             my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-            # Если сетевой путь недоступен, используем локальный путь
             local_path = os.path.join(
                 my_documents_path,
                 'dosymep',
                 str(self.uiapp.VersionNumber),
-                'RevitMEPNumeration'
+                'Задания СС(СППЗ)'
             )
             path = local_path
 
-            # Уведомляем пользователя и открываем папку, если нужно
+            if not os.path.exists(path):
+                os.makedirs(path)
+
             report = (
                 'Нет доступа к сетевому диску. Файлы задания обрабатываются из папки: {} \n'
                 'Открыть папку с файлами?'
             ).format(path)
+
             if self.show_dialog(report):
                 os.startfile(path)
         else:
-            # Используем сетевой путь, если он доступен
             path = network_path
 
-        # Добавляем имя проекта к пути и создаём папку, если её нет
         project_path = os.path.join(path, self.get_project_name())
         if not os.path.exists(project_path):
             os.makedirs(project_path)
@@ -237,15 +227,11 @@ class JsonOperator:
             new_file_path (str): Путь к новому JSON файлу.
         """
         project_name = self.get_project_name()
-
         time = self.get_moscow_date()
+        new_file_path = new_file_path + "/СС(СППЗ)_" + project_name + "_" + time + ".json"
 
-        new_file_path = new_file_path + "\СС(СППЗ)_" + project_name + "_" + time + ".json"
-
-        # Преобразование списка объектов в список словарей
         data_dicts = [item.to_dict() for item in data]
 
-        # Запись в JSON
         with codecs.open(new_file_path, 'w', encoding='utf-8') as json_file:
             json.dump(data_dicts, json_file, ensure_ascii=False, indent=4)
 
@@ -259,21 +245,16 @@ class JsonOperator:
         Returns:
             list: Список объектов LowVoltageSystemData.
         """
-        # Находим все JSON-файлы в директории
         json_files = glob.glob(os.path.join(project_path, "*.json"))
         if not json_files:
             return {}
 
-        # Находим файл с самым поздним временем модификации
         latest_file = max(json_files, key=os.path.getmtime)
 
-        # Проверяем, существует ли файл
         if latest_file is not None and os.path.exists(latest_file):
-            # Читаем существующие данные
             with codecs.open(latest_file, 'r', encoding='utf-8') as json_file:
                 existing_data = json.load(json_file)
 
-                # Конвертируем данные в объекты класса LowVoltageSystemData
                 return [
                     LowVoltageSystemData(
                         id=ElementId(int(item["id"])),
@@ -285,7 +266,7 @@ class JsonOperator:
                     )
                     for item in existing_data
                 ]
-        return []  # Если файл не найден, возвращаем пустой список
+        return []
 
     def get_moscow_date(self):
         """
@@ -294,13 +275,8 @@ class JsonOperator:
         Returns:
             str: Текущая дата в формате "YYYY-MM-DD".
         """
-        # Получаем текущее время в UTC
         utc_time = datetime.utcnow()
-
-        # Добавляем 3 часа для перехода в часовой пояс Москвы (UTC+3)
         moscow_time = utc_time + timedelta(hours=3)
-
-        # Форматируем время
         formatted_time = moscow_time.strftime("%Y-%m-%d")
 
         return formatted_time
@@ -312,22 +288,14 @@ class JsonOperator:
         Returns:
             str: Имя проекта.
         """
-        # Получаем имя пользователя
         username = __revit__.Application.Username
-
-        # Получаем заголовок документа
         title = self.doc.Title
-
-        # Переводим все буквы в верхний регистр
         username_upper = username.upper()
         title_upper = title.upper()
 
-        # Проверяем, является ли имя пользователя частью заголовка
         if username_upper in title_upper:
-            # Убираем имя пользователя и подчеркивание перед ним
             project_name = title_upper.replace('_' + username_upper, '').strip()
         else:
-            # Если имя пользователя не является частью заголовка, возвращаем заголовок как есть
             project_name = title
 
         return project_name

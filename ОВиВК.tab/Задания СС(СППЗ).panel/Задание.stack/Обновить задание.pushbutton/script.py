@@ -10,13 +10,7 @@ clr.AddReference("dosymep.Revit.dll")
 clr.AddReference("dosymep.Bim4Everyone.dll")
 
 import dosymep
-import glob
 import re
-import sys
-import json
-import os
-import ctypes
-import codecs
 from low_voltage_task_class_lib import JsonOperator, EditedReport, LowVoltageSystemData
 
 clr.ImportExtensions(dosymep.Revit)
@@ -39,9 +33,6 @@ from dosymep_libs.bim4everyone import *
 
 from System.Collections.Generic import List
 
-from datetime import datetime, timedelta
-from System import Environment
-
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
@@ -58,7 +49,7 @@ def split_equipment_by_floors(equipment_elements):
         if floor_name not in equpment_by_floors:
             equpment_by_floors[floor_name] = []
 
-        equipment_base_name = system_name + "-" + floor_name
+        equipment_base_name = system_name + "." + floor_name
 
         equpment_by_floors[floor_name].append(LowVoltageSystemData
             (
@@ -176,8 +167,6 @@ def get_elements_to_objective(elements):
     ''' Фильтруем, у каких элементов модели стоит галочка для добавления в задание '''
     filtered_elements = []
     for element in elements:
-
-
         if element.GetParamValueOrDefault(CREATE_TASK_SS_PARAM) == 1:
             filtered_elements.append(element)
         else:
@@ -261,7 +250,6 @@ def script_execute(plugin_logger):
         forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True)
 
     setup_params()
-
     file_folder_path = operator.get_document_path()
 
     # Получаем данные из последнего по дате редактирования файла

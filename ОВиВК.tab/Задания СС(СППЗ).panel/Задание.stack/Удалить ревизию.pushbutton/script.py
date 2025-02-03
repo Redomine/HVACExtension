@@ -33,15 +33,12 @@ from dosymep.Bim4Everyone.SharedParams import *
 
 from dosymep_libs.bim4everyone import *
 
-
-
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 uiapp = __revit__.Application
 
 operator = JsonOperator(doc, uiapp)
-
 
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
