@@ -174,9 +174,11 @@ class JsonOperator:
         Returns:
             str: Путь к документу.
         """
+        dir_name = 'Задания СС(СППЗ)'
+
         network_path = (
             "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/"
-            "5-Надстройки/Bim4Everyone/A101/MEP/Задания СС(СППЗ)/"
+            "5-Надстройки/Bim4Everyone/A101/MEP/{}/".format(dir_name)
         )
 
         if not (os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK)):
@@ -185,7 +187,7 @@ class JsonOperator:
                 my_documents_path,
                 'dosymep',
                 str(self.uiapp.VersionNumber),
-                'Задания СС(СППЗ)'
+                dir_name
             )
             path = local_path
 
