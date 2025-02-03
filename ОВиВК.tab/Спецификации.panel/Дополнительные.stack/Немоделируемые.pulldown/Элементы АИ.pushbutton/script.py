@@ -75,12 +75,12 @@ def get_document_path():
     Returns:
         str: Путь к документу.
     """
-    DIR_NAME = 'Спецификации'
+    dir_name = 'Спецификации'
     file_name = 'Элементы АИ.csv'
 
     # Исходный путь к файлу
     network_path = ("W:/Проектный институт/Отд.стандарт.BIM и RD/"
-                    "BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/{}/").format(DIR_NAME)
+                    "BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/{}/").format(dir_name)
 
     full_network_path = os.path.join(network_path, file_name)
 
@@ -91,7 +91,7 @@ def get_document_path():
     # Если сетевой путь недоступен, используем локальный путь
     version = uiapp.VersionNumber
     documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-    local_path = os.path.join(documents_path, 'dosymep', str(version), DIR_NAME)
+    local_path = os.path.join(documents_path, 'dosymep', str(version), dir_name)
     full_local_path = os.path.join(local_path, file_name)
 
     # Создаем локальную директорию, если она не существует
