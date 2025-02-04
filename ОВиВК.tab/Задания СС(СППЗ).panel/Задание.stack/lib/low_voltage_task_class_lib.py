@@ -186,7 +186,6 @@ class JsonOperator:
             local_path = os.path.join(
                 my_documents_path,
                 'dosymep',
-                str(self.uiapp.VersionNumber),
                 dir_name
             )
             path = local_path

@@ -45,13 +45,14 @@ def split_equipment_by_floors(equipment_elements):
     for equipment in equipment_elements:
         floor_name = get_value_if_para_not_empty(equipment, FLOOR_PARAM)
         system_name = get_value_if_para_not_empty(equipment, SYSTEM_PARAM)
-
-        if floor_name not in equpment_by_floors:
-            equpment_by_floors[floor_name] = []
-
         equipment_base_name = system_name + "." + floor_name
 
-        equpment_by_floors[floor_name].append(LowVoltageSystemData
+
+        if equipment_base_name not in equpment_by_floors:
+            equpment_by_floors[equipment_base_name] = []
+
+
+        equpment_by_floors[equipment_base_name].append(LowVoltageSystemData
             (
                 equipment.Id,
                 creation_date=operator.get_moscow_date(),
