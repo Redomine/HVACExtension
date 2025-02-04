@@ -53,6 +53,8 @@ uidoc = __revit__.ActiveUIDocument
 
 
 class AuditorEquipment:
+    processed = False
+
     def __init__(self,
                  connection_type,
                  x,
@@ -76,6 +78,7 @@ class AuditorEquipment:
         self.setting = setting
         self.maker = maker
         self.full_name = full_name
+
 
 class ReadingRules:
     connection_type_index = 2
@@ -175,7 +178,8 @@ def script_execute(plugin_logger):
 
     equipment = get_elements_by_category(BuiltInCategory.OST_MechanicalEquipment)
 
-    not_found = []
+    not_found_revit = []
+    not_found_ayditor = []
 
     with revit.Transaction("BIM: Импорт расчетов"):
         for element in equipment:
@@ -195,12 +199,11 @@ def script_execute(plugin_logger):
                         was_found = True
                         insert_data(element, auditor_data)
             if not was_found:
-                not_found.append(element.Id.IntegerValue)
+                not_found_revit.append(element.Id.IntegerValue)
 
-    if len(not_found) > 0:
-        print('ID Элементов, которые не были обработаны:')
-        print(not_found)
-
+    if len(not_found_revit) > 0:
+        print('ID Элементов Revit, которые не были обработаны:')
+        print(not_found_revit)
 
 
 script_execute()
