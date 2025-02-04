@@ -24,7 +24,6 @@ from unmodeling_class_library import  *
 from dosymep_libs.bim4everyone import *
 
 from Microsoft.Office.Interop import Excel
-from Redomine import *
 from rpw.ui.forms import select_file
 
 doc = __revit__.ActiveUIDocument.Document
