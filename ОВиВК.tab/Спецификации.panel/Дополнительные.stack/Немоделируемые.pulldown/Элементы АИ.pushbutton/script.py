@@ -80,7 +80,7 @@ def get_document_path():
 
     # Исходный путь к файлу
     network_path = ("W:/Проектный институт/Отд.стандарт.BIM и RD/"
-                    "BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/MEP/{}/").format(dir_name)
+                    "BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/{}/").format(dir_name)
 
     full_network_path = os.path.join(network_path, file_name)
 
