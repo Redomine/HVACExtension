@@ -185,31 +185,32 @@ def script_execute(plugin_logger):
 
     not_found = []
 
-    for element in equipment:
-        was_found = False
-        xyz = element.Location.Point
+    with revit.Transaction("BIM: Импорт расчетов"):
+        for element in equipment:
+            was_found = False
+            xyz = element.Location.Point
 
-        revit_coords = RevitXYZmms(
-            convert_to_mms(xyz.X),
-            convert_to_mms(xyz.Y),
-            convert_to_mms(xyz.Z - element.GetParamValue(BuiltInParameter.INSTANCE_ELEVATION_PARAM))
-        )
+            revit_coords = RevitXYZmms(
+                convert_to_mms(xyz.X),
+                convert_to_mms(xyz.Y),
+                convert_to_mms(xyz.Z - element.GetParamValue(BuiltInParameter.INSTANCE_ELEVATION_PARAM))
+            )
 
-        # print(revit_coords.x)
-        # print(revit_coords.y)
-        # print(revit_coords.z)
-        # print('Выше координаты ревит')
+            # print(revit_coords.x)
+            # print(revit_coords.y)
+            # print(revit_coords.z)
+            # print('Выше координаты ревит')
 
-        for auditor_data in ayditror_equipment:
-            if is_within_sphere(auditor_data, revit_coords):
-                insert_data(element, auditor_data)
+            for auditor_data in ayditror_equipment:
+                if is_within_sphere(auditor_data, revit_coords):
+                    insert_data(element, auditor_data)
 
-                # print(
-                #     "AuditorEquipment с координатами ({}, {}, {}) входит в сферу вокруг RevitXYZmms с координатами ({}, {}, {})".format(
-                #         auditor.x, auditor.y, auditor.z, revit_coords.x, revit_coords.y, revit_coords.z))
-                was_found = True
-        if not was_found:
-            not_found.append(element.Id.IntegerValue)
+                    # print(
+                    #     "AuditorEquipment с координатами ({}, {}, {}) входит в сферу вокруг RevitXYZmms с координатами ({}, {}, {})".format(
+                    #         auditor.x, auditor.y, auditor.z, revit_coords.x, revit_coords.y, revit_coords.z))
+                    was_found = True
+            if not was_found:
+                not_found.append(element.Id.IntegerValue)
     print(not_found)
 
     print(len(ayditror_equipment))
