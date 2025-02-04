@@ -178,7 +178,7 @@ class JsonOperator:
 
         network_path = (
             "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/"
-            "5-Надстройки/Bim4Everyone/A101/MEP/{}/".format(dir_name)
+            "5-Надстройки/Bim4Everyone/A101/{}/".format(dir_name)
         )
 
         if not (os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK)):
