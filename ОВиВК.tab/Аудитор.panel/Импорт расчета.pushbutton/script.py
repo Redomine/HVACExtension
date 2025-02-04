@@ -107,11 +107,6 @@ def distance(point1, point2):
     return math.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2 + (point1.z - point2.z)**2)
 
 def is_within_sphere(auditor_equipment, revit_coords, radius=1500):
-    # if auditor_equipment.x == 12315:
-    #     print(auditor_equipment.x)
-    #     print(auditor_equipment.y)
-    #     print(auditor_equipment.z)
-    #     print(distance(auditor_equipment, revit_coords))
     """ Проверяет, входит ли точка auditor_equipment в сферу радиуса radius вокруг revit_coords """
     return distance(auditor_equipment, revit_coords) <= radius
 
@@ -136,8 +131,8 @@ def extract_heating_device_description(file_path, reading_rules):
                     float(data[reading_rules.z_index].replace(',', '.')) * 1000,
                     float(data[reading_rules.len_index].replace(',', '.'))/304.8,
                     data[reading_rules.code_index],
-                    float(data[reading_rules.real_power_index] * 10.764),
-                    float(data[reading_rules.nominal_power_index] * 10.764),
+                    float(data[reading_rules.real_power_index])  * 10.764,
+                    float(data[reading_rules.nominal_power_index] ) * 10.764,
                     float(data[reading_rules.setting_index]),
                     data[reading_rules.maker_index],
                     data[reading_rules.full_name_index]
@@ -160,20 +155,10 @@ def get_elements_by_category(category):
     return col
 
 def insert_data(element, auditor_data):
-    family_name = element.Symbol.Family.Name
-    #if element.Id.IntegerValue == 2746699:
-        #print auditor_data.len
-
-
-    if 'Обр_ОП_Универсальный' in family_name:
-        # if element.Id.IntegerValue == 2746699:
-        #     print auditor_data.setting
-        #     print element.LookupParameter('ADSK_Настройка')
-        #     print auditor_data.real_power
-        element.SetParamValue('ADSK_Размер_Длина', auditor_data.len)
-        element.SetParamValue('ADSK_Код изделия', auditor_data.code)
-        element.SetParamValue('ADSK_Настройка', auditor_data.setting)
-        element.SetParamValue('ADSK_Тепловая мощность', auditor_data.real_power)
+    element.SetParamValue('ADSK_Размер_Длина', auditor_data.len)
+    element.SetParamValue('ADSK_Код изделия', auditor_data.code)
+    element.SetParamValue('ADSK_Настройка', auditor_data.setting)
+    element.SetParamValue('ADSK_Тепловая мощность', auditor_data.real_power)
 
 
 @notification()
@@ -203,24 +188,19 @@ def script_execute(plugin_logger):
                 convert_to_mms(xyz.Z - element.GetParamValue(BuiltInParameter.INSTANCE_ELEVATION_PARAM))
             )
 
-            # print(revit_coords.x)
-            # print(revit_coords.y)
-            # print(revit_coords.z)
-            # print('Выше координаты ревит')
-
             for auditor_data in ayditror_equipment:
                 if is_within_sphere(auditor_data, revit_coords):
-                    insert_data(element, auditor_data)
-
-                    # print(
-                    #     "AuditorEquipment с координатами ({}, {}, {}) входит в сферу вокруг RevitXYZmms с координатами ({}, {}, {})".format(
-                    #         auditor.x, auditor.y, auditor.z, revit_coords.x, revit_coords.y, revit_coords.z))
-                    was_found = True
+                    family_name = element.Symbol.Family.Name
+                    if 'Обр_ОП_Универсальный' in family_name:
+                        was_found = True
+                        insert_data(element, auditor_data)
             if not was_found:
                 not_found.append(element.Id.IntegerValue)
-    print(not_found)
 
-    print(len(ayditror_equipment))
+    if len(not_found) > 0:
+        print('ID Элементов, которые не были обработаны:')
+        print(not_found)
+
 
 
 script_execute()
