@@ -79,7 +79,6 @@ class AuditorEquipment:
         self.maker = maker
         self.full_name = full_name
 
-
 class ReadingRules:
     connection_type_index = 2
     x_index = 3
