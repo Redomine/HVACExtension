@@ -91,7 +91,7 @@ def get_document_path():
     # Если сетевой путь недоступен, используем локальный путь
     version = uiapp.VersionNumber
     documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-    local_path = os.path.join(documents_path, 'dosymep', str(version), dir_name)
+    local_path = os.path.join(documents_path, 'dosymep', dir_name)
     full_local_path = os.path.join(local_path, file_name)
 
     # Создаем локальную директорию, если она не существует
