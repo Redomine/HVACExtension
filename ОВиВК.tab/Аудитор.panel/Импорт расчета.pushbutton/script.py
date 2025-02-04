@@ -134,11 +134,11 @@ def extract_heating_device_description(file_path, reading_rules):
                     float(data[reading_rules.x_index].replace(',', '.')) * 1000,
                     float(data[reading_rules.y_index].replace(',', '.')) * 1000,
                     float(data[reading_rules.z_index].replace(',', '.')) * 1000,
-                    float(data[reading_rules.len_index].replace(',', '.')),
+                    float(data[reading_rules.len_index].replace(',', '.'))/304.8,
                     data[reading_rules.code_index],
-                    data[reading_rules.real_power_index],
-                    data[reading_rules.nominal_power_index],
-                    data[reading_rules.setting_index],
+                    float(data[reading_rules.real_power_index] * 10.764),
+                    float(data[reading_rules.nominal_power_index] * 10.764),
+                    float(data[reading_rules.setting_index]),
                     data[reading_rules.maker_index],
                     data[reading_rules.full_name_index]
                 ))
@@ -161,8 +161,15 @@ def get_elements_by_category(category):
 
 def insert_data(element, auditor_data):
     family_name = element.Symbol.Family.Name
+    #if element.Id.IntegerValue == 2746699:
+        #print auditor_data.len
+
 
     if 'Обр_ОП_Универсальный' in family_name:
+        # if element.Id.IntegerValue == 2746699:
+        #     print auditor_data.setting
+        #     print element.LookupParameter('ADSK_Настройка')
+        #     print auditor_data.real_power
         element.SetParamValue('ADSK_Размер_Длина', auditor_data.len)
         element.SetParamValue('ADSK_Код изделия', auditor_data.code)
         element.SetParamValue('ADSK_Настройка', auditor_data.setting)
