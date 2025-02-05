@@ -196,9 +196,13 @@ def script_execute(plugin_logger):
                     family_name = element.Symbol.Family.Name
                     if 'Обр_ОП_Универсальный' in family_name:
                         was_found = True
+                        auditor_data.processed = True
                         insert_data(element, auditor_data)
             if not was_found:
                 not_found_revit.append(element.Id.IntegerValue)
+
+        for ayditror_data in ayditror_equipment:
+            print(ayditror_data.processed)
 
     if len(not_found_revit) > 0:
         print('ID Элементов Revit, которые не были обработаны:')
