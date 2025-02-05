@@ -176,13 +176,13 @@ class JsonOperator:
         """
 
         plugin_name = 'Задания СС(СППЗ)'
-        version_number = self.doc.Application.VersionNumber
+        version_number = self.uiapp.VersionNumber
         project_name = self.get_project_name()
         base_root = version_number + "\\" + plugin_name + "\\" + project_name
         my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-        network_path = (
+        network_path = os.path.join(
             "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/"
-            "5-Надстройки/Bim4Everyone/A101/{}/".format(base_root)
+            "5-Надстройки/Bim4Everyone/A101/", base_root
         )
 
         local_path = os.path.join(my_documents_path, 'dosymep', base_root)
