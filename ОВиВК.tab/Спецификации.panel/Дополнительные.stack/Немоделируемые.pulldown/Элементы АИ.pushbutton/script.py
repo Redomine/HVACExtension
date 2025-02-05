@@ -75,24 +75,23 @@ def get_document_path():
     Returns:
         str: Путь к документу.
     """
-    dir_name = 'Спецификации'
+    plugin_name = 'Элементы АИ'
     file_name = 'Элементы АИ.csv'
+    version_number = uiapp.VersionNumber
+    base_root = version_number + "\\" + plugin_name
+    my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
 
-    # Исходный путь к файлу
-    network_path = ("W:/Проектный институт/Отд.стандарт.BIM и RD/"
-                    "BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/{}/").format(dir_name)
+    network_path = os.path.join("W:/Проектный институт/Отд.стандарт.BIM и RD/"
+                    "BIM-Ресурсы/5-Надстройки/Bim4Everyone/A101/", base_root)
+
+    local_path = os.path.join(my_documents_path, 'dosymep', base_root)
 
     full_network_path = os.path.join(network_path, file_name)
+    full_local_path = os.path.join(local_path, file_name)
 
     # Проверка доступности сетевого пути
     if os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK):
         return full_network_path
-
-    # Если сетевой путь недоступен, используем локальный путь
-    version = uiapp.VersionNumber
-    documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-    local_path = os.path.join(documents_path, 'dosymep', dir_name)
-    full_local_path = os.path.join(local_path, file_name)
 
     # Создаем локальную директорию, если она не существует
     if not os.path.exists(local_path):
