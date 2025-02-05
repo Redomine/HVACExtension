@@ -174,40 +174,35 @@ class JsonOperator:
         Returns:
             str: Путь к документу.
         """
-        dir_name = 'Задания СС(СППЗ)'
 
+        plugin_name = 'Задания СС(СППЗ)'
+        version_number = self.doc.Application.VersionNumber
+        project_name = self.get_project_name()
+        base_root = version_number + "\\" + plugin_name + "\\" + project_name
+        my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
         network_path = (
             "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/"
-            "5-Надстройки/Bim4Everyone/A101/{}/".format(dir_name)
+            "5-Надстройки/Bim4Everyone/A101/{}/".format(base_root)
         )
 
-        if not (os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK)):
-            my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-            local_path = os.path.join(
-                my_documents_path,
-                'dosymep',
-                dir_name
-            )
-            path = local_path
+        local_path = os.path.join(my_documents_path, 'dosymep', base_root)
 
-            if not os.path.exists(path):
-                os.makedirs(path)
+        if not (os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK)):
+            if not os.path.exists(local_path):
+                os.makedirs(local_path)
 
             report = (
                 'Нет доступа к сетевому диску. Файлы задания обрабатываются из папки: {} \n'
                 'Открыть папку с файлами?'
-            ).format(path)
+            ).format(local_path)
 
             if self.show_dialog(report):
-                os.startfile(path)
+                os.startfile(local_path)
+
+            return local_path
         else:
-            path = network_path
+            return network_path
 
-        project_path = os.path.join(path, self.get_project_name())
-        if not os.path.exists(project_path):
-            os.makedirs(project_path)
-
-        return project_path
 
     def create_folder_if_not_exist(self, project_path):
         """
