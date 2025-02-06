@@ -167,9 +167,9 @@ class UnmodelingFactory:
     out_of_function_value = '!Нет функции'
     ws_id = None
 
-    edited_reports = [] # Отчеты о занятых файлах
+    edited_reports = [] # Перчень редакторов элементов
     sync_status_report = None # Отчет о статусе необходимости синхронизации
-    edited_status_report = None
+    edited_status_report = None # Отчет о статусе занятых элементов
 
     # Максимальная встреченная координата в проекте. Обновляется в первый раз в get_base_location, далее обновляется в
     # при создании экземпляра якоря
