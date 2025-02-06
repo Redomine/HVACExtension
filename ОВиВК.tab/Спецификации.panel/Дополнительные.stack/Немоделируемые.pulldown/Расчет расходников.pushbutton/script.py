@@ -306,11 +306,11 @@ def get_insulation_elements_list():
 def script_execute(plugin_logger):
     family_symbol = unmodeling_factory.startup_checks(doc)
 
+    # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
+    remove_old_models()
+
     with revit.Transaction("BIM: Добавление расчетных элементов"):
         family_symbol.Activate()
-
-        # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
-        remove_old_models()
 
         process_materials(family_symbol, unmodeling_factory.material_description)
         process_insulation_consumables(family_symbol, unmodeling_factory.consumable_description)

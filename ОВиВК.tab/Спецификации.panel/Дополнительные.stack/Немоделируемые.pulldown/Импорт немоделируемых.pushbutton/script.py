@@ -152,11 +152,11 @@ def script_execute(plugin_logger):
 
         row += 1
 
+    # при каждом повторе расчета удаляем старые версии
+    unmodeling_factory.remove_models(doc, unmodeling_factory.import_description)
+
     with revit.Transaction("BIM: Импорт немоделируемых"):
         family_symbol.Activate()
-
-        # при каждом повторе расчета удаляем старые версии
-        unmodeling_factory.remove_models(doc, unmodeling_factory.import_description)
 
         element_location = unmodeling_factory.get_base_location(doc)
 

@@ -30,7 +30,6 @@ view = doc.ActiveView
 material_calculator = MaterialCalculator(doc)
 unmodeling_factory = UnmodelingFactory()
 
-
 class CSVRules:
     COMMENT = 'Комментарий к типоразмеру'
     DIAMETER = 'Диаметр'
@@ -234,9 +233,13 @@ def get_dn(ai_element):
         pipe_diameter = ai_element.GetParamValue(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)
         return convert_to_mms(pipe_diameter)
     if ai_element.Category.IsId(BuiltInCategory.OST_PipeInsulations) and ai_element.HostElementId is not None:
-        pipe = doc.GetElement(ai_element.HostElementId)
-        pipe_diameter = pipe.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER)
-        return convert_to_mms(pipe_diameter)
+        host_element = doc.GetElement(ai_element.HostElementId)
+
+        if host_element.Category.IsId(BuiltInCategory.OST_PipeCurves):
+            pipe_diameter = host_element.GetParamValue(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER)
+            return convert_to_mms(pipe_diameter)
+
+    return None # Если элемент не труба, не изоляция или хост изоляции не труба
 
 def create_new_row(element, variant, number):
     """Создание нового элемента RowOfSpecification на базе Element из модели для последующей генерации якоря"""
@@ -322,6 +325,11 @@ def process_ai_element(ai_element, cash, elements_to_generation, elements_to_upd
 
     type_comment = ai_element_type.GetParamValue(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)
     ai_element_dn_mm = get_dn(ai_element)
+
+    # Если None - сразу возвращаем исходники и продолжаем перебор. Это означает, что был получен хост изоляции, который
+    # является арматурой или фитингом трубы
+    if ai_element_dn_mm is None:
+        return cash, elements_to_generation, elements_to_update
 
     # Проверяем наличие объекта в кэше
     cached_item = next((item for item in cash if item.dn == ai_element_dn_mm and item.id == id), None)
@@ -453,10 +461,11 @@ def script_execute(plugin_logger):
                                                                              pipe_insulation_stock,
                                                                              pipe_stock)
 
-    with revit.Transaction("BIM: Добавление расчетных элементов"):
-        # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
-        unmodeling_factory.remove_models(doc, unmodeling_factory.ai_description)
 
+    # При каждом запуске затираем расходники с соответствующим описанием и генерируем заново
+    unmodeling_factory.remove_models(doc, unmodeling_factory.ai_description)
+
+    with revit.Transaction("BIM: Добавление расчетных элементов"):
         family_symbol.Activate()
 
         material_location = unmodeling_factory.get_base_location(doc)
@@ -472,7 +481,10 @@ def script_execute(plugin_logger):
                                                   unmodeling_factory.ai_description,
                                                   material_location)
 
-        for element in elements_to_update:
-            update_element(element.element, element.data)
+        for data in elements_to_update:
+            if not unmodeling_factory.is_elemet_edited(doc, data.element):
+                update_element(data.element, data.data)
+
+            unmodeling_factory.show_report()
 
 script_execute()
