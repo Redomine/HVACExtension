@@ -167,6 +167,10 @@ class UnmodelingFactory:
     out_of_function_value = '!Нет функции'
     ws_id = None
 
+    edited_reports = [] # Перчень редакторов элементов
+    sync_status_report = None # Отчет о статусе необходимости синхронизации
+    edited_status_report = None # Отчет о статусе занятых элементов
+
     # Максимальная встреченная координата в проекте. Обновляется в первый раз в get_base_location, далее обновляется в
     # при создании экземпляра якоря
     max_location_y = 0
@@ -382,7 +386,6 @@ class UnmodelingFactory:
         ]
         return gen_list
 
-    # Возвращает имя занявшего элемент или None
     def get_element_editor_name(self, element):
         """
         Возвращает имя пользователя, который последним редактировал элемент.
@@ -401,6 +404,46 @@ class UnmodelingFactory:
         if edited_by.lower() == user_name.lower():
             return None
         return edited_by
+
+    def is_elemet_edited(self, doc, element):
+        """
+        Проверяет, заняты ли элементы другими пользователями.
+        """
+        update_status = WorksharingUtils.GetModelUpdatesStatus(doc, element.Id)
+
+        if update_status == ModelUpdatesStatus.UpdatedInCentral or update_status == ModelUpdatesStatus.DeletedInCentral:
+            self.sync_status_report = "Вы владеете элементами, но ваш файл устарел. Выполните синхронизацию. "
+
+        name = self.get_element_editor_name(element)
+        if name is not None and name not in self.edited_reports:
+            self.edited_reports.append(name)
+
+        if name is not None or update_status == ModelUpdatesStatus.UpdatedInCentral:
+            return True
+
+        return False
+
+    def show_report(self, exit_on_report = False):
+        if len(self.edited_reports) > 0:
+            self.edited_status_report = (
+                "Часть элементов занята пользователями: {}".format(
+                    ", ".join(self.edited_reports)
+                )
+            )
+
+        if self.edited_status_report is not None or self.sync_status_report is not None:
+            report_message = ''
+            if self.sync_status_report is not None:
+                report_message += self.sync_status_report
+            if self.edited_status_report is not None:
+                if report_message:
+                    report_message += '\n'
+                report_message += self.edited_status_report
+
+            if exit_on_report:
+                forms.alert(report_message, "Ошибка", exitscript=True)
+            else:
+                forms.alert(report_message, "Ошибка")
 
     def is_family_in(self, doc):
         """
@@ -444,28 +487,26 @@ class UnmodelingFactory:
             doc: Документ Revit.
             description: Описание элемента.
         """
-        user_name = __revit__.Application.Username
         # Фильтруем элементы, чтобы получить только те, у которых имя семейства равно "_Якорный элемент"
         generic_model_collection = \
             [elem for elem in self.get_elements_by_category(doc, BuiltInCategory.OST_GenericModel) if elem.GetElementType()
             .GetParamValue(BuiltInParameter.ALL_MODEL_FAMILY_NAME) == self.family_name]
 
         for element in generic_model_collection:
-            edited_by = self.get_element_editor_name(element)
-            if edited_by:
-                forms.alert("Якорные элементы не были обработаны, так как были заняты пользователями:" + edited_by,
-                            "Ошибка",
-                            exitscript=True)
+            self.is_elemet_edited(doc, element)
 
-        for element in generic_model_collection:
-            if element.IsExistsParam(self.description_param_name):
-                elem_type = doc.GetElement(element.GetTypeId())
-                current_name = elem_type.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString()
-                current_description = element.GetParamValueOrDefault(self.description_param_name)
+        self.show_report(exit_on_report=True)
 
-                if current_name == self.family_name:
-                    if current_description is None or description in current_description:
-                        doc.Delete(element.Id)
+        with revit.Transaction("BIM: Очистка немоделируемых"):
+            for element in generic_model_collection:
+                if element.IsExistsParam(self.description_param_name):
+                    elem_type = doc.GetElement(element.GetTypeId())
+                    current_name = elem_type.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME).AsString()
+                    current_description = element.GetParamValueOrDefault(self.description_param_name)
+
+                    if current_name == self.family_name:
+                        if current_description is None or description in current_description:
+                            doc.Delete(element.Id)
 
     def create_new_position(self, doc, new_row_data, family_symbol, description, loc):
         """
