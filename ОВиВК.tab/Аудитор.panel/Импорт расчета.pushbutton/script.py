@@ -27,7 +27,6 @@ from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI.Selection import Selection
 from Autodesk.DesignScript.Geometry import *
 
-
 import RevitServices
 from RevitServices.Persistence import DocumentManager
 from RevitServices.Transactions import TransactionManager
@@ -51,9 +50,16 @@ uiapp = DocumentManager.Instance.CurrentUIApplication
 #app = uiapp.Application
 uidoc = __revit__.ActiveUIDocument
 
+class CylinderZ:
+    def __init__(self, z_min, z_max):
+        self.diameter = 2000
+        self.z_min = z_min
+        self.z_max = z_max
+        self.len = z_max - z_min
 
 class AuditorEquipment:
     processed = False
+    level_cylinder = None
 
     def __init__(self,
                  connection_type,
@@ -79,6 +85,37 @@ class AuditorEquipment:
         self.maker = maker
         self.full_name = full_name
 
+    def is_in_data_area(self, revit_equipment):
+        xyz = revit_equipment.Location.Point
+        bb = revit_equipment.GetBoundingBox()
+        bb_center = get_bb_center(bb)
+
+        revit_coords = RevitXYZmms(
+            convert_to_mms(xyz.X),
+            convert_to_mms(xyz.Y),
+            convert_to_mms(xyz.Z)
+        )
+
+        revit_bb_coords = RevitXYZmms(
+            convert_to_mms(bb_center.X),
+            convert_to_mms(bb_center.Y),
+            convert_to_mms(bb_center.Z)
+        )
+
+        radius = self.level_cylinder.diameter / 2.0
+
+        epsilon = 1e-9
+        if ((abs(self.level_cylinder.z_min - revit_coords.z) <= epsilon or self.level_cylinder.z_min < revit_coords.z)
+                and (abs(revit_coords.z - self.level_cylinder.z_max) <= epsilon
+                     or revit_coords.z < self.level_cylinder.z_max)):
+            distance_to_location_center = math.sqrt((self.x - revit_coords.x) ** 2 + (self.y - revit_coords.y) ** 2)
+            distance_to_bb_center = math.sqrt((self.x - revit_bb_coords.x) ** 2 + (self.y - revit_bb_coords.y) ** 2)
+
+            distance = min(distance_to_bb_center, distance_to_location_center)
+
+            return distance <= radius
+        return False
+
 class ReadingRules:
     connection_type_index = 2
     x_index = 3
@@ -103,18 +140,6 @@ def convert_to_mms(value):
     result = UnitUtils.ConvertFromInternalUnits(value,
                                                UnitTypeId.Millimeters)
     return result
-
-def distance(point1, point2):
-    """ Вычисляет расстояние между двумя точками в 3D пространстве """
-    return math.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2 + (point1.z - point2.z)**2)
-
-def is_within_sphere(auditor_equipment, revit_coords, radius=1000):
-
-    """ Проверяет, входит ли точка auditor_equipment в сферу радиуса radius вокруг revit_coords """
-    # if(distance(auditor_equipment, revit_coords) <= radius):
-    #     print(distance(auditor_equipment, revit_coords))
-
-    return distance(auditor_equipment, revit_coords) <= radius
 
 def extract_heating_device_description(file_path, reading_rules):
     with codecs.open(file_path, 'r', encoding='utf-8') as file:
@@ -180,6 +205,18 @@ def get_bb_center(bb):
     )
     return centroid
 
+def get_level_cylinders(unique_z_values):
+    cylinder_list = []
+    for i in range(len(unique_z_values)):
+        z_min = unique_z_values[i]
+        if i < len(unique_z_values) - 1:
+            z_max = unique_z_values[i + 1]
+        else:
+            z_max = z_min + 6000
+        cylinder = CylinderZ(z_min, z_max)
+        cylinder_list.append(cylinder)
+    return  cylinder_list
+
 @notification()
 @log_plugin(EXEC_PARAMS.command_name)
 def script_execute(plugin_logger):
@@ -188,61 +225,82 @@ def script_execute(plugin_logger):
 
     filepath = select_file('Файл расчетов (*.txt)|*.txt')
 
+    if filepath is None:
+        sys.exit()
+
     reading_rules = ReadingRules()
 
-    ayditror_equipment = extract_heating_device_description(filepath, reading_rules)
+    ayditror_equipment_elements = extract_heating_device_description(filepath, reading_rules)
 
-    equipment = get_elements_by_category(BuiltInCategory.OST_MechanicalEquipment)
+    unique_z_values = set()
+    for ayditror_equipment in ayditror_equipment_elements:
+        unique_z_values.add(ayditror_equipment.z)
 
-    not_found_revit = []
-    not_found_ayditor = []
+    unique_z_values = sorted(unique_z_values)
+
+    level_cylinders = get_level_cylinders(unique_z_values)
+
+    for ayditror_equipment in ayditror_equipment_elements:
+        for level_cylinder in level_cylinders:
+            if level_cylinder.z_min <= ayditror_equipment.z <= level_cylinder.z_max:
+                ayditror_equipment.level_cylinder = level_cylinder
+
+    revit_equipment_elements = get_elements_by_category(BuiltInCategory.OST_MechanicalEquipment)
+
+    not_found_ayditor_reports = [] # Отчеты о не найденных приборах для областей данных
+    excess_in_data_area_reports = [] # Отчеты о превышениях количества приборов в областях даннных
 
     with revit.Transaction("BIM: Импорт расчетов"):
-        for element in equipment:
-            xyz = element.Location.Point
-            bb = element.GetBoundingBox()
-            bb_center = get_bb_center(bb)
-            elem_height = 0
-            if element.IsExistsParam('ADSK_Размер_Высота'):
-                elem_height = element.GetParamValue('ADSK_Размер_Высота')
-
-            revit_coords = RevitXYZmms(
-                convert_to_mms(bb_center.X),
-                convert_to_mms(bb_center.Y),
-                convert_to_mms(bb.Min.Z - element.GetParamValue(BuiltInParameter.INSTANCE_ELEVATION_PARAM))
-            )
-
-            # if element.Id.IntegerValue == 2708661:
-            #     print('{} {} {}'.format(bb_center.X, bb_center.Y, bb.Min.Z))
-            #     print(elem_height)
-            for auditor_data in ayditror_equipment:
-                if is_within_sphere(auditor_data, revit_coords):
-                    family_name = element.Symbol.Family.Name
-                    if 'Обр_ОП_Универсальный' in family_name:
-                        auditor_data.processed = True
-                        insert_data(element, auditor_data)
-                        break  # Переходим к следующему элементу в equipment
-            else:
-                not_found_revit.append(element.Id.IntegerValue)
-
-        for ayditror_data in ayditror_equipment:
-            if not ayditror_data.processed:
-                not_found_ayditor.append(ayditror_data)
+        for ayditror_equipment in ayditror_equipment_elements:
 
 
-    # if len(not_found_revit) > 0:
-    #     print('ID Элементов Revit, которые не были обработаны:')
-    #     print(not_found_revit)
-    #
-    # if len(not_found_ayditor) > 0:
-    #     print('Оборудование аудитор, которое не было найдено в модели:')
-    #     for ayditror_data in not_found_ayditor:
-    #         print('Прибор х: {}, y: {}, z: {}, артикул: {}, мощность: {}'.format(
-    #             ayditror_data.x,
-    #             auditor_data.y,
-    #             ayditror_data.z,
-    #             auditor_data.code,
-    #             auditor_data.real_power))
+            # Если ранее было обработано можно не проверять
+            if ayditror_equipment.processed:
+                continue
+
+            data_area = []
+            for revit_equipment in revit_equipment_elements:
+                family_name = revit_equipment.Symbol.Family.Name
+
+                if 'Обр_ОП_Универсальный' not in family_name:
+                    continue
+
+
+                if ayditror_equipment.is_in_data_area(revit_equipment):
+                    data_area.append(revit_equipment)
+
+            if len(data_area) == 1:
+                ayditror_equipment.processed = True
+                insert_data(data_area[0], ayditror_equipment)
+            if len(data_area) > 1: # Если в области данных дублирование элементов - данные из
+                # аудитора могут перенестись идентично в несколько разных приборов
+                print('В данные области попадает больше одного прибора:')
+                print('Прибор х: {}, y: {}, z: {}'.format(
+                    ayditror_equipment.x,
+                    ayditror_equipment.y,
+                    ayditror_equipment.z))
+                print(ayditror_equipment.code)
+
+                print('ID приборов:')
+                for x in data_area:
+                    print(x.Id)
+                ayditror_equipment.processed = True
+                excess_in_data_area_reports.append(ayditror_equipment)
+
+    for ayditror_equipment in ayditror_equipment_elements:
+        if not ayditror_equipment.processed:
+            not_found_ayditor_reports.append(ayditror_equipment)
+
+
+    if len(not_found_ayditor_reports) > 0:
+        print('Оборудование аудитор, которое не было найдено в модели:')
+        for ayditror_equipment in not_found_ayditor_reports:
+            print('Прибор х: {}, y: {}, z: {}, артикул: {}, мощность: {}'.format(
+                ayditror_equipment.x,
+                ayditror_equipment.y,
+                ayditror_equipment.z,
+                ayditror_equipment.code,
+                ayditror_equipment.real_power))
 
 
 script_execute()
