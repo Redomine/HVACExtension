@@ -179,15 +179,16 @@ class JsonOperator:
         version_number = self.uiapp.VersionNumber
         project_name = self.get_project_name()
         base_root = version_number + "\\" + plugin_name + "\\" + project_name
-        my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-        network_path = os.path.join(
+        network_directory = os.path.join(
             "W:/Проектный институт/Отд.стандарт.BIM и RD/BIM-Ресурсы/"
-            "5-Надстройки/Bim4Everyone/A101/", base_root
+            "5-Надстройки/Bim4Everyone/A101/"
         )
 
+        my_documents_path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        network_path = os.path.join(network_directory, base_root)
         local_path = os.path.join(my_documents_path, 'dosymep', base_root)
 
-        if not (os.path.exists(network_path) and os.access(network_path, os.R_OK | os.W_OK)):
+        if not (os.path.exists(network_directory) and os.access(network_directory, os.R_OK | os.W_OK)):
             if not os.path.exists(local_path):
                 os.makedirs(local_path)
 
@@ -201,6 +202,9 @@ class JsonOperator:
 
             return local_path
         else:
+            if not os.path.exists(network_path):
+                os.makedirs(network_path)
+
             return network_path
 
 
