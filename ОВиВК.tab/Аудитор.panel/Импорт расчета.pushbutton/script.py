@@ -141,7 +141,9 @@ def convert_to_mms(value):
                                                UnitTypeId.Millimeters)
     return result
 
-def extract_heating_device_description(file_path, reading_rules):
+def extract_heating_device_description(file_path):
+    reading_rules = ReadingRules()
+
     with codecs.open(file_path, 'r', encoding='utf-8') as file:
         lines = file.readlines()
 
@@ -205,7 +207,13 @@ def get_bb_center(bb):
     )
     return centroid
 
-def get_level_cylinders(unique_z_values):
+def get_level_cylinders(ayditror_equipment_elements):
+    unique_z_values = set()
+    for ayditor_equipment in ayditror_equipment_elements:
+        unique_z_values.add(ayditor_equipment.z)
+
+    unique_z_values = sorted(unique_z_values)
+
     cylinder_list = []
     for i in range(len(unique_z_values)):
         z_min = unique_z_values[i]
@@ -230,20 +238,15 @@ def script_execute(plugin_logger):
 
     reading_rules = ReadingRules()
 
-    ayditror_equipment_elements = extract_heating_device_description(filepath, reading_rules)
+    ayditror_equipment_elements = extract_heating_device_description(filepath)
 
-    unique_z_values = set()
-    for ayditror_equipment in ayditror_equipment_elements:
-        unique_z_values.add(ayditror_equipment.z)
+    # собираем высоты цилиндров в которых будем искать данные
+    level_cylinders = get_level_cylinders(ayditror_equipment_elements)
 
-    unique_z_values = sorted(unique_z_values)
-
-    level_cylinders = get_level_cylinders(unique_z_values)
-
-    for ayditror_equipment in ayditror_equipment_elements:
+    for ayditor_equipment in ayditror_equipment_elements:
         for level_cylinder in level_cylinders:
-            if level_cylinder.z_min <= ayditror_equipment.z <= level_cylinder.z_max:
-                ayditror_equipment.level_cylinder = level_cylinder
+            if level_cylinder.z_min <= ayditor_equipment.z <= level_cylinder.z_max:
+                ayditor_equipment.level_cylinder = level_cylinder
 
     revit_equipment_elements = get_elements_by_category(BuiltInCategory.OST_MechanicalEquipment)
 
@@ -251,56 +254,49 @@ def script_execute(plugin_logger):
     excess_in_data_area_reports = [] # Отчеты о превышениях количества приборов в областях даннных
 
     with revit.Transaction("BIM: Импорт расчетов"):
-        for ayditror_equipment in ayditror_equipment_elements:
-
-
+        for ayditor_equipment in ayditror_equipment_elements:
             # Если ранее было обработано можно не проверять
-            if ayditror_equipment.processed:
+            if ayditor_equipment.processed:
                 continue
 
-            data_area = []
+            equipment_in_area = [] # Список данных которые попадают в текущую область
             for revit_equipment in revit_equipment_elements:
                 family_name = revit_equipment.Symbol.Family.Name
-
                 if 'Обр_ОП_Универсальный' not in family_name:
                     continue
 
 
-                if ayditror_equipment.is_in_data_area(revit_equipment):
-                    data_area.append(revit_equipment)
+                if ayditor_equipment.is_in_data_area(revit_equipment):
+                    equipment_in_area.append(revit_equipment)
 
-            if len(data_area) == 1:
-                ayditror_equipment.processed = True
-                insert_data(data_area[0], ayditror_equipment)
-            if len(data_area) > 1: # Если в области данных дублирование элементов - данные из
+            if len(equipment_in_area) == 1:
+                ayditor_equipment.processed = True
+                insert_data(equipment_in_area[0], ayditor_equipment)
+            if len(equipment_in_area) > 1: # Если в области данных дублирование элементов - данные из
                 # аудитора могут перенестись идентично в несколько разных приборов
                 print('В данные области попадает больше одного прибора:')
                 print('Прибор х: {}, y: {}, z: {}'.format(
-                    ayditror_equipment.x,
-                    ayditror_equipment.y,
-                    ayditror_equipment.z))
-                print(ayditror_equipment.code)
+                    ayditor_equipment.x,
+                    ayditor_equipment.y,
+                    ayditor_equipment.z))
 
                 print('ID приборов:')
-                for x in data_area:
+                for x in equipment_in_area:
                     print(x.Id)
-                ayditror_equipment.processed = True
-                excess_in_data_area_reports.append(ayditror_equipment)
+                ayditor_equipment.processed = True
+                excess_in_data_area_reports.append(ayditor_equipment)
 
-    for ayditror_equipment in ayditror_equipment_elements:
-        if not ayditror_equipment.processed:
-            not_found_ayditor_reports.append(ayditror_equipment)
-
+    for ayditor_equipment in ayditror_equipment_elements:
+        if not ayditor_equipment.processed:
+            not_found_ayditor_reports.append(ayditor_equipment)
 
     if len(not_found_ayditor_reports) > 0:
-        print('Оборудование аудитор, которое не было найдено в модели:')
-        for ayditror_equipment in not_found_ayditor_reports:
-            print('Прибор х: {}, y: {}, z: {}, артикул: {}, мощность: {}'.format(
-                ayditror_equipment.x,
-                ayditror_equipment.y,
-                ayditror_equipment.z,
-                ayditror_equipment.code,
-                ayditror_equipment.real_power))
+        print('Не найдено универсальное оборудование в областях:')
+        for ayditor_equipment in not_found_ayditor_reports:
+            print('Прибор х: {}, y: {}, z: {}'.format(
+                ayditor_equipment.x,
+                ayditor_equipment.y,
+                ayditor_equipment.z))
 
 
 script_execute()
