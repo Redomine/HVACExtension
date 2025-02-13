@@ -116,6 +116,12 @@ class AuditorEquipment:
             return distance <= radius
         return False
 
+    def set_level_cylinder(self, level_cylinders):
+        for level_cylinder in level_cylinders:
+            if level_cylinder.z_min <= self.z <= level_cylinder.z_max:
+                self.level_cylinder = level_cylinder
+
+
 class ReadingRules:
     connection_type_index = 2
     x_index = 3
@@ -225,67 +231,22 @@ def get_level_cylinders(ayditror_equipment_elements):
         cylinder_list.append(cylinder)
     return  cylinder_list
 
-@notification()
-@log_plugin(EXEC_PARAMS.command_name)
-def script_execute(plugin_logger):
-    if doc.IsFamilyDocument:
-        forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True )
+def print_area_overflow_report(ayditor_equipment, equipment_in_area):
+    if len(equipment_in_area) > 1:  # Если в области данных дублирование элементов - данные из
+        # аудитора могут перенестись идентично в несколько разных приборов
+        print('В данные области попадает больше одного прибора:')
+        print('Прибор х: {}, y: {}, z: {}'.format(
+            ayditor_equipment.x,
+            ayditor_equipment.y,
+            ayditor_equipment.z))
 
-    filepath = select_file('Файл расчетов (*.txt)|*.txt')
-
-    if filepath is None:
-        sys.exit()
-
-    reading_rules = ReadingRules()
-
-    ayditror_equipment_elements = extract_heating_device_description(filepath)
-
-    # собираем высоты цилиндров в которых будем искать данные
-    level_cylinders = get_level_cylinders(ayditror_equipment_elements)
-
-    for ayditor_equipment in ayditror_equipment_elements:
-        for level_cylinder in level_cylinders:
-            if level_cylinder.z_min <= ayditor_equipment.z <= level_cylinder.z_max:
-                ayditor_equipment.level_cylinder = level_cylinder
-
-    revit_equipment_elements = get_elements_by_category(BuiltInCategory.OST_MechanicalEquipment)
-
-    not_found_ayditor_reports = [] # Отчеты о не найденных приборах для областей данных
-    excess_in_data_area_reports = [] # Отчеты о превышениях количества приборов в областях даннных
-
-    with revit.Transaction("BIM: Импорт расчетов"):
-        for ayditor_equipment in ayditror_equipment_elements:
-            # Если ранее было обработано можно не проверять
-            if ayditor_equipment.processed:
-                continue
-
-            equipment_in_area = [] # Список данных которые попадают в текущую область
-            for revit_equipment in revit_equipment_elements:
-                family_name = revit_equipment.Symbol.Family.Name
-                if 'Обр_ОП_Универсальный' not in family_name:
-                    continue
+        print('ID приборов:')
+        for x in equipment_in_area:
+            print(x.Id)
 
 
-                if ayditor_equipment.is_in_data_area(revit_equipment):
-                    equipment_in_area.append(revit_equipment)
-
-            if len(equipment_in_area) == 1:
-                ayditor_equipment.processed = True
-                insert_data(equipment_in_area[0], ayditor_equipment)
-            if len(equipment_in_area) > 1: # Если в области данных дублирование элементов - данные из
-                # аудитора могут перенестись идентично в несколько разных приборов
-                print('В данные области попадает больше одного прибора:')
-                print('Прибор х: {}, y: {}, z: {}'.format(
-                    ayditor_equipment.x,
-                    ayditor_equipment.y,
-                    ayditor_equipment.z))
-
-                print('ID приборов:')
-                for x in equipment_in_area:
-                    print(x.Id)
-                ayditor_equipment.processed = True
-                excess_in_data_area_reports.append(ayditor_equipment)
-
+def print_not_found_report(ayditror_equipment_elements):
+    not_found_ayditor_reports = []
     for ayditor_equipment in ayditror_equipment_elements:
         if not ayditor_equipment.processed:
             not_found_ayditor_reports.append(ayditor_equipment)
@@ -297,6 +258,48 @@ def script_execute(plugin_logger):
                 ayditor_equipment.x,
                 ayditor_equipment.y,
                 ayditor_equipment.z))
+
+FAMILY_NAME_CONST = 'Обр_ОП_Универсальный'
+
+@notification()
+@log_plugin(EXEC_PARAMS.command_name)
+def script_execute(plugin_logger):
+    if doc.IsFamilyDocument:
+        forms.alert("Надстройка не предназначена для работы с семействами", "Ошибка", exitscript=True )
+
+    filepath = select_file('Файл расчетов (*.txt)|*.txt')
+
+    if filepath is None:
+        sys.exit()
+
+    ayditror_equipment_elements = extract_heating_device_description(filepath)
+
+    # собираем высоты цилиндров в которых будем искать данные
+    level_cylinders = get_level_cylinders(ayditror_equipment_elements)
+
+    for ayditor_equipment in ayditror_equipment_elements:
+        ayditor_equipment.set_level_cylinder(level_cylinders)
+
+    revit_equipment_elements = get_elements_by_category(BuiltInCategory.OST_MechanicalEquipment)
+
+    with revit.Transaction("BIM: Импорт расчетов"):
+        for ayditor_equipment in ayditror_equipment_elements:
+            equipment_in_area = [] # Список данных которые попадают в текущую область
+            for revit_equipment in revit_equipment_elements:
+                family_name = revit_equipment.Symbol.Family.Name
+                if FAMILY_NAME_CONST not in family_name:
+                    continue
+
+                if ayditor_equipment.is_in_data_area(revit_equipment):
+                    equipment_in_area.append(revit_equipment)
+
+            ayditor_equipment.processed = len(equipment_in_area) >= 1
+            if len(equipment_in_area) == 1:
+                insert_data(equipment_in_area[0], ayditor_equipment)
+
+            print_area_overflow_report(ayditor_equipment, equipment_in_area)
+
+        print_not_found_report(ayditror_equipment_elements)
 
 
 script_execute()
