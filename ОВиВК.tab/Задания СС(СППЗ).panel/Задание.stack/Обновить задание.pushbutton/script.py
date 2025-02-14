@@ -184,7 +184,8 @@ def get_elements():
     return elements
 
 def get_elements_to_objective(elements):
-    ''' Фильтруем, у каких элементов модели стоит галочка для добавления в задание '''
+    ''' Фильтруем, у каких элементов модели стоит галочка для добавления в задание
+    и параметры системы этажа имеют значение '''
     filtered_elements = []
     for element in elements:
         system_name = element.GetParamValueOrDefault(SYSTEM_PARAM)
@@ -243,11 +244,10 @@ def get_open_max_numbers(old_data):
         if data.closed_algorithm:
             continue
 
-        # Разделяем строку по дефисам
         parts = data.json_name.split('-')
 
-        floor_name = parts[-2]  # Предпоследняя часть
-        number = int(parts[-1])  # Последняя часть
+        floor_name = parts[-2]
+        number = int(parts[-1])
 
         if number > max_numbers[floor_name]:
             max_numbers[floor_name] = number
